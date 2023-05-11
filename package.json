@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.9.1",
+	"version": "2.9.2",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -229,7 +229,7 @@
 			"properties": {
 				"dltxt.simpleTM.remoteHost": {
 					"type": "string",
-					"default": "https://jsccsj.com",
+					"default": "https://localhost:5000/",
 					"description": "SimpleTM服务器网址"
 				},
 				"dltxt.simpleTM.username": {

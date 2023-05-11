@@ -97,13 +97,13 @@ export function activate(context: vscode.ExtensionContext) {
 			clearTimeout(timeout);
 			timeout = undefined;
 		}
-		timeout = setTimeout(updateDecorations, 500);
+		timeout = setTimeout(updateDecorations, 2000);
 	}
 	setInterval(() => {
 		if (vscode.window.activeTextEditor && context.workspaceState.get('game')) {
 			vscode.commands.executeCommand('Extension.dltxt.sync_database');
 		}
-	}, 1000);
+	}, 30000);
 
 	if (activeEditor) {
 		triggerUpdateDecorations();
