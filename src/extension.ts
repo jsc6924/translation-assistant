@@ -3,7 +3,6 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import open = require('open');
-import { mojiTranslate, mojiLogin, mojiLogout } from './moji';
 import * as motion from './motion';
 import { setCursorAndScroll } from './utils';
 import * as fs from "fs"; 
@@ -388,20 +387,6 @@ export function activate(context: vscode.ExtensionContext) {
 		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
 	});
 
-	let dLoginMoji = vscode.commands.registerCommand('Extension.dltxt.mojiLogin', () => {
-		mojiLogin();
-	});
-	let dLogoutMoji = vscode.commands.registerCommand('Extension.dltxt.mojiLogout', () => {
-		mojiLogout();
-	});
-
-	let searchWord0 = vscode.commands.registerCommand('Extension.dltxt.searchWord0', () => {
-		let editor = vscode.window.activeTextEditor;
-		if (!editor || !editor.selection)
-			return;
-		let word = editor.document.getText(editor.selection);
-		mojiTranslate(word);
-	});
 	let searchWord1 = vscode.commands.registerCommand('Extension.dltxt.searchWord1', () => {
 		let editor = vscode.window.activeTextEditor;
 		if (!editor || !editor.selection)
@@ -435,9 +420,6 @@ export function activate(context: vscode.ExtensionContext) {
 		copyOriginalCmd,
 		mergeIntoDoubleLine,
 		extractSingleline,
-		dLoginMoji,
-		dLogoutMoji,
-		searchWord0,
 		searchWord1,
 		searchWord2
 	);

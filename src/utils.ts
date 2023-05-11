@@ -1,16 +1,17 @@
 import * as vscode from "vscode";
+
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
 		let match: RegExpExecArray | null;
+    let lastMatch: RegExpExecArray | null = null;
 		let cur = text;
-		let result = -1;
-		while ((match = pattern.exec(cur)) != null) {
-			if (result == -1)
-				result = match.index;
-			else
-				result += match.index;
-			cur = cur.slice(match.index);
-		}
-		return result;
+		while ((match = pattern.exec(text)) !== null) {
+      lastMatch = match;
+    }
+		if (lastMatch) {
+      return  lastMatch.index;
+    } else {
+      return -1;
+    }
 }
   
 export function countCharBeforeNewline(text: string, startIdx: number) : number {

@@ -78,7 +78,7 @@ export function prevLine() {
 			const sStart = editor.selection.start.with(startLine, 0);
 			const sEnd = editor.selection.start.with(endLine, 100);
 			const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-			const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
+			const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
 			let startIdx = utils.findLastMatchIndex(pattern, searchTxt);
 			if (startIdx != -1) {
 				let m = utils.countCharBeforeNewline(searchTxt, startIdx);
@@ -133,7 +133,7 @@ export function moveToPrevLine() {
     const sStart = editor.selection.start.with(startLine, 0);
     const sEnd = editor.selection.start.with(endLine, INT_MAX);
     const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-    const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
+    const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
     let idx = utils.findLastMatchIndex(pattern, searchTxt);
     if (idx != -1) {
       let n = utils.countLineFrom(searchTxt, idx);
