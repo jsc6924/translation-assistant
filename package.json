@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.9.2",
+	"version": "2.9.5",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -169,10 +169,6 @@
 			{
 				"command": "Extension.dltxt.repeatFirst",
 				"key": "ctrl+alt+space"
-			},
-			{
-				"command": "Extension.dltxt.searchWord0",
-				"key": "ctrl+alt+m"
 			}
 		],
 		"menus": {
@@ -209,11 +205,6 @@
 				},
 				{
 					"when": "editorHasSelection",
-					"command": "Extension.dltxt.searchWord0",
-					"group": "dltxt.query"
-				},
-				{
-					"when": "editorHasSelection",
 					"command": "Extension.dltxt.searchWord1",
 					"group": "dltxt.query"
 				},
@@ -229,7 +220,7 @@
 			"properties": {
 				"dltxt.simpleTM.remoteHost": {
 					"type": "string",
-					"default": "https://localhost:5000/",
+					"default": "https://simpletm.jscrosoft.com/",
 					"description": "SimpleTM服务器网址"
 				},
 				"dltxt.simpleTM.username": {

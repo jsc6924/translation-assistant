@@ -202,10 +202,17 @@ export function activate(context: vscode.ExtensionContext) {
 				let editor = vscode.window.activeTextEditor;
 				if (editor && !editor.selection.isEmpty) {
 					const raw_text = editor.document.getText(editor.selection);
-					var msg = raw_text + "->" + translate;
-					const API_Query: string = BASE_URL + "/api/update";
-					let fullURL = API_Query + "/" + GameTitle + "/" + raw_text + "/" + translate;
-					fullURL = encodeURI(fullURL);
+					let fullURL = "";
+					var msg = "";
+					if (translate) {
+						msg = raw_text + "->" + translate;
+						fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + raw_text + "/" + translate;
+						fullURL = encodeURI(fullURL);
+					} else {
+						msg = "deleted: " + raw_text;
+						fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + raw_text
+						fullURL = encodeURI(fullURL);
+					}
 					axios.get(fullURL, {
 						auth: {
 							username: username, password: apiToken
