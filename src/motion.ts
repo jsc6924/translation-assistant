@@ -124,6 +124,35 @@ export function moveToNextLine() {
   }
 }
 
+export function deleteAllAfter() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return;
+  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
+  const position = editor.selection.active;
+  const curLine = editor.document.getText(
+    new vscode.Range(
+      position.with(position.line, 0),
+      position.with(position.line, INT_MAX)
+    )
+  );
+  if (curLine.search(pattern) == -1)
+    return;
+
+  let iend = curLine.length;
+  if (curLine.charAt(iend - 1) == '」') {
+    iend--;
+  }
+  
+  const toMove = new vscode.Range(
+    position.with(position.line, position.character),
+    position.with(position.line, iend)
+  );
+  editor.edit((editbuilder) => {
+    editbuilder.delete(toMove);
+  });
+}
+
 export function moveToPrevLine() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)

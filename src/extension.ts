@@ -383,6 +383,10 @@ export function activate(context: vscode.ExtensionContext) {
 		motion.moveToPrevLine();
 	});
 
+	let deleteAllAfterCmd = vscode.commands.registerCommand('Extension.dltxt.deleteAllAfter', () => {
+		motion.deleteAllAfter();
+	});
+
 	let repeatFirst = vscode.commands.registerCommand('Extension.dltxt.repeatFirst', () => {
 		let editor = vscode.window.activeTextEditor;
 		let document = editor?.document;
@@ -423,6 +427,8 @@ export function activate(context: vscode.ExtensionContext) {
 		nextWordCmd,
 		prevWordCmd,
 		moveToNextLineCmd,
+		moveToPrevLineCmd,
+		deleteAllAfterCmd,
 		repeatFirst,
 		copyOriginalCmd,
 		mergeIntoDoubleLine,
