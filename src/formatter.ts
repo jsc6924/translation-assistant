@@ -132,26 +132,28 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
 
   const ellipsis = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
-    text = text.replace(/\.{2,}/g, '……');
-    text = text.replace(/。{2,}/g, '……');
+    let target = config.get("formatter.a.ellipsis.specify") as string;
+    text = text.replace(/\.{2,}/g, target);
+    text = text.replace(/。{2,}/g, target);
     cgrps.text = text;
   };
-  if(config.get("formatter.a.ellipsis"))
+  if(config.get("formatter.a.ellipsis.enable"))
     ops.push(ellipsis);
 
   const wave = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    cgrps.text = cgrps.text.replace(/[~∼〜～]/g, '～');
+    let target = config.get("formatter.a.wave.specify") as string;
+    cgrps.text = cgrps.text.replace(/[~∼〜～]/g, target);
   };
-  if(config.get("formatter.a.wave"))
+  if(config.get("formatter.a.wave.enable"))
     ops.push(wave);
 
   const horizontalLine = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
-    text = text.replace(/[ー－\-]/g, '—');
-    text = text.replace(/(?<!—)—(?!—)/g, '——');
+    let target = config.get("formatter.a.horizontalLine.specify") as string;
+    text = text.replace(/[ー－\-]+/g, target);
     cgrps.text = text;
   };
-  if(config.get("formatter.a.horizontalLine"))
+  if(config.get("formatter.a.horizontalLine.enable"))
     ops.push(horizontalLine);
 
 
