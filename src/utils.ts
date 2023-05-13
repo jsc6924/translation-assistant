@@ -59,7 +59,7 @@ export function setCursorAndScroll(editor: vscode.TextEditor, dn: number, m: num
 };
 
 const dictionary = new Set<string>();
-dictionary.add(" ").add("\t").add("　").add("「").add("『");
+dictionary.add(" ").add("\t").add("　").add("「").add("『").add("\\").add("n");
 export function countStartingUnimportantChar(txt: string, start: number, wordSet?: Set<string>) : number {
   let n = 0;
   if (!wordSet)
