@@ -4,6 +4,13 @@ import * as utils from './utils';
 
 const configInit = vscode.workspace.getConfiguration("dltxt");
 const translatedPrefixRegex = configInit.get('core.translatedTextPrefixRegex');
+const skipCharsStr = configInit.get('core.skipCharsPrefix') as string;
+let skipCharsSet =  new Set<string>();
+for (let i = 0; i < skipCharsStr.length; i++) {
+  skipCharsSet.add(skipCharsStr[i]);
+}
+const suffixPatternStr = configInit.get('core.translatedTextSuffixRegex') as string;
+const translatedSuffixRegex = new RegExp(suffixPatternStr);
 const INT_MAX = Number.MAX_SAFE_INTEGER;
 
 export function getCurrentLine() {
@@ -31,7 +38,7 @@ export function nextLine() {
 			const idx = searchTxt.search(new RegExp(`(?<=${translatedPrefixRegex}).*`,'m'))
 			if (idx >= 0) {
 				let m = utils.countCharBeforeNewline(searchTxt, idx);
-				m += utils.countStartingUnimportantChar(searchTxt, idx);
+				m += utils.countStartingUnimportantChar(searchTxt, idx, skipCharsSet);
         let n = utils.countLineUntil(searchTxt, idx);
 				utils.setCursorAndScroll(editor, n, m);
 			}
@@ -82,15 +89,13 @@ export function prevLine() {
 			let startIdx = utils.findLastMatchIndex(pattern, searchTxt);
 			if (startIdx != -1) {
 				let m = utils.countCharBeforeNewline(searchTxt, startIdx);
-				m += utils.countStartingUnimportantChar(searchTxt, startIdx);
+				m += utils.countStartingUnimportantChar(searchTxt, startIdx, skipCharsSet);
         let n = utils.countLineFrom(searchTxt, startIdx);
 				utils.setCursorAndScroll(editor, -n, m);
 			}
 		}
 }
 
-const skipChars = new Set<string>();
-skipChars.add(" ").add("\t").add("　");
 
 export function moveToNextLine() {
   const editor = vscode.window.activeTextEditor;
@@ -107,7 +112,7 @@ export function moveToNextLine() {
   const idx = searchTxt.search(pattern);
   if (idx >= 0) {
     let m = utils.countCharBeforeNewline(searchTxt, idx);
-    m += utils.countStartingUnimportantChar(searchTxt, idx, skipChars);
+    m += utils.countStartingUnimportantChar(searchTxt, idx, skipCharsSet);
     let n = utils.countLineUntil(searchTxt, idx);
     const position = editor.selection.active;
     const toMove = new vscode.Range(
@@ -142,8 +147,7 @@ export function deleteAllAfter() {
   const curLineAfter = curLine.substring(position.character);
 
   let iend = position.character + curLineAfter.length;
-  const suffixPattern = new RegExp(`」|(\\\\@)`)
-  const suffixMatch = suffixPattern.exec(curLineAfter)
+  const suffixMatch = translatedSuffixRegex.exec(curLineAfter)
   if (suffixMatch) {
     iend = position.character + suffixMatch.index;
   }
@@ -178,7 +182,7 @@ export function moveToPrevLine() {
       let t = strThisLine.search(pattern);
       if (t == -1)
         return;
-      t += utils.countStartingUnimportantChar(strThisLine, t);
+      t += utils.countStartingUnimportantChar(strThisLine, t, skipCharsSet);
       const toMove = new vscode.Range(
         position.with(position.line, t),
         position.with(position.line, position.character))
