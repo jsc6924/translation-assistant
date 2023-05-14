@@ -139,17 +139,24 @@ export function deleteAllAfter() {
   if (curLine.search(pattern) == -1)
     return;
 
-  let iend = curLine.length;
-  if (curLine.charAt(iend - 1) == '」') {
-    iend--;
+  const curLineAfter = curLine.substring(position.character);
+
+  let iend = position.character + curLineAfter.length;
+  const suffixPattern = new RegExp(`」|(\\\\@)`)
+  const suffixMatch = suffixPattern.exec(curLineAfter)
+  if (suffixMatch) {
+    iend = position.character + suffixMatch.index;
+  }
+  if (iend == position.character) {
+    iend++;
   }
   
-  const toMove = new vscode.Range(
+  const toDelete = new vscode.Range(
     position.with(position.line, position.character),
     position.with(position.line, iend)
   );
   editor.edit((editbuilder) => {
-    editbuilder.delete(toMove);
+    editbuilder.delete(toDelete);
   });
 }
 
