@@ -172,8 +172,10 @@ export function activate(context: vscode.ExtensionContext) {
 							if (response.data.Result === 'True') {
 								vscode.window.showInformationMessage("Insert Success!\n" + msg);
 							}
-							else
+							else {
 								vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+							}
+							vscode.commands.executeCommand('Extension.dltxt.sync_database');
 						})
 						.catch(error => {
 							vscode.window.showInformationMessage("unexpected error:\n" + error);
@@ -212,10 +214,13 @@ export function activate(context: vscode.ExtensionContext) {
 							username: username, password: apiToken
 						}
 					}).then(response => {
-							if (response.data.Result === 'True')
+							if (response.data.Result === 'True') {
 								vscode.window.showInformationMessage("Update Success!\n" + msg);
-							else
+							}
+							else {
 								vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+							}
+							vscode.commands.executeCommand('Extension.dltxt.sync_database');
 						})
 						.catch(error => {
 							vscode.window.showInformationMessage("unexpected error:\n" + error);
