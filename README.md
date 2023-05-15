@@ -164,6 +164,7 @@ vsce publish
 ## Release Notes
 #### 2.13
 - 自定义翻译表
+- 使用esbuild打包，提高加载速度
 #### 2.12
 - 自定义skipchars前缀和deleteAllAfter后缀
 #### 2.11

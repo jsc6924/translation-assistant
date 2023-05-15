@@ -4,3 +4,4 @@ node_modules
 *.vsix
 mytoken
 src/notes.txt
+dist/
