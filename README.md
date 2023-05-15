@@ -143,15 +143,12 @@
 为了更好的体验，建议对vscode进行如下设置：
 - 右下角打开设置`Settings`,
   1. 搜索 `editor.wordSeparators` <br>
-  2. 改成 ``~`!@#$%^&*()-=+[{]}\|;:'",.<>/?★☆○●「」『』，、。！？…`` (这样就可以用 `ctrl+Left` `ctrl+right` 了.) <br>
-  3. 搜索 `font family` <br>
-  4. 点击 `Workspace` <br>
-  5. 把 `Editor: Font Family` 设成  `SimHei` （黑体） <br>
+  2. 改成 ``~`!@#$%^&*()-=+[{]}\|;:'",.<>/?★☆○●「」『』“”，、。！？……　—`` (这样就可以用 `ctrl+Left` `ctrl+right` 了.) <br>
 
 ---
 ## 开发
 ```
-npm run compile
+npm run compile && npm run esbuild
 vsce login <username of dev.azure.com>
 vsce package
 vsce publish
@@ -165,6 +162,7 @@ vsce publish
 #### 2.13
 - 自定义翻译表
 - 使用esbuild打包，提高加载速度
+- 优化关键词显示样式
 #### 2.12
 - 自定义skipchars前缀和deleteAllAfter后缀
 #### 2.11
