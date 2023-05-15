@@ -1,10 +1,10 @@
 {
 	"name": "translateassistant",
-	"displayName": "双行文本翻译辅助工具 - Translate Assistant for Double Line TxT Files",
+	"displayName": "DLTxT: 双行文本翻译辅助工具",
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.13.0",
+	"version": "2.13.2",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
