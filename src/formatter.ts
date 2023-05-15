@@ -228,6 +228,17 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   if(config.get("formatter.c.omitPeriod"))
     ops.push(omitPeriod);
 
+  const customMappingFunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    const nameMapping = config.get("formatter.d.customMapping") as object
+    if (cgrps?.text) {
+      for (const [key, value] of Object.entries(nameMapping)) {
+        cgrps.text = cgrps.text.replace(new RegExp(`${key}`, 'g'), value);
+      }
+    }
+  }
+  ops.push(customMappingFunc);
+
+
   return editTranslation(context, document, ops);
 }
 

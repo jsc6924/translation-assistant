@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.12.0",
+	"version": "2.13.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -318,6 +318,14 @@
 					"type": "boolean",
 					"default": true,
 					"description": "格式化文本：去除对话句末的句号"
+				},
+				"dltxt.formatter.d.customMapping": {
+					"type": "object",
+					"default": {},
+					"description": "格式化文本：自定义翻译表",
+					"additionalProperties": {
+					  "type": "string"
+					}
 				},
 				"dltxt.query.search1": {
 					"type": "string",
