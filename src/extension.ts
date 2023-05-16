@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		if (!config.get('appearance.showKeywordHighlight'))
 			return;
-		const game : string | undefined = context.workspaceState.get('game');
+		const game : string | undefined = config.get("simpleTM.project") as string;
 		if (!activeEditor || !game) {
 			return;
 		}
@@ -118,7 +118,6 @@ export function activate(context: vscode.ExtensionContext) {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		if (!config.get('appearance.showErrorHighlight'))
 			return;
-		const game : string | undefined = context.workspaceState.get('game');
 		if (!activeEditor) {
 			return;
 		}
@@ -169,7 +168,8 @@ export function activate(context: vscode.ExtensionContext) {
 		timeout = setTimeout(updateDecorations, 1000);
 	}
 	setInterval(() => {
-		if (vscode.window.activeTextEditor && context.workspaceState.get('game')) {
+		const config = vscode.workspace.getConfiguration("dltxt");
+		if (vscode.window.activeTextEditor && config.get("simpleTM.project")) {
 			vscode.commands.executeCommand('Extension.dltxt.sync_database');
 		}
 	}, 30000);
@@ -199,11 +199,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		const BASE_URL = config.get('simpleTM.remoteHost');
-		let GameTitle: string = context.workspaceState.get("game") as string;
-		if (!GameTitle) {
-			vscode.commands.executeCommand('Extension.dltxt.setGame');
-			GameTitle = context.workspaceState.get("game") as string;
-		}
+		let GameTitle: string = config.get("simpleTM.project") as string;
 		if (GameTitle) {
 			let fullURL = BASE_URL + "/api/querybygame/" + GameTitle;
 			axios.get(fullURL, {
@@ -229,7 +225,11 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		const BASE_URL = config.get('simpleTM.remoteHost');
-		let GameTitle: string = context.workspaceState.get("game") as string;
+		let GameTitle: string = config.get("simpleTM.project") as string;
+		if (!GameTitle) {
+			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
+			return;
+		}
 		vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
 			.then((translate: string | undefined) => {
 				let editor = vscode.window.activeTextEditor;
@@ -267,7 +267,11 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		const BASE_URL = config.get('simpleTM.remoteHost');
-		let GameTitle: string = context.workspaceState.get("game") as string;
+		let GameTitle: string = config.get("simpleTM.project") as string;
+		if (!GameTitle) {
+			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
+			return;
+		}
 		vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
 			.then((translate: string | undefined) => {
 				let editor = vscode.window.activeTextEditor;
@@ -302,15 +306,6 @@ export function activate(context: vscode.ExtensionContext) {
 						});
 				}
 			})
-	});
-	let setGame = vscode.commands.registerCommand('Extension.dltxt.setGame', () => {
-		vscode.window.showInputBox({ placeHolder: '输入游戏名' })
-			.then((value: string | undefined) => {
-				if (value === undefined) {
-					value = ""
-				}
-				context.workspaceState.update("game", value);
-			});
 	});
 
 	let dlEditor: vscode.TextEditor | undefined = undefined;
@@ -495,7 +490,6 @@ export function activate(context: vscode.ExtensionContext) {
 		syncDatabaseCommand,
 		newContextMenu_Insert,
 		newContextMenu_Update,
-		setGame,
 		nextLineCmd,
 		prevLineCmd,
 		nextWordCmd,

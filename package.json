@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.14.2",
+	"version": "2.15.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -87,10 +87,6 @@
 			{
 				"command": "Extension.dltxt.merge_into_double_line",
 				"title": "DLTXT: 应用译文至双行文本"
-			},
-			{
-				"command": "Extension.dltxt.setGame",
-				"title": "DLTXT: 输入当前项目名称"
 			},
 			{
 				"command": "Extension.dltxt.next",
@@ -193,11 +189,6 @@
 				},
 				{
 					"when": "resourceLangId == dltxt",
-					"command": "Extension.dltxt.setGame",
-					"group": "dltxt.simpleTM.b"
-				},
-				{
-					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.extract_single_line",
 					"group": "dltxt.extract"
 				},
@@ -238,6 +229,10 @@
 				"dltxt.simpleTM.apiToken": {
 					"type": "string",
 					"description": "SimpleTM APIToken （登录后可以在你的主页上找到）"
+				},
+				"dltxt.simpleTM.project": {
+					"type": "string",
+					"description": "SimpleTM项目名（建议在Workspace中填写）"
 				},
 				"dltxt.core.originalTextPrefixRegex": {
 					"type": "string",
