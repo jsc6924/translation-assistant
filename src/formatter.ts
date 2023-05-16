@@ -11,7 +11,7 @@ export function getRegex() {
   }
   const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
   const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
-  const oreg = new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
+  const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`) : undefined;
   return [jreg, creg, oreg];
 }
 

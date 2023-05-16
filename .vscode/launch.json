@@ -10,7 +10,6 @@
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${execPath}",
-            "sourceMaps": true,
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ]

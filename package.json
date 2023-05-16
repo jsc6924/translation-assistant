@@ -15,7 +15,7 @@
 		"onLanguage:dltxt",
 		"onLanguage:sltxt"
 	],
-	"main": "./dist/main.js",
+	"main": "./out/extension.js",
 	"contributes": {
 		"languages": [
 			{
@@ -351,16 +351,12 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile && npm run esbuild-base -- --minify",
+		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
 		"lint": "eslint src --ext ts",
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
-		"test": "node ./out/test/runTest.js",
-		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/main.js --external:vscode --format=cjs --platform=node",
-		"esbuild": "npm run esbuild-base -- --sourcemap",
-		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-		"test-compile": "tsc -p ./"
+		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
@@ -369,7 +365,6 @@
 		"@types/vscode": "^1.47.0",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
-		"esbuild": "^0.17.19",
 		"eslint": "^6.8.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",

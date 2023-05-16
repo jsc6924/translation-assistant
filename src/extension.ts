@@ -104,16 +104,26 @@ export function activate(context: vscode.ExtensionContext) {
 		activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
 	}
 
+	let diagnosticCollection: vscode.DiagnosticCollection | undefined = undefined;
+
+	function getOrCreateDiagnosticCollection() : vscode.DiagnosticCollection {
+		if (!diagnosticCollection) {
+			diagnosticCollection = vscode.languages.createDiagnosticCollection('dltxt');
+		}
+		return diagnosticCollection;
+	}
+
+
 	function updateErrorDecorations() {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		if (!config.get('appearance.showErrorHighlight'))
 			return;
 		const game : string | undefined = context.workspaceState.get('game');
-		if (!activeEditor || !game) {
+		if (!activeEditor) {
 			return;
 		}
-		const diagnosticCollection = vscode.languages.createDiagnosticCollection('myExtension');
-
+		const diagnosticCollection = getOrCreateDiagnosticCollection();
+		diagnosticCollection.clear();
 		const diagnostics: vscode.Diagnostic[] = [];
 		const valid_regs = getRegex();
 
