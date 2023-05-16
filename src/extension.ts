@@ -104,13 +104,13 @@ export function activate(context: vscode.ExtensionContext) {
 		activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
 	}
 
-	let diagnosticCollection: vscode.DiagnosticCollection | undefined = undefined;
+	let diagnosticCollection: Map<string, vscode.DiagnosticCollection> = new Map<string, vscode.DiagnosticCollection>();
 
-	function getOrCreateDiagnosticCollection() : vscode.DiagnosticCollection {
-		if (!diagnosticCollection) {
-			diagnosticCollection = vscode.languages.createDiagnosticCollection('dltxt');
+	function getOrCreateDiagnosticCollection(file: string) : vscode.DiagnosticCollection | undefined {
+		if (!diagnosticCollection.has(file)) {
+			diagnosticCollection.set(file, vscode.languages.createDiagnosticCollection(`dltxt-${file}`));
 		}
-		return diagnosticCollection;
+		return diagnosticCollection.get(file);
 	}
 
 
@@ -121,10 +121,19 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!activeEditor) {
 			return;
 		}
-		const diagnosticCollection = getOrCreateDiagnosticCollection();
+		const fileName = activeEditor.document.fileName;
+    	if(!fileName.endsWith('.txt')) {
+			return;
+		}
+		const diagnosticCollection = getOrCreateDiagnosticCollection(fileName);
+		if (!diagnosticCollection) {
+			return;
+		}
 		diagnosticCollection.clear();
 		const diagnostics: vscode.Diagnostic[] = [];
 		const valid_regs = getRegex();
+
+		let matched_count = 0;
 
 		// Example syntax error - checking if each line starts with a specific character
 		for (let lineNumber = 0; lineNumber < activeEditor.document.lineCount; lineNumber++) {
@@ -147,10 +156,14 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.DiagnosticSeverity.Error
 				);
 				diagnostics.push(diagnostic);
+			} else {
+				matched_count++;
 			}
-			
         }
-		diagnosticCollection.set(activeEditor.document.uri, diagnostics);
+		//在错误数小于正确数时才报告错误
+		if (diagnostics.length < matched_count) {
+			diagnosticCollection.set(activeEditor.document.uri, diagnostics);
+		}
     }
 
 	

@@ -2,15 +2,25 @@ import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 import * as utils from './utils';
 
-const configInit = vscode.workspace.getConfiguration("dltxt");
-const translatedPrefixRegex = configInit.get('core.translatedTextPrefixRegex');
-const skipCharsStr = configInit.get('core.skipCharsPrefix') as string;
-let skipCharsSet =  new Set<string>();
-for (let i = 0; i < skipCharsStr.length; i++) {
-  skipCharsSet.add(skipCharsStr[i]);
+function getTranslatedPrefixRegex() {
+  const config = vscode.workspace.getConfiguration("dltxt");
+  return config.get('core.translatedTextPrefixRegex')
 }
-const suffixPatternStr = configInit.get('core.translatedTextSuffixRegex') as string;
-const translatedSuffixRegex = new RegExp(suffixPatternStr);
+function getSkipCharsSet() {
+  const config = vscode.workspace.getConfiguration("dltxt");
+  const skipCharsStr = config.get('core.skipCharsPrefix') as string;
+  let skipCharsSet =  new Set<string>();
+  for (let i = 0; i < skipCharsStr.length; i++) {
+    skipCharsSet.add(skipCharsStr[i]);
+  }
+  return skipCharsSet;
+}
+function getTranslatedSuffixRegex() {
+  const config = vscode.workspace.getConfiguration("dltxt");
+  const suffixPatternStr = config.get('core.translatedTextSuffixRegex') as string;
+  const translatedSuffixRegex = new RegExp(suffixPatternStr);
+  return translatedSuffixRegex;
+}
 const INT_MAX = Number.MAX_SAFE_INTEGER;
 
 export function getCurrentLine() {
@@ -34,11 +44,13 @@ export function nextLine() {
 			const sStart = editor.selection.start.with(editor.selection.start.line + 1, 0);
 			const sEnd = editor.selection.start.with(editor.selection.start.line + 16);
 			const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-			
-			const idx = searchTxt.search(new RegExp(`(?<=${translatedPrefixRegex}).*`,'m'))
+
+      const translatedPrefixRegex = getTranslatedPrefixRegex();
+			let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`,'m');
+			const idx = searchTxt.search(reg);
 			if (idx >= 0) {
 				let m = utils.countCharBeforeNewline(searchTxt, idx);
-				m += utils.countStartingUnimportantChar(searchTxt, idx, skipCharsSet);
+				m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
         let n = utils.countLineUntil(searchTxt, idx);
 				utils.setCursorAndScroll(editor, n, m);
 			}
@@ -85,11 +97,12 @@ export function prevLine() {
 			const sStart = editor.selection.start.with(startLine, 0);
 			const sEnd = editor.selection.start.with(endLine, 100);
 			const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
+      const translatedPrefixRegex = getTranslatedPrefixRegex();
 			const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
 			let startIdx = utils.findLastMatchIndex(pattern, searchTxt);
 			if (startIdx != -1) {
 				let m = utils.countCharBeforeNewline(searchTxt, startIdx);
-				m += utils.countStartingUnimportantChar(searchTxt, startIdx, skipCharsSet);
+				m += utils.countStartingUnimportantChar(searchTxt, startIdx, getSkipCharsSet());
         let n = utils.countLineFrom(searchTxt, startIdx);
 				utils.setCursorAndScroll(editor, -n, m);
 			}
@@ -101,6 +114,7 @@ export function moveToNextLine() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
+  const translatedPrefixRegex = getTranslatedPrefixRegex();
   const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
   const curLine = getCurrentLine();
   if (curLine.search(pattern) == -1)
@@ -112,7 +126,7 @@ export function moveToNextLine() {
   const idx = searchTxt.search(pattern);
   if (idx >= 0) {
     let m = utils.countCharBeforeNewline(searchTxt, idx);
-    m += utils.countStartingUnimportantChar(searchTxt, idx, skipCharsSet);
+    m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
     let n = utils.countLineUntil(searchTxt, idx);
     const position = editor.selection.active;
     const toMove = new vscode.Range(
@@ -133,6 +147,7 @@ export function deleteAllAfter() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
+  const translatedPrefixRegex = getTranslatedPrefixRegex();
   const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
   const position = editor.selection.active;
   const curLine = editor.document.getText(
@@ -147,7 +162,7 @@ export function deleteAllAfter() {
   const curLineAfter = curLine.substring(position.character);
 
   let iend = position.character + curLineAfter.length;
-  const suffixMatch = translatedSuffixRegex.exec(curLineAfter)
+  const suffixMatch = getTranslatedSuffixRegex().exec(curLineAfter)
   if (suffixMatch) {
     iend = position.character + suffixMatch.index;
   }
@@ -173,6 +188,7 @@ export function moveToPrevLine() {
     const sStart = editor.selection.start.with(startLine, 0);
     const sEnd = editor.selection.start.with(endLine, INT_MAX);
     const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
+    const translatedPrefixRegex = getTranslatedPrefixRegex();
     const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
     let idx = utils.findLastMatchIndex(pattern, searchTxt);
     if (idx != -1) {
@@ -182,7 +198,7 @@ export function moveToPrevLine() {
       let t = strThisLine.search(pattern);
       if (t == -1)
         return;
-      t += utils.countStartingUnimportantChar(strThisLine, t, skipCharsSet);
+      t += utils.countStartingUnimportantChar(strThisLine, t, getSkipCharsSet());
       const toMove = new vscode.Range(
         position.with(position.line, t),
         position.with(position.line, position.character))
