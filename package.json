@@ -249,6 +249,11 @@
 					"default": "(;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|((//[^\n]*\n)(?!<\\d+>))",
 					"description": "描述译文开头的正则表达式"
 				},
+				"dltxt.core.otherPrefixRegex": {
+					"type": "string",
+					"default": "",
+					"description": "描述其他合法的开头的正则表达式"
+				},
 				"dltxt.core.skipCharsPrefix": {
 					"type": "string",
 					"default": " \t　「『n\\",
@@ -263,6 +268,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "外观：显示关键词高亮"
+				},
+				"dltxt.appearance.showErrorHighlight": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示格式错误高亮"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",

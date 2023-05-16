@@ -1,19 +1,21 @@
 import * as vscode from 'vscode';
 import { toDBC, contains } from './utils';
 
-function getRegex() {
+export function getRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
   const jPreStr = config.get('core.originalTextPrefixRegex') as string;
   const cPreStr = config.get('core.translatedTextPrefixRegex') as string;
+  const oPreStr = config.get('core.otherPrefixRegex') as string;
   if (!jPreStr || !cPreStr) {
     return [undefined, undefined];
   }
   const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
   const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
-  return [jreg, creg];
+  const oreg = new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
+  return [jreg, creg, oreg];
 }
 
-interface MatchedGroups {
+export interface MatchedGroups {
   prefix: string;
   white: string;
   text: string;
@@ -89,7 +91,7 @@ function editTranslation(
   ops: Array<CallableFunction>,
   lines?: Array<number>
 ) {
-  const [jreg, creg] = getRegex();
+  const [jreg, creg, oreg] = getRegex();
   if (!jreg || !creg)
     return [];
   const result = [];

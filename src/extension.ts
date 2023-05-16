@@ -9,7 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 import {
 	formatter, copyOriginalToTranslation,
-	repeatFirstChar
+	repeatFirstChar, getRegex
 } from "./formatter";
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
@@ -38,11 +38,29 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	const errorDecorationType = vscode.window.createTextEditorDecorationType({
+		borderWidth: '1px',
+		borderStyle: 'solid',
+		isWholeLine: true,
+		overviewRulerColor: 'red',
+		overviewRulerLane: vscode.OverviewRulerLane.Right,
+		light: {
+			// this color will be used in light color themes
+			borderColor: 'darkred',
+			backgroundColor: 'lightred'
+		},
+		dark: {
+			// this color will be used in dark color themes
+			borderColor: 'lightred',
+			backgroundColor: 'darkred'
+		}
+	});
+
 	let activeEditor = vscode.window.activeTextEditor;
 	const configInit = vscode.workspace.getConfiguration("dltxt");
 	const translatedPrefixRegex = configInit.get('core.translatedTextPrefixRegex');
-	
-	function updateDecorations() {
+
+	function updateKeywordDecorations() {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		if (!config.get('appearance.showKeywordHighlight'))
 			return;
@@ -86,12 +104,59 @@ export function activate(context: vscode.ExtensionContext) {
 		activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
 	}
 
+	function updateErrorDecorations() {
+		const config = vscode.workspace.getConfiguration("dltxt");
+		if (!config.get('appearance.showErrorHighlight'))
+			return;
+		const game : string | undefined = context.workspaceState.get('game');
+		if (!activeEditor || !game) {
+			return;
+		}
+		const diagnosticCollection = vscode.languages.createDiagnosticCollection('myExtension');
+
+		const diagnostics: vscode.Diagnostic[] = [];
+		const valid_regs = getRegex();
+
+		// Example syntax error - checking if each line starts with a specific character
+		for (let lineNumber = 0; lineNumber < activeEditor.document.lineCount; lineNumber++) {
+			const lineText = activeEditor.document.lineAt(lineNumber).text;
+			if (!lineText) {
+				continue;
+			}
+			let matched = false;
+			for(let reg of valid_regs) {
+				if (reg && reg.test(lineText)) {
+					matched = true;
+					break;
+				}
+			}
+			if (!matched) {
+				const range = new vscode.Range(lineNumber, 0, lineNumber, lineText.length);
+				const diagnostic = new vscode.Diagnostic(
+					range,
+					'格式错误',
+					vscode.DiagnosticSeverity.Error
+				);
+				diagnostics.push(diagnostic);
+			}
+			
+        }
+		diagnosticCollection.set(activeEditor.document.uri, diagnostics);
+    }
+
+	
+	
+	function updateDecorations() {
+		updateKeywordDecorations();
+		updateErrorDecorations();
+	}
+
 	function triggerUpdateDecorations() {
 		if (timeout) {
 			clearTimeout(timeout);
 			timeout = undefined;
 		}
-		timeout = setTimeout(updateDecorations, 2000);
+		timeout = setTimeout(updateDecorations, 1000);
 	}
 	setInterval(() => {
 		if (vscode.window.activeTextEditor && context.workspaceState.get('game')) {
