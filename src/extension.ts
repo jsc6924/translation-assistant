@@ -88,6 +88,9 @@ export function activate(context: vscode.ExtensionContext) {
 		const keywordsDecos: vscode.DecorationOptions[] = [];
 		let match;
 		while (keywordsDecos.length < 10000 && (match = regEx.exec(text))) {
+			if (match[0].length === 0) {
+				regEx.lastIndex++;
+			}
 			const startPos = activeEditor.document.positionAt(match.index);
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
 			const decoration = {

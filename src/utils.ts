@@ -5,6 +5,9 @@ export function findLastMatchIndex(pattern: RegExp, text: string): number {
     let lastMatch: RegExpExecArray | null = null;
 		let cur = text;
 		while ((match = pattern.exec(text)) !== null) {
+      if (match[0].length == 0) {
+        pattern.lastIndex++;
+      }
       lastMatch = match;
     }
 		if (lastMatch) {
