@@ -488,25 +488,6 @@ export function activate(context: vscode.ExtensionContext) {
 		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
 	});
 
-	let searchWord1 = vscode.commands.registerCommand('Extension.dltxt.searchWord1', () => {
-		let editor = vscode.window.activeTextEditor;
-		if (!editor || !editor.selection)
-			return;
-		let word = editor.document.getText(editor.selection);
-		const config = vscode.workspace.getConfiguration("dltxt.query");
-		let base_url = config.get("search1");
-		open(`${base_url}${encodeURI(word)}`);
-	});
-	let searchWord2 = vscode.commands.registerCommand('Extension.dltxt.searchWord2', () => {
-		let editor = vscode.window.activeTextEditor;
-		if (!editor || !editor.selection)
-			return;
-		let word = editor.document.getText(editor.selection);
-		const config = vscode.workspace.getConfiguration("dltxt.query");
-		let base_url = config.get("search2");
-		open(`${base_url}${encodeURI(word)}`);
-	});
-
 	context.subscriptions.push(
 		syncDatabaseCommand,
 		newContextMenu_Insert,
@@ -521,9 +502,7 @@ export function activate(context: vscode.ExtensionContext) {
 		repeatFirst,
 		copyOriginalCmd,
 		mergeIntoDoubleLine,
-		extractSingleline,
-		searchWord1,
-		searchWord2
+		extractSingleline
 	);
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {

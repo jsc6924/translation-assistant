@@ -117,14 +117,6 @@
 				"title": "DLTXT: 复制原文到未翻译的译文行"
 			},
 			{
-				"command": "Extension.dltxt.searchWord1",
-				"title": "DLTXT: 联网搜索（引擎1）"
-			},
-			{
-				"command": "Extension.dltxt.searchWord2",
-				"title": "DLTXT: 联网搜索（引擎2）"
-			},
-			{
 				"command": "Extension.dltxt.nextWord",
 				"title": "DLTXT: 下一处翻译点"
 			},
@@ -201,16 +193,6 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.copy_original",
 					"group": "dltxt.edit"
-				},
-				{
-					"when": "editorHasSelection",
-					"command": "Extension.dltxt.searchWord1",
-					"group": "dltxt.query"
-				},
-				{
-					"when": "editorHasSelection",
-					"command": "Extension.dltxt.searchWord2",
-					"group": "dltxt.query"
 				}
 			]
 		},
@@ -331,16 +313,6 @@
 					"additionalProperties": {
 						"type": "string"
 					}
-				},
-				"dltxt.query.search1": {
-					"type": "string",
-					"default": "https://dict.hjenglish.com/jp/jc/",
-					"description": "搜索引擎1"
-				},
-				"dltxt.query.search2": {
-					"type": "string",
-					"default": "https://thesaurus.weblio.jp/content/",
-					"description": "搜索引擎2"
 				}
 			}
 		}
