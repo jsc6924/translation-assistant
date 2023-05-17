@@ -1,10 +1,10 @@
 {
 	"name": "translateassistant",
-	"displayName": "DLTXT: 双行文本翻译辅助工具",
+	"displayName": "DLTXT: 双行文本翻译解决方案",
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.16.3",
+	"version": "2.17.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -237,17 +237,17 @@
 				"dltxt.core.originalTextPrefixRegex": {
 					"type": "string",
 					"default": "(\\[[a-z0-9]+\\])|((★|○)[a-z0-9]+(★|○))|((<\\d+>)?//)",
-					"description": "描述原文开头的正则表达式"
+					"description": "原文开头标签的正则表达式"
 				},
 				"dltxt.core.translatedTextPrefixRegex": {
 					"type": "string",
 					"default": "(;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|((//[^\n]*\n)(?!<\\d+>))",
-					"description": "描述译文开头的正则表达式"
+					"description": "译文开头标签的正则表达式"
 				},
 				"dltxt.core.otherPrefixRegex": {
 					"type": "string",
 					"default": "",
-					"description": "描述其他合法的开头的正则表达式"
+					"description": "其他合法的开头的正则表达式"
 				},
 				"dltxt.core.z.skipCharsPrefix": {
 					"type": "string",
