@@ -62,10 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	function updateKeywordDecorations() {
 		const config = vscode.workspace.getConfiguration("dltxt");
-		if (!config.get('appearance.showKeywordHighlight'))
-			return;
 		const game : string | undefined = config.get("simpleTM.project") as string;
 		if (!activeEditor || !game) {
+			return;
+		}
+		if (!config.get<boolean>('appearance.showKeywordHighlight')) {
+			activeEditor.setDecorations(keywordDecorationType, []);
 			return;
 		}
 		const keywords = context.workspaceState.get(`${game}.dict`) as Array<any>;
@@ -119,8 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	function updateErrorDecorations() {
 		const config = vscode.workspace.getConfiguration("dltxt");
-		if (!config.get('appearance.showErrorHighlight'))
-			return;
+		
 		if (!activeEditor) {
 			return;
 		}
@@ -133,6 +134,10 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		diagnosticCollection.clear();
+		let bShow = config.get<boolean>('appearance.showErrorHighlight');
+		if (!bShow) {
+			return;
+		}
 		const diagnostics: vscode.Diagnostic[] = [];
 		const valid_regs = getRegex();
 

@@ -1,10 +1,10 @@
 {
 	"name": "translateassistant",
-	"displayName": "DLTxT: 双行文本翻译辅助工具",
+	"displayName": "DLTXT: 双行文本翻译辅助工具",
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.16.2",
+	"version": "2.16.3",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -249,12 +249,12 @@
 					"default": "",
 					"description": "描述其他合法的开头的正则表达式"
 				},
-				"dltxt.core.skipCharsPrefix": {
+				"dltxt.core.z.skipCharsPrefix": {
 					"type": "string",
 					"default": " \t　「『n\\",
 					"description": "移动至译文开头时可以跳过的字符（用于nextLine等）"
 				},
-				"dltxt.core.translatedTextSuffixRegex": {
+				"dltxt.core.z.translatedTextSuffixRegex": {
 					"type": "string",
 					"default": "」|』|(\\\\@)",
 					"description": "标识译文结尾的正则表达式（只用于deleteAllAfter）"
@@ -267,7 +267,7 @@
 				"dltxt.appearance.showErrorHighlight": {
 					"type": "boolean",
 					"default": true,
-					"description": "外观：显示格式错误高亮"
+					"description": "外观：显示错误"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",

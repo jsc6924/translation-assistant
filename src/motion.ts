@@ -8,7 +8,7 @@ function getTranslatedPrefixRegex() {
 }
 function getSkipCharsSet() {
   const config = vscode.workspace.getConfiguration("dltxt");
-  const skipCharsStr = config.get('core.skipCharsPrefix') as string;
+  const skipCharsStr = config.get('core.z.skipCharsPrefix') as string;
   let skipCharsSet =  new Set<string>();
   for (let i = 0; i < skipCharsStr.length; i++) {
     skipCharsSet.add(skipCharsStr[i]);
@@ -17,7 +17,7 @@ function getSkipCharsSet() {
 }
 function getTranslatedSuffixRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
-  const suffixPatternStr = config.get('core.translatedTextSuffixRegex') as string;
+  const suffixPatternStr = config.get('core.z.translatedTextSuffixRegex') as string;
   const translatedSuffixRegex = new RegExp(suffixPatternStr);
   return translatedSuffixRegex;
 }
