@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.17.2",
+	"version": "2.18.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -118,11 +118,15 @@
 			},
 			{
 				"command": "Extension.dltxt.nextWord",
-				"title": "DLTXT: 下一处翻译点"
+				"title": "DLTXT: 下一个字"
 			},
 			{
 				"command": "Extension.dltxt.prevWord",
-				"title": "DLTXT: 上一处翻译点"
+				"title": "DLTXT: 上一个字"
+			},
+			{
+				"command": "Extension.dltxt.convertToEncoding",
+				"title": "DLTXT: 批量转换文件编码格式"
 			}
 		],
 		"keybindings": [
@@ -345,6 +349,7 @@
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
+		"iconv-lite": "^0.6.3",
 		"open": "^7.4.2",
 		"request": "^2.88.2"
 	},
