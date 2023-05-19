@@ -64,11 +64,11 @@ DLTXT默认支持以下格式（用横线隔开）
 
 ## 语法高亮
   区分人名栏，原文，译文。
-  ![img1](imgs/1.png)
+  ![img1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/1.png?raw=true)
 
 ## 错误检测
   检测被不小心删除的标签
-  ![img2](imgs/2.png)
+  ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/2.png?raw=true)
 
 ## 键盘快捷键
 在翻译文本时可使用键盘快捷键代替鼠标操作（注：可以在vscode设置中更改默认快捷键绑定）
@@ -81,7 +81,7 @@ DLTXT默认支持以下格式（用横线隔开）
   - `Alt + ]` 相当于右箭头，当遇到省略号时移动两次
   - `Alt + [` 相当于左箭头，当遇到省略号时移动两次
 
-![demo](imgs/demo.gif)
+![demo](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo.gif?raw=true)
 ## 批量修改
 
 #### 文本格式化
@@ -97,7 +97,7 @@ DLTXT默认支持以下格式（用横线隔开）
   - 去除对话句末的句号　（`。」-> 」`）
   - 自定义翻译表（例如自动翻译人名）
 
-![demo-format](imgs/demo-format.gif)
+![demo-format](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo-format.gif?raw=true)
 
 注1: 可自定义想要统一成的符号
 
@@ -109,7 +109,7 @@ DLTXT默认支持以下格式（用横线隔开）
   3. 在右半窗口会显示提取的译文。完成修改之后，在右键菜单中选择 `应用译文至双行文本`，完成
   4. 注：上一步操作可使用`Ctrl + Z`撤销
 
-![demo-extract](imgs/demo-extract.gif)
+![demo-extract](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo-extract.gif?raw=true)
 
 #### 复制原文到未翻译的译文行
 在右键菜单或命令框中选择“复制原文到未翻译的译文行”即可
@@ -119,6 +119,7 @@ DLTXT默认支持以下格式（用横线隔开）
 可以选择以下两个范围的文本：
 1. 当前窗口已打开的所有文件
 2. 当前窗口打开的文件夹内的所有文件（包括所有前缀不带'.'的子文件夹）
+
 **注意第二种范围转换后不可撤销，只能重新转换。转换之前请先备份。如果转换过程中出现任何问题导致文本丢失，本插件作者概不负责。**
 
 选好范围以后根据提示选择文本原来的编码和想要转换到的编码就行了。任何一步不选择都会取消操作。
@@ -131,7 +132,7 @@ DLTXT默认支持以下格式（用横线隔开）
   - 该游戏所有出现的专有名词都会显示高亮
   - 把鼠标放到高亮的专有名词上可以查看其对应翻译
 
-![SimpleTM](imgs/simpletm.png)
+![SimpleTM](https://github.com/jsc6924/translation-assistant/blob/master/imgs/simpletm.png?raw=true)
 
 #### 具体使用方法
 
