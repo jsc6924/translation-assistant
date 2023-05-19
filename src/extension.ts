@@ -12,6 +12,7 @@ import {
 	repeatFirstChar, getRegex
 } from "./formatter";
 import { batchConvertFilesEncoding } from './encoding';
+import { extract } from './dlbuild';
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -492,6 +493,10 @@ export function activate(context: vscode.ExtensionContext) {
 	let convertEncoding = vscode.commands.registerCommand('Extension.dltxt.convertToEncoding', 
 		batchConvertFilesEncoding);
 
+	let extractCmd = vscode.commands.registerCommand('Extension.dltxt.dlbuild.extract', () => {
+		extract();
+	});
+
 
 	context.subscriptions.push(
 		syncDatabaseCommand,
@@ -508,7 +513,8 @@ export function activate(context: vscode.ExtensionContext) {
 		copyOriginalCmd,
 		mergeIntoDoubleLine,
 		extractSingleline,
-		convertEncoding
+		convertEncoding,
+		extractCmd
 	);
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {

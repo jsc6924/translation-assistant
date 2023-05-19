@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.18.2",
+	"version": "2.19.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -74,43 +74,53 @@
 			},
 			{
 				"command": "Extension.dltxt.context_menu_insert",
-				"title": "DLTXT: 添加词条"
+				"title": "DLTXT: 添加词条",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.context_menu_update",
-				"title": "DLTXT: 更新词条"
+				"title": "DLTXT: 更新词条",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.extract_single_line",
-				"title": "DLTXT: 提取译文"
+				"title": "DLTXT: 提取译文",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.merge_into_double_line",
-				"title": "DLTXT: 应用译文至双行文本"
+				"title": "DLTXT: 应用译文至双行文本",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.next",
-				"title": "DLTXT: 移动到下一行翻译"
+				"title": "DLTXT: 移动到下一行翻译",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.prev",
-				"title": "DLTXT: 移动到上一行翻译"
+				"title": "DLTXT: 移动到上一行翻译",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.moveToNextLine",
-				"title": "DLTXT: 将光标后剪切到下一行翻译"
+				"title": "DLTXT: 将光标后剪切到下一行翻译",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.moveToPrevLine",
-				"title": "DLTXT: 将光标前剪切到上一行翻译"
+				"title": "DLTXT: 将光标前剪切到上一行翻译",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.deleteAllAfter",
-				"title": "DLTXT: 将光标后的翻译全部删除"
+				"title": "DLTXT: 将光标后的翻译全部删除",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.repeatFirst",
-				"title": "DLTXT: 重复当前句的第一个字"
+				"title": "DLTXT: 重复当前句的第一个字",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.copy_original",
@@ -118,15 +128,21 @@
 			},
 			{
 				"command": "Extension.dltxt.nextWord",
-				"title": "DLTXT: 下一个字"
+				"title": "DLTXT: 下一个字",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.prevWord",
-				"title": "DLTXT: 上一个字"
+				"title": "DLTXT: 上一个字",
+				"when": "false"
 			},
 			{
 				"command": "Extension.dltxt.convertToEncoding",
 				"title": "DLTXT: 批量转换文件编码格式"
+			},
+			{
+				"command": "Extension.dltxt.dlbuild.extract",
+				"title": "DLTXT: 将脚本提取为双行文本"
 			}
 		],
 		"keybindings": [
@@ -335,6 +351,7 @@
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
+		"@types/js-yaml": "^4.0.5",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
 		"@types/vscode": "^1.47.0",
@@ -350,6 +367,7 @@
 	"dependencies": {
 		"axios": "^0.19.2",
 		"iconv-lite": "^0.6.3",
+		"js-yaml": "^4.1.0",
 		"open": "^7.4.2",
 		"request": "^2.88.2"
 	},

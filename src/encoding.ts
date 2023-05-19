@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from "fs";
-const iconv = require('iconv-lite');
+import * as iconv from "iconv-lite";
 
 
 export async function batchConvertFilesEncoding() {
