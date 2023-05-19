@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.19.3",
+	"version": "2.19.4",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -192,6 +192,20 @@
 			}
 		],
 		"menus": {
+			"explorer/context": [
+				{
+					"command": "Extension.dltxt.convertToEncoding",
+					"group": "navigation"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.extract",
+					"group": "navigation"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.pack",
+					"group": "navigation"
+				}
+			],
 			"editor/context": [
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
