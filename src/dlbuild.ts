@@ -5,6 +5,7 @@ import * as yaml from 'js-yaml';
 import * as path from 'path';
 import * as iconv from "iconv-lite";
 
+const channel = vscode.window.createOutputChannel("DLTXT");
 
 // Read YAML from a file
 function readYamlFile(filePath: string): any {
@@ -45,35 +46,28 @@ export function extract(): void {
     const files = fs.readdirSync(inputPath);
     const ext = yamlData.extract.input.ext;
 
+    const total = files.length;
+    let success = 0;
     for (const file of files) {
         if (path.extname(file) !== ext) {
             continue;
         }
         const filePath = path.join(inputPath, file);
         const item = vscode.Uri.file(filePath);
-        processExtract(yamlData, item, outPath, labelledPath);
-    }
-    vscode.window.showInformationMessage(`提取完成`);
-}
-
-function testReplace() {
-    let str = '@Talk name=叶 @Talk name=叶';
-    const regex = /@Talk .*?name=(\S+)/g;
-    const groupNumber = 1; // Variable representing the group number
-    const replacement = '[[label]]'
-
-    let match;
-    while (match = regex.exec(str)) {
-        if (match[groupNumber]) {
-            console.log(match)
-            const startIndex = match.index + match[0].indexOf(match[groupNumber]);
-            const endIndex = startIndex + match[groupNumber].length;
-            str = str.slice(0, startIndex) + replacement + str.slice(endIndex);
-            regex.lastIndex = regex.lastIndex - match[groupNumber].length + replacement.length;
+        try {
+            if (processExtract(yamlData, item, outPath, labelledPath)) {
+                success++;
+            }
+        } catch (e) {
+            channel.appendLine(`提取${file}时出错: ${e}`);
         }
     }
-    return match;
+    vscode.window.showInformationMessage(`提取完成：共${total}个文件，成功${success}个文件`);
+    if (success !== total) {
+        channel.show(true);
+    }
 }
+
 
 function addNewLine(str: string) {
     if (str.length == 0 || str[str.length - 1] !== '\r') {
@@ -89,11 +83,11 @@ function addNewLines(str: string, k: number) {
 }
 
 
-function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labelledPath: string): void {
+function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labelledPath: string): boolean {
 
     const stem = getStemFromUri(item);
     if (!stem) {
-        return;
+        return false;
     }
 
     const srcEncoding: string = yamlData.extract.input.encoding;
@@ -151,7 +145,7 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
     fs.writeFileSync(fOut, encodedOutBuffer);
     const encodedLabelledBuffer = iconv.encode(fLabelStr, dstEncoding);
     fs.writeFileSync(fLabel, encodedLabelledBuffer);
-
+    return true
 }
 
 export function pack(): void {
@@ -176,22 +170,35 @@ export function pack(): void {
 
     const files = fs.readdirSync(transPath);
 
+    const total = files.length;
+    let success = 0;
+
     for (const file of files) {
         if (path.extname(file) !== '.txt') {
             continue;
         }
         const filePath = path.join(transPath, file);
         const item = vscode.Uri.file(filePath);
-        processPack(yamlData, item, labelledPath, replacedPath);
+        try{
+            if(processPack(yamlData, item, labelledPath, replacedPath)) {
+                success++;
+            }
+        } 
+        catch(e) {
+            channel.appendLine(`替换${file}时出错: ${e}`);
+        }
     }
-    vscode.window.showInformationMessage(`替换完成`);
+    vscode.window.showInformationMessage(`替换完成：共${total}个文件，成功${success}个文件`);
+    if (success !== total) {
+        channel.show(true);
+    }
 }
 
-function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, replacedPath: string): void {
-    const stem = getStemFromUri(item);
+function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, replacedPath: string): boolean {
+    const stem = getStemFromUri(item)
     if (!stem) {
-        console.error('Invalid filename:', item.fsPath);
-        return;
+        channel.appendLine(`Invalid filename: ${item.fsPath}`);
+        return false;
     }
     const ext = yamlData.extract.input.ext;
     const labeledItem = path.join(labeledPath, `${stem}.label`);
@@ -213,8 +220,8 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
     let i = 0;
     let j = 0;
 
-    const patternTag = /\[\[([a-z]*\d+)\]\]/
-    const patternKeyValue = /☆([a-z]*\d+)☆(.*)/;
+    const patternTag = /\[\[([a-zA-Z]*\d+)\]\]/
+    const patternKeyValue = /☆([a-zA-Z]*\d+)☆(.*)/;
 
     try {
         while (i < lbLines.length && j < trLines.length) {
@@ -228,6 +235,9 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
                         break;
                     }
                     j++;
+                }
+                if (j == trLines.length) {
+                    throw new Error(`Unable to find tag: ${tag}`)
                 }
 
                 const mkv = patternKeyValue.exec(trLines[j]);
@@ -248,11 +258,13 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
             i++;
         }
     } catch (e) {
-        console.error(e);
-        console.error(`item=${item.fsPath}`);
-        console.error(`i=${i}, j=${j}`);
+        channel.appendLine(`item=${item.fsPath}`);
+        channel.appendLine(`labeled_line_num=${i}, translated_line_num=${j}`);
+        channel.appendLine(`${e}`);
+        return false;
     }
 
     const encodedLabelledBuffer = iconv.encode(fReplacedStr, dstEncoding);
     fs.writeFileSync(fReplaced, encodedLabelledBuffer);
+    return true
 }

@@ -142,11 +142,11 @@
 			},
 			{
 				"command": "Extension.dltxt.dlbuild.extract",
-				"title": "DLTXT: 将脚本提取为双行文本"
+				"title": "DLTXT: 将脚本提取为双行文本 (dlbuild.extract)"
 			},
 			{
 				"command": "Extension.dltxt.dlbuild.pack",
-				"title": "DLTXT: 用双行文本的翻译替换脚本中的原文"
+				"title": "DLTXT: 用双行文本的翻译替换脚本中的原文 (dlbuild.pack)"
 			}
 		],
 		"keybindings": [
