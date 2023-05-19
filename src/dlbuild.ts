@@ -64,7 +64,10 @@ export async function extract(context: vscode.ExtensionContext) {
     fs.mkdirSync(labelledPath, { recursive: true });
 
     const files = fs.readdirSync(inputPath);
-    const ext = yamlData.extract.input.ext;
+    let ext = yamlData.extract.input.ext;
+    if (ext && ext[0] !== '.') {
+        ext = '.' + ext;
+    }
 
     const total = files.length;
     let success = 0;
