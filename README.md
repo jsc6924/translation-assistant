@@ -169,11 +169,11 @@ extract: #配置提取操作
   input:
     path: './input/'   #游戏原脚本所在的文件夹
     encoding: 'shift-jis'   #游戏脚本使用的编码格式
-    ext: 'ks'              #游戏脚本的后缀名
+    ext: 'ks'               #游戏脚本的后缀名
     digits: 5               #双行文本标签中数字的长度
     items:                  #配置想提取的文本，程序会一行行读取脚本并使用正则表达式匹配
       - capture: '@Talk .*?name=(\S+)'             #描述要提取的文本
-        tag: 'nme'          #双行文本中标签的前缀
+        tag: 'nme'                                 #双行文本中标签的前缀
         group: 1                                   #注明要提取capture中的哪个group
       - capture: '@scene .*?text=(\S+)'
         tag: 'scn'
