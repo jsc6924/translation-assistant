@@ -22,17 +22,37 @@ function getStemFromUri(uri: vscode.Uri): string {
 const RelativeYAMLPath = 'dlbuild.yaml';
 const RelativeLabelledPath = '.dltxt/dlbuild-labelled/'
 
-export function extract(): void {
+async function checkYaml(rootDir: string, yamlPath: string, context: vscode.ExtensionContext) {
+    if (!fs.existsSync(yamlPath)) {
+        const userSelect = await vscode.window.showQuickPick(['复制默认配置文件后继续', '复制配置文件后取消操作', '取消操作'], {
+            placeHolder: '当前目录下没有找到dlbuild.yaml，请选择一个选项继续'
+        });
+        if (userSelect == '取消操作') {
+            return false;
+        }
+        // Get the path to the source file within your extension's package
+        const sourceFilePath = path.join(context.extensionPath, 'templates/dlbuild.yaml')
+        const destinationFilePath = path.join(rootDir, 'dlbuild.yaml')
+        fs.copyFileSync(sourceFilePath, destinationFilePath);
+        vscode.window.showInformationMessage('已在当前目录下生成dlbuild.yaml');
+        if (userSelect == '复制配置文件后取消操作') {
+            return false;
+        }
+    }
+    return true;
+}
+
+export async function extract(context: vscode.ExtensionContext) {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('No workspace folder found.');
+        vscode.window.showErrorMessage('vscode没有打开目录');
         return;
     }
     const rootDir = folders[0].uri.fsPath;
     const yamlPath = path.join(rootDir, RelativeYAMLPath);
 
-    if (!fs.existsSync(yamlPath)) {
-        vscode.window.showErrorMessage('当前目录下未找到dlbuild.yaml');
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
         return;
     }
     const yamlData = readYamlFile(yamlPath);
@@ -148,10 +168,10 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
     return true
 }
 
-export function pack(): void {
+export async function pack(context: vscode.ExtensionContext) {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('No workspace folder found.');
+        vscode.window.showErrorMessage('vscode没有打开目录');
         return;
     }
     const rootDir = folders[0].uri.fsPath;

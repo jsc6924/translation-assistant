@@ -17,6 +17,7 @@
 - [键盘快捷键](#键盘快捷键)
 - [批量修改](#批量修改)
 - [专有名词翻译同步](#专有名词翻译同步)
+- [游戏脚本相关操作](#游戏脚本相关操作)
 - [其他](#其他)
 
 ## 格式支持
@@ -156,6 +157,56 @@ DLTXT默认支持以下格式（用横线隔开）
 - 读写：用户可以读取词条、更新词条、增加新词条
 - 管理员：在读写权限的基础上，用户还能改变当前项目中其他用户的权限，并可以删除该项目
 ----
+
+## 游戏脚本相关操作
+
+这个功能可以从游戏脚本中提取原文并生成双行文本，在翻译完成后可以用译文将脚本中的原文替换。
+
+使用这个功能需要在当前目录下定义一个配置文件`dlbuild.yaml`，格式如下
+```yaml
+extract: #配置提取操作
+  input:
+    path: './input/'   #游戏原脚本所在的文件夹
+    encoding: 'shift-jis'   #游戏脚本使用的编码格式
+    ext: '.ks'              #游戏脚本的后缀名
+    digits: 5               #双行文本标签中数字的长度
+    items:                  #配置想提取的文本，程序会一行行读取脚本并使用正则表达式匹配
+      - capture: '@Talk .*?name=(\S+)'             #描述要提取的文本
+        tag: 'nme'          #双行文本中标签的前缀
+        group: 1                                   #注明要提取capture中的哪个group
+      - capture: '@scene .*?text=(\S+)'
+        tag: 'scn'
+        group: 1
+      - capture: '@AddSelect .*?text=(\S+)'
+        tag: 'slt'
+        group: 1
+      - capture: '^\s*([^@\s].*)'
+        tag: 'txt'
+        group: 1
+  output:
+    path: './output/'    #提取出来的双行文本会保存到这里
+    encoding: 'utf-16le' #双行文本使用的编码格式
+
+pack: #配置替换操作
+  input:
+    path: './output/'  #翻译好的双行文本所在的文件夹，这个文件夹不需要与extract.output.path一致
+    encoding: 'utf-16le'
+  output:
+    path: './replaced/' #替换好的脚本会保存到这里
+    encoding: 'utf-16le'
+```
+以上例子描述了如何从krkr引擎的脚本中提取双行文本。
+
+其中`encoding`是iconv-lite库中支持的encoding，常用的有
+```yaml
+['utf8', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk']
+```
+
+#### 从游戏脚本中提取原文并生成双行文本
+`Ctrl+Alt+P`: 搜索dlbuild，选择`将脚本提取为双行文本`即可
+
+#### 用双行文本的翻译替换脚本中的原文 
+`Ctrl+Alt+P`: 搜索dlbuild，选择`用双行文本的翻译替换脚本中的原文 `即可
 
 ## 其他
 #### 如何设置插件

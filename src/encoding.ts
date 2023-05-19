@@ -39,7 +39,7 @@ export async function batchConvertFilesEncoding() {
                         .map(document => document.uri);
     }
     // List of supported encodings
-    const encodings = ['utf8', 'utf8-bom', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk'];
+    const encodings = ['utf8', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk'];
     // Show encoding selection menu
     const selectedSrcEncoding = await vscode.window.showQuickPick(encodings, {
         placeHolder: '选择文件原来的编码格式',

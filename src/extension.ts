@@ -494,11 +494,11 @@ export function activate(context: vscode.ExtensionContext) {
 		batchConvertFilesEncoding);
 
 	let extractCmd = vscode.commands.registerCommand('Extension.dltxt.dlbuild.extract', () => {
-		extract();
+		extract(context);
 	});
 
 	let packCmd = vscode.commands.registerCommand('Extension.dltxt.dlbuild.pack', () => {
-		pack();
+		pack(context);
 	});
 
 
