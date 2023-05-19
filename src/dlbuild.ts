@@ -150,7 +150,7 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
                     fOutStr += addNewLines(`☆${tag}☆${text}`, 3);
                     const startIndex = match.index + match[0].indexOf(match[groupId]);
                     const endIndex = startIndex + match[groupId].length;
-                    const replacement = `[[${tag}]]`;
+                    const replacement = `[#[${tag}]#]`;
                     lline = lline.slice(0, startIndex) + replacement + lline.slice(endIndex);
 
                     pattern.lastIndex = pattern.lastIndex - match[groupId].length + replacement.length;
@@ -243,7 +243,7 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
     let i = 0;
     let j = 0;
 
-    const patternTag = /\[\[([a-zA-Z]*\d+)\]\]/
+    const patternTag = /\[#\[([a-zA-Z]*\d+)\]#\]/
     const patternKeyValue = /☆([a-zA-Z]*\d+)☆(.*)/;
 
     try {
