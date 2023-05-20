@@ -172,11 +172,11 @@ extract: #配置提取操作
   input:
     path: './input/'   #游戏原脚本所在的文件夹
     encoding: 'shift-jis'   #游戏脚本使用的编码格式
-    ext: 'ks'               #游戏脚本的后缀名
+    ext: 'ks'              #游戏脚本的后缀名，空字符串表示全部匹配
     digits: 5               #双行文本标签中数字的长度
     items:                  #配置想提取的文本，程序会一行行读取脚本并使用正则表达式匹配
       - capture: '@Talk .*?name=(\S+)'             #描述要提取的文本
-        tag: 'nme'                                 #双行文本中标签的前缀
+        tag: 'nme'          #双行文本中标签的前缀
         group: 1                                   #注明要提取capture中的哪个group
       - capture: '@scene .*?text=(\S+)'
         tag: 'scn'
@@ -189,23 +189,21 @@ extract: #配置提取操作
         group: 1
   output:
     path: './output/'    #提取出来的双行文本会保存到这里
-    encoding: 'utf16le' #双行文本使用的编码格式
+    encoding: 'utf16le-bom' #双行文本使用的编码格式
 
 pack: #配置替换操作
   input:
     path: './output/'  #翻译好的双行文本所在的文件夹，这个文件夹不需要与extract.output.path一致
-    encoding: 'utf16le'
+    encoding: 'utf16le-bom'
   output:
     path: './replaced/' #替换好的脚本会保存到这里
-    encoding: 'utf16le'
+    encoding: 'utf16le-bom'
+
+#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
 ```
 以上例子描述了如何从krkr引擎的脚本中提取双行文本。
 
-其中`encoding`是iconv-lite库中支持的encoding，常用的有
-```yaml
-['utf8', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk']
-```
-其中utf16le是带签名的，其他不带签名
+其中`encoding`除了以上列举的还包括iconv-lite库中支持的所有encoding。有'-bom'后缀的表示是带签名的。只在output.encoding中区分签名，在input.encoding中不区分有没有签名。
 
 #### 从游戏脚本中提取原文并生成双行文本（dlbuild.extract）
 `Ctrl+Alt+P`: 搜索dlbuild，选择`将脚本提取为双行文本`即可（在左侧explorer右键菜单中也能找到）
