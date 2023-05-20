@@ -19,12 +19,14 @@ extract: #配置提取操作
         group: 1
   output:
     path: './output/'    #提取出来的双行文本会保存到这里
-    encoding: 'utf16le' #双行文本使用的编码格式
+    encoding: 'utf16le-bom' #双行文本使用的编码格式
 
 pack: #配置替换操作
   input:
     path: './output/'  #翻译好的双行文本所在的文件夹，这个文件夹不需要与extract.output.path一致
-    encoding: 'utf16le'
+    encoding: 'utf16le-bom'
   output:
     path: './replaced/' #替换好的脚本会保存到这里
-    encoding: 'utf16le'
+    encoding: 'utf16le-bom'
+
+#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];

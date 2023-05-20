@@ -4,12 +4,9 @@ import { Uri } from 'vscode';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
 import * as iconv from "iconv-lite";
+import { encodeWithBom } from './encoding';
 
 const channel = vscode.window.createOutputChannel("DLTXT");
-const optionsMap: { [key: string]: any } = {
-    'utf16le' : { addBOM: true },
-    'utf-16le' : { addBOM: true }
-};
 
 // Read YAML from a file
 function readYamlFile(filePath: string): any {
@@ -117,7 +114,7 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
         return false;
     }
 
-    const srcEncoding: string = yamlData.extract.input.encoding;
+    const srcEncoding: string = yamlData.extract.input.encoding.replace(/-bom/, '');
     const dstEncoding: string = yamlData.extract.output.encoding;
 
     const outItem = Uri.joinPath(Uri.file(outPath), `${stem}.txt`);
@@ -169,9 +166,9 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
         fLabelStr += addNewLine(lline);
     });
     
-    const encodedOutBuffer = iconv.encode(fOutStr, dstEncoding, optionsMap[dstEncoding]);
+    const encodedOutBuffer = encodeWithBom(fOutStr, dstEncoding);
     fs.writeFileSync(fOut, encodedOutBuffer);
-    const encodedLabelledBuffer = iconv.encode(fLabelStr, dstEncoding, optionsMap[dstEncoding]);
+    const encodedLabelledBuffer = encodeWithBom(fLabelStr, dstEncoding);
     fs.writeFileSync(fLabel, encodedLabelledBuffer);
     return true;
 }
@@ -232,7 +229,7 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
     const labeledItem = path.join(labeledPath, `${stem}.label`);
     const replacedItem = path.join(replacedPath, `${stem}.${ext}`);
 
-    const srcEncoding: string = yamlData.pack.input.encoding;
+    const srcEncoding: string = yamlData.pack.input.encoding.replace(/-bom/, '');
     const dstEncoding: string = yamlData.pack.output.encoding;
 
     const fTransBuffer = fs.readFileSync(item.fsPath);
@@ -292,7 +289,7 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
         return false;
     }
 
-    const encodedLabelledBuffer = iconv.encode(fReplacedStr, dstEncoding, optionsMap[dstEncoding]);
+    const encodedLabelledBuffer = encodeWithBom(fReplacedStr, dstEncoding);
     fs.writeFileSync(fReplaced, encodedLabelledBuffer);
     return true
 }
