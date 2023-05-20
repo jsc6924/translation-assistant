@@ -202,6 +202,7 @@ pack: #配置替换操作
 ```yaml
 ['utf8', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk']
 ```
+其中utf16le是带签名的，其他不带签名
 
 #### 从游戏脚本中提取原文并生成双行文本（dlbuild.extract）
 `Ctrl+Alt+P`: 搜索dlbuild，选择`将脚本提取为双行文本`即可（在左侧explorer右键菜单中也能找到）
