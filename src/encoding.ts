@@ -2,6 +2,10 @@ import * as vscode from 'vscode';
 import * as fs from "fs";
 import * as iconv from "iconv-lite";
 
+const optionsMap: { [key: string]: any } = {
+    'utf16le' : { addBOM: true },
+    'utf-16le' : { addBOM: true }
+};
 
 export async function batchConvertFilesEncoding() {
     
@@ -67,7 +71,7 @@ export async function batchConvertFilesEncoding() {
             // Get the content of the document
             const rawContent = fs.readFileSync(uri.fsPath);
             const content = iconv.decode(rawContent, selectedSrcEncoding);
-            const encodedContent = iconv.encode(content, selectedDstEncoding);
+            let encodedContent = iconv.encode(content, selectedDstEncoding, optionsMap[selectedDstEncoding]);
             // Save the converted content back to the document
             await vscode.workspace.fs.writeFile(uri, encodedContent);
             success++;

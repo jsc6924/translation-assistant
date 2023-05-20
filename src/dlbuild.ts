@@ -6,6 +6,10 @@ import * as path from 'path';
 import * as iconv from "iconv-lite";
 
 const channel = vscode.window.createOutputChannel("DLTXT");
+const optionsMap: { [key: string]: any } = {
+    'utf16le' : { addBOM: true },
+    'utf-16le' : { addBOM: true }
+};
 
 // Read YAML from a file
 function readYamlFile(filePath: string): any {
@@ -164,11 +168,12 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
         }
         fLabelStr += addNewLine(lline);
     });
-    const encodedOutBuffer = iconv.encode(fOutStr, dstEncoding);
+    
+    const encodedOutBuffer = iconv.encode(fOutStr, dstEncoding, optionsMap[dstEncoding]);
     fs.writeFileSync(fOut, encodedOutBuffer);
-    const encodedLabelledBuffer = iconv.encode(fLabelStr, dstEncoding);
+    const encodedLabelledBuffer = iconv.encode(fLabelStr, dstEncoding, optionsMap[dstEncoding]);
     fs.writeFileSync(fLabel, encodedLabelledBuffer);
-    return true
+    return true;
 }
 
 export async function pack(context: vscode.ExtensionContext) {
@@ -287,7 +292,7 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
         return false;
     }
 
-    const encodedLabelledBuffer = iconv.encode(fReplacedStr, dstEncoding);
+    const encodedLabelledBuffer = iconv.encode(fReplacedStr, dstEncoding, optionsMap[dstEncoding]);
     fs.writeFileSync(fReplaced, encodedLabelledBuffer);
     return true
 }
