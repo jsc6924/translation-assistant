@@ -73,7 +73,7 @@ export async function extract(context: vscode.ExtensionContext) {
     const total = files.length;
     let success = 0;
     for (const file of files) {
-        if (path.extname(file) !== ext) {
+        if (ext && path.extname(file) !== ext) {
             continue;
         }
         const filePath = path.join(inputPath, file);
@@ -109,9 +109,13 @@ function addNewLines(str: string, k: number) {
 
 function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labelledPath: string): boolean {
 
-    const stem = getStemFromUri(item);
+    let stem = getStemFromUri(item);
     if (!stem) {
         return false;
+    }
+    if(!yamlData.extract.input.ext) {
+        const { base } = path.parse(item.fsPath);
+        stem = base;
     }
 
     const srcEncoding: string = yamlData.extract.input.encoding.replace(/-bom/, '');
@@ -227,7 +231,7 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
     }
     const ext = yamlData.extract.input.ext;
     const labeledItem = path.join(labeledPath, `${stem}.label`);
-    const replacedItem = path.join(replacedPath, `${stem}.${ext}`);
+    const replacedItem = ext ? path.join(replacedPath, `${stem}.${ext}`) : path.join(replacedPath, stem);
 
     const srcEncoding: string = yamlData.pack.input.encoding.replace(/-bom/, '');
     const dstEncoding: string = yamlData.pack.output.encoding;
