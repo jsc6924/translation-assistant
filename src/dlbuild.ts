@@ -70,12 +70,13 @@ export async function extract(context: vscode.ExtensionContext) {
         ext = '.' + ext;
     }
 
-    const total = files.length;
+    let total = 0;
     let success = 0;
     for (const file of files) {
         if (ext && path.extname(file) !== ext) {
             continue;
         }
+        total++;
         const filePath = path.join(inputPath, file);
         const item = vscode.Uri.file(filePath);
         try {
@@ -199,13 +200,14 @@ export async function pack(context: vscode.ExtensionContext) {
 
     const files = fs.readdirSync(transPath);
 
-    const total = files.length;
+    let total = 0;
     let success = 0;
 
     for (const file of files) {
         if (path.extname(file) !== '.txt') {
             continue;
         }
+        total++;
         const filePath = path.join(transPath, file);
         const item = vscode.Uri.file(filePath);
         try{
