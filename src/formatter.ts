@@ -267,7 +267,7 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   const rep = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
     let i = curChar - cgrps?.prefix.length - cgrps?.white.length;
-    while (i > 0 && i - 1 < text.length && text[i - 1].match(/[^，。、？！…—；：“”‘’~～「」「」\[\]\(\)（）【】]/)) {
+    while (i > 0 && i - 1 < text.length && text[i - 1].match(/[^，。、？！…—；：“”‘’~～\s　「」「」\[\]\(\)（）【】]/)) {
       i--;
     }
     if (i < text.length) {
