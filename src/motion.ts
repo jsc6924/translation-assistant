@@ -131,7 +131,7 @@ export function moveToNextLine() {
     const position = editor.selection.active;
     const toMove = new vscode.Range(
       position.with(position.line, position.character),
-      position.with(position.line, INT_MAX))
+      position.with(position.line, INT_MAX));
     const toInsert = new vscode.Position(
       position.line + n, m
     );
@@ -140,6 +140,10 @@ export function moveToNextLine() {
       editbuilder.delete(toMove);
       editbuilder.insert(toInsert, sline);
     });
+    const config = vscode.workspace.getConfiguration("dltxt");
+    if(config.get('motion.moveToNextLine.moveCursor') as boolean) {
+      utils.setCursorAndScroll(editor, n, m + sline.length);
+    }
   }
 }
 

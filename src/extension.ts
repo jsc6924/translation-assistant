@@ -23,6 +23,17 @@ import { extract, pack } from './dlbuild';
 export function activate(context: vscode.ExtensionContext) {
 	let timeout: NodeJS.Timer | undefined = undefined;
 
+	let copyToClipboardCmd = vscode.commands.registerCommand('Extension.dltxt.copyToClipboard', (arg) => {
+        vscode.env.clipboard.writeText(arg.text).then(
+			() => {
+				vscode.window.showInformationMessage(`已复制`);
+			},
+			(reason) => {
+				vscode.window.showInformationMessage(`复制失败: ${reason}`);
+			}
+		)
+    });
+
 	const keywordDecorationType = vscode.window.createTextEditorDecorationType({
 		borderWidth: '1px',
 		borderStyle: 'solid',
@@ -97,9 +108,14 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			const startPos = activeEditor.document.positionAt(match.index);
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
+			const word = dict.get(match[0])?.replace(/"/g, '');
+
+			const linkCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${word}"})`;
+			const hoverMarkdown = new vscode.MarkdownString(`${word} ${linkCommand}`);
+			hoverMarkdown.isTrusted = true;
 			const decoration = {
 				range: new vscode.Range(startPos, endPos),
-				hoverMessage: dict.get(match[0]),
+				hoverMessage: hoverMarkdown,
 				renderOptions: {
 					// after: {
 					// 	contentText: ""
@@ -109,6 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
 			keywordsDecos.push(decoration);
 		}
 		activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
+	
 	}
 
 	let diagnosticCollection: Map<string, vscode.DiagnosticCollection> = new Map<string, vscode.DiagnosticCollection>();
@@ -503,6 +520,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 	context.subscriptions.push(
+		copyToClipboardCmd,
 		syncDatabaseCommand,
 		newContextMenu_Insert,
 		newContextMenu_Update,
