@@ -456,6 +456,36 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
+	// Register a tab close event listener
+	const removeTempListerner = vscode.workspace.onDidCloseTextDocument((document) => {
+		const isDltxtSingleLineFile = (filePath: string): boolean => {
+			return filePath.includes('.dltxt') && filePath.endsWith('.sl');
+		}
+
+		if (!vscode.workspace.textDocuments.includes(document)
+			&& isDltxtSingleLineFile(document.uri.fsPath)) {
+			// Delete the document file
+			const filePath = document.uri.fsPath;
+			const {dir, base, ext, name} = path.parse(filePath);
+			const refPath = path.join(dir, name + '.ref');
+			fs.unlink(filePath, (error) => {
+				if (error) {
+				console.error('Failed to delete file:', error);
+				} else {
+				// File deletion successful
+				}
+			});
+			fs.unlink(refPath, (error) => {
+				if (error) {
+					console.error('Failed to delete file:', error);
+				} else {
+					// File deletion successful
+				}
+			});
+		}
+	  });
+	
+
 	let copyOriginalCmd = vscode.commands.registerCommand('Extension.dltxt.copy_original', () => {
 		const editor = vscode.window.activeTextEditor;
 		const document = editor?.document;
@@ -537,7 +567,8 @@ export function activate(context: vscode.ExtensionContext) {
 		extractSingleline,
 		convertEncoding,
 		extractCmd,
-		packCmd
+		packCmd,
+		removeTempListerner
 	);
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
