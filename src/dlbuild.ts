@@ -165,6 +165,8 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
                     }
                     prevPatternLastIndex = pattern.lastIndex;
                     i += 1;
+                } else {
+                    break;
                 }
             }
         }
