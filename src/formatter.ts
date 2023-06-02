@@ -7,12 +7,17 @@ export function getRegex() {
   const cPreStr = config.get('core.translatedTextPrefixRegex') as string;
   const oPreStr = config.get('core.otherPrefixRegex') as string;
   if (!jPreStr || !cPreStr) {
-    return [undefined, undefined];
+    return [undefined, undefined, undefined];
   }
-  const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
-  const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
-  const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`) : undefined;
-  return [jreg, creg, oreg];
+  try {
+    const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
+    const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
+    const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`) : undefined;
+    return [jreg, creg, oreg];
+  } catch (e) {
+    vscode.window.showErrorMessage(`${e}`);
+    return [undefined, undefined, undefined];
+  }
 }
 
 export interface MatchedGroups {
@@ -152,7 +157,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   const horizontalLine = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
     let target = config.get("formatter.a.horizontalLine.specify") as string;
-    text = text.replace(/[ー－\-]{2,}/g, target);
+    text = text.replace(/[―ー－\-]{2,}/g, target);
     cgrps.text = text;
   };
   if(config.get("formatter.a.horizontalLine.enable"))
