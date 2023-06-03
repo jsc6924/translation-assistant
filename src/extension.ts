@@ -13,7 +13,7 @@ import {
 } from "./formatter";
 import { batchConvertFilesEncoding } from './encoding';
 import { extract, pack } from './dlbuild';
-import { cwt } from './treeview';
+import { dltxt } from './treeview';
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -232,6 +232,9 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}, null, context.subscriptions);
 
+	let tree = new dltxt.TreeView();
+	vscode.window.registerTreeDataProvider('dltxt_dict', tree);
+
 	let syncDatabaseCommand = vscode.commands.registerCommand('Extension.dltxt.sync_database', function () {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		const username: string = config.get("simpleTM.username") as string;
@@ -252,6 +255,7 @@ export function activate(context: vscode.ExtensionContext) {
 				if (result) {
 					context.workspaceState.update(`${GameTitle}.dict`, result.data);
 					updateDecorations();
+					tree.refresh(context);
 				}
 			});
 		}
@@ -299,7 +303,7 @@ export function activate(context: vscode.ExtensionContext) {
 					} 
 			})
 	});
-	let newContextMenu_Update = vscode.commands.registerCommand('Extension.dltxt.context_menu_update',　function () {
+	let dictUpdateCmd = vscode.commands.registerCommand('Extension.dltxt.dict_update',　function (arg) {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		const username: string = config.get("simpleTM.username") as string;
 		const apiToken: string = config.get("simpleTM.apiToken") as string;
@@ -313,40 +317,58 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
 		}
-		vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
+		let editor = vscode.window.activeTextEditor;
+		let rawText = arg ? arg : '';
+		if (!rawText && editor && !editor.selection.isEmpty) {
+			rawText = editor.document.getText(editor.selection);
+		}
+		if (!rawText) {
+			return;
+		}
+		vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文` })
 			.then((translate: string | undefined) => {
-				let editor = vscode.window.activeTextEditor;
-				if (editor && !editor.selection.isEmpty) {
-					const raw_text = editor.document.getText(editor.selection);
-					let fullURL = "";
-					var msg = "";
-					if (translate) {
-						msg = raw_text + "->" + translate;
-						fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + raw_text + "/" + translate;
-						fullURL = encodeURI(fullURL);
-					} else {
-						msg = "deleted: " + raw_text;
-						fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + raw_text
-						fullURL = encodeURI(fullURL);
-					}
-					axios.get(fullURL, {
-						auth: {
-							username: username, password: apiToken
-						}
-					}).then(response => {
-							if (response.data.Result === 'True') {
-								vscode.window.showInformationMessage("Update Success!\n" + msg);
-							}
-							else {
-								vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
-							}
-							vscode.commands.executeCommand('Extension.dltxt.sync_database');
-						})
-						.catch(error => {
-							vscode.window.showInformationMessage("unexpected error:\n" + error);
-						});
+				if (translate === undefined) {
+					return; //cancelled
 				}
+				let fullURL = "";
+				var msg = "";
+				if (translate) {
+					msg = rawText + "->" + translate;
+					fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + rawText + "/" + translate;
+					fullURL = encodeURI(fullURL);
+				} else {
+					msg = "deleted: " + rawText;
+					fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + rawText
+					fullURL = encodeURI(fullURL);
+				}
+				axios.get(fullURL, {
+					auth: {
+						username: username, password: apiToken
+					}
+				}).then(response => {
+						if (response.data.Result === 'True') {
+							vscode.window.showInformationMessage("Update Success!\n" + msg);
+						}
+						else {
+							vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+						}
+						vscode.commands.executeCommand('Extension.dltxt.sync_database');
+					})
+					.catch(error => {
+						vscode.window.showInformationMessage("unexpected error:\n" + error);
+					});
 			})
+	});
+	let newContextMenu_Update = vscode.commands.registerCommand('Extension.dltxt.context_menu_update',　function () {
+		let editor = vscode.window.activeTextEditor;
+		if (!editor || editor.selection.isEmpty) {
+			return;
+		}
+		let rawText = editor.document.getText(editor.selection);
+		if (!rawText) {
+			return;
+		}
+		vscode.commands.executeCommand('Extension.dltxt.dict_update', rawText);
 	});
 
 	let dlEditor: vscode.TextEditor | undefined = undefined;
@@ -576,6 +598,7 @@ export function activate(context: vscode.ExtensionContext) {
 		copyToClipboardCmd,
 		syncDatabaseCommand,
 		newContextMenu_Insert,
+		dictUpdateCmd,
 		newContextMenu_Update,
 		cursorNextLineCmd,
 		cursorPrevLineCmd,
@@ -598,8 +621,7 @@ export function activate(context: vscode.ExtensionContext) {
 		packCmd,
 		removeTempListerner
 	);
-	let tree = new cwt.tree_view();
-	vscode.window.registerTreeDataProvider('dltxt_dict', tree);
+	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
 			return formatter(context, document);
