@@ -10,6 +10,9 @@ export namespace dltxt
         value: string = '';
         constructor(label: string, value: string) {
             super(`${label}: ${value}`, vscode.TreeItemCollapsibleState.None);
+            if (!value) {
+                this.label = label;
+            }
             this.raw = label;
             this.value = value;
         }
@@ -41,6 +44,9 @@ export namespace dltxt
         }
     
         getChildren(element?: CustomItem): Thenable<CustomItem[]> {
+            if (!this.game) {
+                return Promise.resolve([new CustomItem('未连接SimpleTM数据库', '')]);
+            }
             return Promise.resolve(this.items);
         }
 
