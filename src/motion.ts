@@ -19,12 +19,12 @@ export function getTextDelimiter() {
   const config = vscode.workspace.getConfiguration("dltxt");
   const suffixPatternStr = config.get('core.z.textDelimiter') as string;
   try {
-    const translatedSuffixRegex = new RegExp(suffixPatternStr);
+    const translatedSuffixRegex = new RegExp(suffixPatternStr, 'g');
     return translatedSuffixRegex;
   } catch (e) {
     vscode.window.showErrorMessage(`${e}`);
   }
-  return new RegExp('[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]');
+  return new RegExp('[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]', 'g');
 }
 const INT_MAX = Number.MAX_SAFE_INTEGER;
 
@@ -89,10 +89,13 @@ export function cursorToNextWord() {
   if (editor && editor.selection.isEmpty) {
     const c = editor.selection.start;
     const text = editor.document.getText(new vscode.Range(c, c.with(c.line, c.character+2)));
-    if (text === '……')
+    if (text === '……') {
       utils.setCursorAndScroll(editor, 0, c.character + 2, false);
-    else
-      utils.setCursorAndScroll(editor, 0, c.character + 1, false);
+    }
+    else {
+      let k = c.character < editor.document.lineAt(c.line).text.length ? 1 : 0;
+      utils.setCursorAndScroll(editor, 0, c.character + k, false);
+    }
   }
 }
 export function cursorToPrevWord() {

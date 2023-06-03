@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.22.0",
+	"version": "2.22.2",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -129,6 +129,14 @@
 			{
 				"command": "Extension.dltxt.cursorToPrevLine",
 				"key": "alt+\\"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextLine",
+				"key": "ctrl+enter"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevLine",
+				"key": "ctrl+\\"
 			},
 			{
 				"command": "Extension.dltxt.cursorToNextWord",

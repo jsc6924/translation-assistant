@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { toDBC, contains } from './utils';
 import { getTextDelimiter } from './motion';
+import { findLastMatchIndex } from './utils';
+import { dirxml } from 'console';
 
 export function getRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
@@ -265,7 +267,6 @@ export function copyOriginalToTranslation(context: vscode.ExtensionContext, docu
   });
 }
 export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode.TextEditor, editBuilder: vscode.TextEditorEdit){
-
   const document = editor.document;
   const cur = editor.selection.start;
 	const curLine = document.lineAt(editor.selection.start.line)
@@ -273,12 +274,22 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   const delimiterPattern = getTextDelimiter();
   const rep = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
-    let i = curChar - cgrps?.prefix.length - cgrps?.white.length;
-    while (i > 0 && i - 1 < text.length && !delimiterPattern.test(text[i-1])) {
-      i--;
+    let textLeft = text.substring(0, curChar - cgrps.prefix.length - cgrps.white.length);
+    let i = findLastMatchIndex(delimiterPattern, textLeft);
+    if (i == -1) {
+      i = 0;
+    } else {
+      const match = delimiterPattern.exec(textLeft.substring(i));
+      if (!match) {
+        return;
+      }
+      i += match[0].length;
     }
     if (i < text.length) {
-      text = text.substr(0, i) + text.substr(i, 1) + '、' + text.substr(i);
+      const t1 = text.substring(0, i);
+      const t2 = text.substring(i, i+1);
+      const t3 = text.substring(i);
+      text = t1 + t2 + '、' + t3;
     }
     cgrps.text = text;
   }
