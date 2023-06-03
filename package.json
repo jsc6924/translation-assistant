@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.23.1",
+	"version": "2.24.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -67,7 +67,32 @@
 				}
 			}
 		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "dltxt-view-container",
+					"title": "dltxt",
+					"icon": "assets/logo.png"
+				}
+			]
+		},
+		"views": {
+			"dltxt-view-container": [
+				{
+					"id": "dltxt_dict",
+					"name": "dictionary"
+				}
+			]
+		},
 		"commands": [
+			{
+				"command": "cwt_cucumber.item_clicked",
+				"title": "cwt tree view item"
+			},
+			{
+				"command": "cwt_cucumber.refresh",
+				"title": "refresh"
+			},
 			{
 				"command": "Extension.dltxt.copyToClipboard",
 				"title": "复制到剪贴板",
@@ -224,6 +249,13 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.copy_original",
 					"group": "dltxt.edit"
+				}
+			],
+			"view/title": [
+				{
+					"command": "cwt_cucumber.refresh",
+					"when": "view == cwt_cucumber",
+					"group": "navigation@0"
 				}
 			]
 		},

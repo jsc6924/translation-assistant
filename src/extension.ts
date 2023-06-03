@@ -13,6 +13,7 @@ import {
 } from "./formatter";
 import { batchConvertFilesEncoding } from './encoding';
 import { extract, pack } from './dlbuild';
+import { cwt } from './treeview';
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -597,6 +598,8 @@ export function activate(context: vscode.ExtensionContext) {
 		packCmd,
 		removeTempListerner
 	);
+	let tree = new cwt.tree_view();
+	vscode.window.registerTreeDataProvider('dltxt_dict', tree);
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
 			return formatter(context, document);
