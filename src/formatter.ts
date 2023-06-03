@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { toDBC, contains } from './utils';
+import { getTextDelimiter } from './motion';
 
 export function getRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
@@ -157,7 +158,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   const horizontalLine = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
     let target = config.get("formatter.a.horizontalLine.specify") as string;
-    text = text.replace(/[―ー－\-]{2,}/g, target);
+    text = text.replace(/[―ーー－\-]{2,}/g, target);
     cgrps.text = text;
   };
   if(config.get("formatter.a.horizontalLine.enable"))
@@ -269,10 +270,11 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   const cur = editor.selection.start;
 	const curLine = document.lineAt(editor.selection.start.line)
   let curChar = cur.character;
+  const delimiterPattern = getTextDelimiter();
   const rep = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
     let i = curChar - cgrps?.prefix.length - cgrps?.white.length;
-    while (i > 0 && i - 1 < text.length && text[i - 1].match(/[^，。、？！…—；：“”‘’~～\s　「」「」\[\]\(\)（）【】]/)) {
+    while (i > 0 && i - 1 < text.length && !delimiterPattern.test(text[i-1])) {
       i--;
     }
     if (i < text.length) {

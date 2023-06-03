@@ -498,21 +498,30 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	let nextLineCmd = vscode.commands.registerCommand('Extension.dltxt.next', () => {
-		motion.nextLine();
+	let cursorNextLineCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToNextLine', () => {
+		motion.cursorToNextLine();
 	});
 
-	let prevLineCmd = vscode.commands.registerCommand('Extension.dltxt.prev', () => {
-		motion.prevLine();
+	let cursorPrevLineCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToPrevLine', () => {
+		motion.cursorToPrevLine();
 	});
 
-	let nextWordCmd = vscode.commands.registerCommand('Extension.dltxt.nextWord', () => {
-		motion.nextWord();
+	let cursorNextWordCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToNextWord', () => {
+		motion.cursorToNextWord();
 	});
 
-	let prevWordCmd = vscode.commands.registerCommand('Extension.dltxt.prevWord', () => {
-		motion.prevWord();
+	let cursorPrevWordCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToPrevWord', () => {
+		motion.cursorToPrevWord();
 	});
+
+	let cursorToLineHeadCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToLineHead', () => {
+		motion.cursorToLineHead();
+	});
+
+	let cursorToLineEndCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToLineEnd', () => {
+		motion.cursorToLineEnd();
+	});
+
 
 	let moveToNextLineCmd = vscode.commands.registerCommand('Extension.dltxt.moveToNextLine', () => {
 		motion.moveToNextLine();
@@ -522,9 +531,14 @@ export function activate(context: vscode.ExtensionContext) {
 		motion.moveToPrevLine();
 	});
 
-	let deleteAllAfterCmd = vscode.commands.registerCommand('Extension.dltxt.deleteAllAfter', () => {
-		motion.deleteAllAfter();
+	let deleteUntilPuncCmd = vscode.commands.registerCommand('Extension.dltxt.deleteUntilPunc', () => {
+		motion.deleteUntil(false);
 	});
+
+	let deleteAllAfterCmd = vscode.commands.registerCommand('Extension.dltxt.deleteAllAfter', () => {
+		motion.deleteUntil(true);
+	});
+
 
 	let repeatFirst = vscode.commands.registerCommand('Extension.dltxt.repeatFirst', () => {
 		let editor = vscode.window.activeTextEditor;
@@ -554,12 +568,15 @@ export function activate(context: vscode.ExtensionContext) {
 		syncDatabaseCommand,
 		newContextMenu_Insert,
 		newContextMenu_Update,
-		nextLineCmd,
-		prevLineCmd,
-		nextWordCmd,
-		prevWordCmd,
+		cursorNextLineCmd,
+		cursorPrevLineCmd,
+		cursorNextWordCmd,
+		cursorPrevWordCmd,
+		cursorToLineHeadCmd,
+		cursorToLineEndCmd,
 		moveToNextLineCmd,
 		moveToPrevLineCmd,
+		deleteUntilPuncCmd,
 		deleteAllAfterCmd,
 		repeatFirst,
 		copyOriginalCmd,

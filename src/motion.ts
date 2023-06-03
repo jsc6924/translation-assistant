@@ -15,11 +15,16 @@ function getSkipCharsSet() {
   }
   return skipCharsSet;
 }
-function getTranslatedSuffixRegex() {
+export function getTextDelimiter() {
   const config = vscode.workspace.getConfiguration("dltxt");
-  const suffixPatternStr = config.get('core.z.translatedTextSuffixRegex') as string;
-  const translatedSuffixRegex = new RegExp(suffixPatternStr);
-  return translatedSuffixRegex;
+  const suffixPatternStr = config.get('core.z.textDelimiter') as string;
+  try {
+    const translatedSuffixRegex = new RegExp(suffixPatternStr);
+    return translatedSuffixRegex;
+  } catch (e) {
+    vscode.window.showErrorMessage(`${e}`);
+  }
+  return new RegExp('[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]');
 }
 const INT_MAX = Number.MAX_SAFE_INTEGER;
 
@@ -38,26 +43,48 @@ export function getCurrentLine() {
   );
 }
 
-export function nextLine() {
+export function cursorToLineHead() {
   const editor = vscode.window.activeTextEditor;
-    if (editor && editor.selection.isEmpty) {
-			const sStart = editor.selection.start.with(editor.selection.start.line + 1, 0);
-			const sEnd = editor.selection.start.with(editor.selection.start.line + 16);
-			const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
+  if (editor && editor.selection.isEmpty) {
+    const position = editor.selection.active;
+    const searchTxt = editor.document.getText(
+      new vscode.Range(
+        position.with(position.line, 0),
+        position.with(position.line, INT_MAX)
+      )
+    );
 
-      const translatedPrefixRegex = getTranslatedPrefixRegex();
-			let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`,'m');
-			const idx = searchTxt.search(reg);
-			if (idx >= 0) {
-				let m = utils.countCharBeforeNewline(searchTxt, idx);
-				m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
-        let n = utils.countLineUntil(searchTxt, idx);
-				utils.setCursorAndScroll(editor, n, m);
-			}
+    const translatedPrefixRegex = getTranslatedPrefixRegex();
+    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`,'m');
+    const idx = searchTxt.search(reg);
+    if (idx >= 0) {
+      let m = utils.countCharBeforeNewline(searchTxt, idx);
+      m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
+      utils.setCursorAndScroll(editor, 0, m);
     }
+  }
 }
 
-export function nextWord() {
+export function cursorToNextLine() {
+  const editor = vscode.window.activeTextEditor;
+  if (editor && editor.selection.isEmpty) {
+    const sStart = editor.selection.start.with(editor.selection.start.line + 1, 0);
+    const sEnd = editor.selection.start.with(editor.selection.start.line + 16);
+    const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
+
+    const translatedPrefixRegex = getTranslatedPrefixRegex();
+    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`,'m');
+    const idx = searchTxt.search(reg);
+    if (idx >= 0) {
+      let m = utils.countCharBeforeNewline(searchTxt, idx);
+      m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
+      let n = utils.countLineUntil(searchTxt, idx);
+      utils.setCursorAndScroll(editor, n, m);
+    }
+  }
+}
+
+export function cursorToNextWord() {
   const editor = vscode.window.activeTextEditor;
   if (editor && editor.selection.isEmpty) {
     const c = editor.selection.start;
@@ -68,7 +95,7 @@ export function nextWord() {
       utils.setCursorAndScroll(editor, 0, c.character + 1, false);
   }
 }
-export function prevWord() {
+export function cursorToPrevWord() {
   const editor = vscode.window.activeTextEditor;
   if (editor && editor.selection.isEmpty) {
     const c = editor.selection.start;
@@ -89,7 +116,7 @@ export function prevWord() {
 
 
 
-export function prevLine() {
+export function cursorToPrevLine() {
   const editor = vscode.window.activeTextEditor;
 		if (editor && editor.selection.isEmpty) {
 			const startLine = Math.max(0, editor.selection.start.line - 16);
@@ -147,7 +174,7 @@ export function moveToNextLine() {
   }
 }
 
-export function deleteAllAfter() {
+export function deleteUntil(all: boolean) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
@@ -166,12 +193,19 @@ export function deleteAllAfter() {
   const curLineAfter = curLine.substring(position.character);
 
   let iend = position.character + curLineAfter.length;
-  const suffixMatch = getTranslatedSuffixRegex().exec(curLineAfter)
-  if (suffixMatch) {
-    iend = position.character + suffixMatch.index;
-  }
-  if (iend == position.character) {
-    iend++;
+  if (all) {
+    const pattern = /」|』/;
+    while(iend >= 0 && pattern.test(curLine[iend-1])) {
+      iend--;
+    }
+  } else {
+    const suffixMatch = getTextDelimiter().exec(curLineAfter)
+    if (suffixMatch) {
+      iend = position.character + suffixMatch.index;
+    }
+    if (iend == position.character) {
+      iend++;
+    }
   }
   
   const toDelete = new vscode.Range(
@@ -181,6 +215,26 @@ export function deleteAllAfter() {
   editor.edit((editbuilder) => {
     editbuilder.delete(toDelete);
   });
+}
+
+export function cursorToLineEnd() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return;
+  const position = editor.selection.active;
+  const curLine = editor.document.getText(
+    new vscode.Range(
+      position.with(position.line, 0),
+      position.with(position.line, INT_MAX)
+    )
+  );
+  let i = curLine.length - 1;
+  const pattern = /」|』/;
+  while(i >= 0 && pattern.test(curLine[i])) {
+    i--;
+  }
+  const newPosition = position.with(position.line, i+1);
+  editor.selection = new vscode.Selection(newPosition, newPosition);
 }
 
 export function moveToPrevLine() {

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.21.2",
+	"version": "2.22.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -77,109 +77,74 @@
 			},
 			{
 				"command": "Extension.dltxt.sync_database",
-				"title": "DLTXT: 拉取云端词条"
+				"title": "拉取云端词条",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.context_menu_insert",
-				"title": "DLTXT: 添加词条",
-				"when": "false"
+				"title": "添加词条",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.context_menu_update",
-				"title": "DLTXT: 更新词条",
-				"when": "false"
+				"title": "更新词条",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.extract_single_line",
-				"title": "DLTXT: 提取译文",
-				"when": "false"
+				"title": "提取译文",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.merge_into_double_line",
-				"title": "DLTXT: 应用译文至双行文本",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.next",
-				"title": "移动到下一行翻译",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.prev",
-				"title": "移动到上一行翻译",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.moveToNextLine",
-				"title": "将光标后剪切到下一行翻译",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.moveToPrevLine",
-				"title": "将光标前剪切到上一行翻译",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.deleteAllAfter",
-				"title": "将光标后的翻译全部删除",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.repeatFirst",
-				"title": "重复当前句的第一个字",
-				"when": "false"
+				"title": "应用译文至双行文本",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.copy_original",
-				"title": "DLTXT: 复制原文到未翻译的译文行"
-			},
-			{
-				"command": "Extension.dltxt.nextWord",
-				"title": "下一个字",
-				"when": "false"
-			},
-			{
-				"command": "Extension.dltxt.prevWord",
-				"title": "上一个字",
-				"when": "false"
+				"title": "复制原文到未翻译的译文行",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.convertToEncoding",
-				"title": "DLTXT: 批量转换文件编码格式"
+				"title": "批量转换文件编码格式",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.dlbuild.extract",
-				"title": "DLTXT: 将脚本提取为双行文本 (dlbuild.extract)"
+				"title": "将脚本提取为双行文本 (dlbuild.extract)",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.dlbuild.pack",
-				"title": "DLTXT: 用双行文本的翻译替换脚本中的原文 (dlbuild.pack)"
+				"title": "用双行文本的翻译替换脚本中的原文 (dlbuild.pack)",
+				"category": "DLTXT"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "Extension.dltxt.next",
+				"command": "Extension.dltxt.cursorToNextLine",
 				"key": "alt+enter"
 			},
 			{
-				"command": "Extension.dltxt.prev",
+				"command": "Extension.dltxt.cursorToPrevLine",
 				"key": "alt+\\"
 			},
 			{
-				"command": "Extension.dltxt.nextWord",
+				"command": "Extension.dltxt.cursorToNextWord",
 				"key": "alt+]"
 			},
 			{
-				"command": "Extension.dltxt.prevWord",
+				"command": "Extension.dltxt.cursorToPrevWord",
 				"key": "alt+["
 			},
 			{
-				"command": "Extension.dltxt.next",
-				"key": "ctrl+enter"
+				"command": "Extension.dltxt.cursorToLineHead",
+				"key": "alt+u"
 			},
 			{
-				"command": "Extension.dltxt.prev",
-				"key": "ctrl+\\"
+				"command": "Extension.dltxt.cursorToLineEnd",
+				"key": "alt+i"
 			},
 			{
 				"command": "Extension.dltxt.moveToNextLine",
@@ -188,6 +153,10 @@
 			{
 				"command": "Extension.dltxt.moveToPrevLine",
 				"key": "ctrl+alt+\\"
+			},
+			{
+				"command": "Extension.dltxt.deleteUntilPunc",
+				"key": "alt+backspace"
 			},
 			{
 				"command": "Extension.dltxt.deleteAllAfter",
@@ -281,10 +250,10 @@
 					"default": " \t　「『n\\",
 					"description": "移动至译文开头时可以跳过的字符（用于nextLine等）"
 				},
-				"dltxt.core.z.translatedTextSuffixRegex": {
+				"dltxt.core.z.textDelimiter": {
 					"type": "string",
-					"default": "」|』|(\\\\@)",
-					"description": "标识译文结尾的正则表达式（只用于deleteAllAfter）"
+					"default": "[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]|(\\\\@)",
+					"description": "分割句段的正则表达式（用于repeatFirstChar/deleteUntilPunc）"
 				},
 				"dltxt.appearance.showKeywordHighlight": {
 					"type": "boolean",
