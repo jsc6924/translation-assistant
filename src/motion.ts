@@ -177,7 +177,7 @@ export function moveToNextLine() {
   }
 }
 
-export function deleteUntil(all: boolean) {
+export function deleteUntil(all: boolean, doDelete: boolean) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
@@ -190,7 +190,7 @@ export function deleteUntil(all: boolean) {
       position.with(position.line, INT_MAX)
     )
   );
-  if (curLine.search(pattern) == -1)
+  if (doDelete && curLine.search(pattern) == -1)
     return;
 
   const curLineAfter = curLine.substring(position.character);
@@ -202,28 +202,35 @@ export function deleteUntil(all: boolean) {
       iend--;
     }
   } else {
-    const suffixMatch = getTextDelimiter().exec(curLineAfter)
-    if (suffixMatch) {
-      iend = position.character + suffixMatch.index;
+    const delimMatch = getTextDelimiter().exec(curLineAfter)
+    if (delimMatch) {
+      iend = position.character + delimMatch.index;
     }
     if (iend == position.character) {
       iend++;
     }
   }
   
-  const toDelete = new vscode.Range(
-    position.with(position.line, position.character),
-    position.with(position.line, iend)
-  );
-  editor.edit((editbuilder) => {
-    editbuilder.delete(toDelete);
-  });
+  if (doDelete) {
+    const toDelete = new vscode.Range(
+      position.with(position.line, position.character),
+      position.with(position.line, iend)
+    );
+    editor.edit((editbuilder) => {
+      editbuilder.delete(toDelete);
+    });
+  } else {
+    const newPosition = position.with(position.line, iend);
+    editor.selection = new vscode.Selection(newPosition, newPosition);
+  }
 }
 
-export function cursorToLineEnd() {
+export function cursorToSublineHead() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
+  
+  const delimiterPattern = getTextDelimiter();
   const position = editor.selection.active;
   const curLine = editor.document.getText(
     new vscode.Range(
@@ -231,14 +238,33 @@ export function cursorToLineEnd() {
       position.with(position.line, INT_MAX)
     )
   );
-  let i = curLine.length - 1;
-  const pattern = /」|』/;
-  while(i >= 0 && pattern.test(curLine[i])) {
+  const translatedPrefixRegex = getTranslatedPrefixRegex();
+  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
+  const transMatch = pattern.exec(curLine);
+  const prefixLen = transMatch ? transMatch[1].length : 0;
+
+  const curChar = position.character;
+  let textLeft = curLine.substring(0, curChar);
+  let i = utils.findLastMatchIndex(delimiterPattern, textLeft);
+  if (i == -1) {
+    i = 0;
+  } else {
+    const match = delimiterPattern.exec(textLeft.substring(i));
+    if (!match) {
+      return;
+    }
+    i += match[0].length;
+  }
+  if (i == curChar) {
     i--;
   }
-  const newPosition = position.with(position.line, i+1);
+  if (i < prefixLen) {
+    i = prefixLen;
+  }
+  const newPosition = position.with(position.line, i);
   editor.selection = new vscode.Selection(newPosition, newPosition);
 }
+
 
 export function moveToPrevLine() {
   const editor = vscode.window.activeTextEditor;

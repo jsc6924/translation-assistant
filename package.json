@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.22.2",
+	"version": "2.23.1",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -150,9 +150,18 @@
 				"command": "Extension.dltxt.cursorToLineHead",
 				"key": "alt+u"
 			},
+			
 			{
 				"command": "Extension.dltxt.cursorToLineEnd",
+				"key": "alt+p"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineHead",
 				"key": "alt+i"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineEnd",
+				"key": "alt+o"
 			},
 			{
 				"command": "Extension.dltxt.moveToNextLine",

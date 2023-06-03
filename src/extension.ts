@@ -519,7 +519,15 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let cursorToLineEndCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToLineEnd', () => {
-		motion.cursorToLineEnd();
+		motion.deleteUntil(true, false);
+	});
+
+	let cursorToSublineHeadCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToSublineHead', () => {
+		motion.cursorToSublineHead();
+	});
+
+	let cursorToSublineEndCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToSublineEnd', () => {
+		motion.deleteUntil(false, false);
 	});
 
 
@@ -532,11 +540,11 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let deleteUntilPuncCmd = vscode.commands.registerCommand('Extension.dltxt.deleteUntilPunc', () => {
-		motion.deleteUntil(false);
+		motion.deleteUntil(false, true);
 	});
 
 	let deleteAllAfterCmd = vscode.commands.registerCommand('Extension.dltxt.deleteAllAfter', () => {
-		motion.deleteUntil(true);
+		motion.deleteUntil(true, true);
 	});
 
 
@@ -572,6 +580,8 @@ export function activate(context: vscode.ExtensionContext) {
 		cursorPrevLineCmd,
 		cursorNextWordCmd,
 		cursorPrevWordCmd,
+		cursorToSublineHeadCmd,
+		cursorToSublineEndCmd,
 		cursorToLineHeadCmd,
 		cursorToLineEndCmd,
 		moveToNextLineCmd,
