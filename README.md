@@ -72,9 +72,18 @@ DLTXT默认支持以下格式（用横线隔开）
   ![img1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/1.png?raw=true)
 
 ## 错误检测
-  检测被不小心删除的标签
+#### 检测被不小心删除的标签
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/2.png?raw=true)
+#### 检测错别字
+  ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
 
+  此功能需要连接百度智能云API，使用方法如下：
+  1. 在百度智能云注册账号后开通“人工智能-自然语言处理-文本纠错”服务
+  2. 在vscode设置中搜索`dltxt baidu`，填写百度智能云的`Access Key`和`Serect Key`
+  3. 打开你想检测的双行文本，`Ctrl + Shift + P`打开命令框，输入dltxt，点击`DLTXT：译文错别字检查`即可
+  4. 如果想清除检测结果，在命令框选择`DLTXT：清除错别字检查结果`即可
+  （目前使用较麻烦，后续可能会添加到右键菜单）
+  
 ## 键盘快捷键
 在翻译文本时可使用键盘快捷键代替鼠标操作（注：可以在vscode设置中更改默认快捷键绑定）
   - `Alt + Enter` 或 `Ctrl + Enter`移动到下一个译文行标签之后（例如这里的`|`的位置：`☆00000002☆「|`）

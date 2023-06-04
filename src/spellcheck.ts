@@ -3,7 +3,7 @@ import * as utils from './utils'
 import { getRegex, MatchedGroups } from './formatter';
 import { getTextDelimiter } from './motion';
 import axios from 'axios'; 
-const BAIDU_MAX_QUERY_LEN = 500;
+const BAIDU_MAX_QUERY_LEN = 540;
 
 /**
  * 使用 AK，SK 生成鉴权签名（Access Token）
@@ -95,6 +95,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
     let curDelay = 0;
 
     const delims = getTextDelimiter();
+    vscode.window.showInformationMessage(`正在发送请求，请耐心等待`);
 
     getAccessToken(AK, SK)
     .then((accessToken) => {
@@ -168,10 +169,25 @@ export function spellCheck(context: vscode.ExtensionContext) {
             }
         }
         diagnosticCollection.set(activeEditor.document.uri, diagnostics);
-        vscode.window.showInformationMessage(`检查完成，发现${diagnostics.length}处疑似问题`);
+        vscode.window.showInformationMessage(`检查完成，共发送${value_list.length}个请求，发现${diagnostics.length}处疑似问题`);
     }, (e) => {
         vscode.window.showErrorMessage(`${e}`);
     })
+}
 
-    
+export function clearSpellCheck() {
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        return;
+    }
+    const fileName = activeEditor.document.fileName;
+    if(!fileName.endsWith('.txt')) {
+        return;
+    }
+    const diagnosticCollection = utils.getOrCreateDiagnosticCollection(fileName + '.spellcheck');
+    if (!diagnosticCollection) {
+        return;
+    }
+    diagnosticCollection.clear();
 }

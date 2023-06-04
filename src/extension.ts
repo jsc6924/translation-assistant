@@ -14,7 +14,7 @@ import {
 import { batchConvertFilesEncoding } from './encoding';
 import { extract, pack } from './dlbuild';
 import { dltxt } from './treeview';
-import { spellCheck } from './spellcheck';
+import { spellCheck, clearSpellCheck } from './spellcheck';
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -588,6 +588,10 @@ export function activate(context: vscode.ExtensionContext) {
 		spellCheck(context);
 	});
 
+	let spellCheckClearCmd = vscode.commands.registerCommand('Extension.dltxt.spellCheckClear', () => {
+		clearSpellCheck();
+	});
+
 
 	context.subscriptions.push(
 		copyToClipboardCmd,
@@ -614,6 +618,8 @@ export function activate(context: vscode.ExtensionContext) {
 		convertEncoding,
 		extractCmd,
 		packCmd,
+		spellCheckCmd,
+		spellCheckClearCmd,
 		removeTempListerner
 	);
 	

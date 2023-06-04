@@ -147,7 +147,12 @@
 			},
 			{
 				"command": "Extension.dltxt.spellCheck",
-				"title": "中文拼写检查",
+				"title": "译文错别字检查",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.spellCheckClear",
+				"title": "清除错别字检查结果",
 				"category": "DLTXT"
 			}
 		],
