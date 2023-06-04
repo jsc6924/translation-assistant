@@ -4,7 +4,7 @@ import { getRegex, MatchedGroups } from './formatter';
 import { getTextDelimiter } from './motion';
 import axios from 'axios'; 
 const BAIDU_MAX_QUERY_LEN = 540;
-
+const delayInterval = 600; //ms
 /**
  * 使用 AK，SK 生成鉴权签名（Access Token）
  * @return string 鉴权签名信息（Access Token）
@@ -91,7 +91,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
 
     let offsetMaps: [number, number, number][][] = [];
 
-    const delayInterval = 1000; //ms
+
     let curDelay = 0;
 
     const delims = getTextDelimiter();
