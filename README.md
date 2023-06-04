@@ -248,8 +248,8 @@ pack: #配置替换操作
 #### 使用建议
 为了更好的体验，建议对vscode进行如下设置：
 - 右下角打开设置`Settings`,
-  1. 搜索 `editor.wordSeparators` <br>
-  2. 改成 ``~`!@#$%^&*()-=+[{]}\|;:'",.<>/?★☆○●「」『』“”，、。！？……　—`` (这样就可以用 `ctrl+Left` `ctrl+right` 了.) <br>
+  1. 搜索 `font family` 
+  2. 把Workspace的Editor：Font Family设置成`SimHei`
 
 ---
 ## 开发

@@ -27,7 +27,7 @@ function make_query(text: string, accessToken: string): Promise<any> {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     };
-    console.log(`send text: [${text}]`);
+    //console.log(`send text: [${text}]`);
     const data = {
         text: text
     };
@@ -103,7 +103,6 @@ export function spellCheck(context: vscode.ExtensionContext) {
         let curMap: [number, number, number][] = []; //offset -> line_num
         let queryPromises: Promise<any>[] = [];
 
-        // Example syntax error - checking if each line starts with a specific character
         for (let lineNumber = 0; lineNumber < activeEditor.document.lineCount; lineNumber++) {
             const lineText = activeEditor.document.lineAt(lineNumber).text;
             if (!lineText) {
@@ -133,7 +132,9 @@ export function spellCheck(context: vscode.ExtensionContext) {
             }
         }
         if (queryString) {
-            let p = make_query(queryString, accessToken);
+            let p = delay(curDelay).then(() => {
+                return make_query(queryString, accessToken);
+            });
             queryPromises.push(p);
             offsetMaps.push(curMap);
         }

@@ -239,7 +239,7 @@ export function cursorToSublineHead() {
     )
   );
   const translatedPrefixRegex = getTranslatedPrefixRegex();
-  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
+  const pattern = new RegExp(`(${translatedPrefixRegex}).*`, 'm');
   const transMatch = pattern.exec(curLine);
   const prefixLen = transMatch ? transMatch[1].length : 0;
 
