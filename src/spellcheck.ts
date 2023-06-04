@@ -32,7 +32,7 @@ function make_query(text: string, accessToken: string): Promise<any> {
         text: text
     };
     return axios.post(url, data, { headers }).then((value) => {
-        console.debug(value.data);
+        //console.debug(value.data);
         return Promise.resolve(value.data);
     }, (e) => {
         console.debug(`${e}`);
