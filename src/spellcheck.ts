@@ -3,7 +3,7 @@ import * as utils from './utils'
 import { getRegex, MatchedGroups } from './formatter';
 import { getTextDelimiter } from './motion';
 import axios from 'axios'; 
-const BAIDU_MAX_QUERY_LEN = 540;
+const BAIDU_MAX_QUERY_LEN = 548;
 const delayInterval = 600; //ms
 /**
  * 使用 AK，SK 生成鉴权签名（Access Token）
@@ -27,7 +27,7 @@ function make_query(text: string, accessToken: string): Promise<any> {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     };
-    //console.log(`send text: [${text}]`);
+    console.log(`send text: [${text}]`);
     const data = {
         text: text
     };
@@ -97,6 +97,8 @@ export function spellCheck(context: vscode.ExtensionContext) {
     const delims = getTextDelimiter();
     vscode.window.showInformationMessage(`正在发送请求，请耐心等待`);
 
+    const endingBracket = /[」』】）]/;
+
     getAccessToken(AK, SK)
     .then((accessToken) => {
         let queryString = '';
@@ -114,7 +116,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
                 if (isName(matchedGroups.text, delims)) {
                     continue;
                 }
-                if (queryString.length + matchedGroups.text.length >= BAIDU_MAX_QUERY_LEN) {
+                if (queryString.length + matchedGroups.text.length + 1 >= BAIDU_MAX_QUERY_LEN) {
                     ((queryStringCopy: string) => {
                         let p = delay(curDelay).then(() => {
                             return make_query(queryStringCopy, accessToken);
@@ -129,6 +131,10 @@ export function spellCheck(context: vscode.ExtensionContext) {
                 const prefixOffset = matchedGroups.prefix.length + matchedGroups.white.length;
                 curMap.push([lineNumber, queryString.length, prefixOffset]);
                 queryString += matchedGroups.text;
+                if (endingBracket.test(matchedGroups.suffix) 
+                    && !delims.test(matchedGroups.text[matchedGroups.text.length - 1])) {
+                    queryString += '。';
+                }
             }
         }
         if (queryString) {
