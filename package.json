@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.24.0",
+	"version": "2.25.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -143,6 +143,11 @@
 			{
 				"command": "Extension.dltxt.dlbuild.pack",
 				"title": "用双行文本的翻译替换脚本中的原文 (dlbuild.pack)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.spellCheck",
+				"title": "中文拼写检查",
 				"category": "DLTXT"
 			}
 		],
@@ -381,6 +386,14 @@
 					"type": "boolean",
 					"default": true,
 					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
+				},
+				"dltxt.z.api.baidu.AccessKey": {
+					"type": "string",
+					"description": "百度智能云API AccessKey"
+				},
+				"dltxt.z.api.baidu.SecretKey": {
+					"type": "string",
+					"description": "百度智能云API AccessKey"
 				}
 			}
 		}

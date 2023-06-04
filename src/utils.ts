@@ -92,3 +92,14 @@ export function toDBC(txtstring: string) {
 export function contains(str: string, search: string) {
   return str.indexOf(search) >= 0;
 }
+
+
+let diagnosticCollection: Map<string, vscode.DiagnosticCollection> = new Map<string, vscode.DiagnosticCollection>();
+
+export function getOrCreateDiagnosticCollection(file: string) : vscode.DiagnosticCollection | undefined {
+    if (!diagnosticCollection.has(file)) {
+        diagnosticCollection.set(file, vscode.languages.createDiagnosticCollection(`dltxt-${file}`));
+    }
+    return diagnosticCollection.get(file);
+}
+

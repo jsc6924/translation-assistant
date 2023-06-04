@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import axios from 'axios';
 import open = require('open');
 import * as motion from './motion';
-import { setCursorAndScroll } from './utils';
+import { setCursorAndScroll, getOrCreateDiagnosticCollection } from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
 import {
@@ -14,6 +14,7 @@ import {
 import { batchConvertFilesEncoding } from './encoding';
 import { extract, pack } from './dlbuild';
 import { dltxt } from './treeview';
+import { spellCheck } from './spellcheck';
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -128,16 +129,6 @@ export function activate(context: vscode.ExtensionContext) {
 		activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
 	
 	}
-
-	let diagnosticCollection: Map<string, vscode.DiagnosticCollection> = new Map<string, vscode.DiagnosticCollection>();
-
-	function getOrCreateDiagnosticCollection(file: string) : vscode.DiagnosticCollection | undefined {
-		if (!diagnosticCollection.has(file)) {
-			diagnosticCollection.set(file, vscode.languages.createDiagnosticCollection(`dltxt-${file}`));
-		}
-		return diagnosticCollection.get(file);
-	}
-
 
 	function updateErrorDecorations() {
 		const config = vscode.workspace.getConfiguration("dltxt");
@@ -591,6 +582,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let packCmd = vscode.commands.registerCommand('Extension.dltxt.dlbuild.pack', () => {
 		pack(context);
+	});
+
+	let spellCheckCmd = vscode.commands.registerCommand('Extension.dltxt.spellCheck', () => {
+		spellCheck(context);
 	});
 
 
