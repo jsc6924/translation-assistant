@@ -259,6 +259,16 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.copy_original",
 					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.spellCheck",
+					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.spellCheckClear",
+					"group": "dltxt.edit"
 				}
 			],
 			"view/title": [

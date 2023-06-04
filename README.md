@@ -72,21 +72,26 @@ DLTXT默认支持以下格式（用横线隔开）
   ![img1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/1.png?raw=true)
 
 ## 错误检测
-#### 检测被不小心删除的标签
+#### 检测被误删的标签
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/2.png?raw=true)
+  
+  如图，被误删的标签会报错
 #### 检测错别字
   ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
 
-  此功能需要连接百度智能云API（收费，不过很便宜），使用方法如下：
+  检测译文的错别字，此功能需要连接百度智能云API（收费，不过很便宜），使用方法如下：
+
   1. 在百度智能云注册账号后开通“人工智能-自然语言处理-文本纠错”服务
-    - 记得领取免费额度（个人用户50万次试用），顺便再充几块钱
+      - 记得领取免费额度（个人用户50万次试用），顺便再充几块钱
   2. 在百度智能云中创建新应用，勾选自然语言处理全部功能，创建完成后会获取一对`Access Key`和`Serect Key`
   3. 在vscode设置中搜索`dltxt baidu`，填写百度智能云的`Access Key`和`Serect Key`
-  4. 打开你想检测的双行文本，`Ctrl + Shift + P`打开命令框，输入dltxt，点击`DLTXT：译文错别字检查`即可
-    - 译文每540字（程序会自动过滤人名行）发一个请求给百度云，检测一个1000句（大小100k左右）的双行文本大约需要15个请求，百度云文本纠错服务价格约为2元/千次请求，换算一下的话检测一个100k的文本大约3分钱。
-  5. 如果想清除检测结果，在命令框选择`DLTXT：清除错别字检查结果`即可
+  4. 打开你想检测的双行文本，在编辑器中右键，选择`DLTXT：译文错别字检查`即可
+      - 译文每540字（程序会自动过滤人名行）发一个请求给百度云，检测一个1000句（大小100k左右）的双行文本大约需要15个请求，百度云文本纠错服务价格约为2元/千次请求，换算一下的话检测一个100k的文本大约3分钱。
+  5. 如果想清除检测结果，在右键菜单选择`DLTXT：清除错别字检查结果`即可
   
-
+#### 浏览错误/警告
+  点击左下角的这个按钮可以浏览全部错误和警告。
+  ![error_warning](https://github.com/jsc6924/translation-assistant/blob/master/imgs/error_warning.png?raw=true)
 
 
 ## 键盘快捷键
