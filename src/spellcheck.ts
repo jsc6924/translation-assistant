@@ -56,8 +56,21 @@ function queryLineNumber(offsetMap: [number, number, number][], offset: number):
     return [offsetMap[x][0], offset - offsetMap[x][1], offsetMap[x][2]]
 }
 
-function isName(text: string, delims: RegExp) {
-    return !delims.test(text);
+function isAsciiOnly(str: string): boolean {
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      if (code > 127) {
+        return false;
+      }
+    }
+    return true;
+}
+
+function shouldSkipChecking(text: string, delims: RegExp) {
+    if (isAsciiOnly(text)) {
+        return true;
+    }
+    return text.length <= 6 && !delims.test(text);
 }
 
 export function spellCheck(context: vscode.ExtensionContext) {
@@ -113,7 +126,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
             const match = creg.exec(lineText);
             if (match) {
                 const matchedGroups = match.groups as any as MatchedGroups;
-                if (isName(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
+                if (shouldSkipChecking(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
                     continue;
                 }
                 if (queryString.length + matchedGroups.text.length + 1 >= BAIDU_MAX_QUERY_LEN) {
