@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.25.5",
+	"version": "2.25.6",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -159,64 +159,78 @@
 		"keybindings": [
 			{
 				"command": "Extension.dltxt.cursorToNextLine",
-				"key": "alt+enter"
+				"key": "alt+enter",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToPrevLine",
-				"key": "alt+\\"
+				"key": "alt+\\",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToNextLine",
-				"key": "ctrl+enter"
+				"key": "ctrl+enter",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToPrevLine",
-				"key": "ctrl+\\"
+				"key": "ctrl+\\",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToNextWord",
-				"key": "alt+]"
+				"key": "alt+]",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToPrevWord",
-				"key": "alt+["
+				"key": "alt+[",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToLineHead",
-				"key": "alt+u"
+				"key": "alt+u",
+				"when": "resourceLangId == dltxt"
 			},
-			
 			{
 				"command": "Extension.dltxt.cursorToLineEnd",
-				"key": "alt+p"
+				"key": "alt+p",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToSublineHead",
-				"key": "alt+i"
+				"key": "alt+i",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToSublineEnd",
-				"key": "alt+o"
+				"key": "alt+o",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.moveToNextLine",
-				"key": "ctrl+alt+enter"
+				"key": "ctrl+alt+enter",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.moveToPrevLine",
-				"key": "ctrl+alt+\\"
+				"key": "ctrl+alt+\\",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.deleteUntilPunc",
-				"key": "alt+backspace"
+				"key": "alt+backspace",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.deleteAllAfter",
-				"key": "alt+delete"
+				"key": "alt+delete",
+				"when": "resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.repeatFirst",
-				"key": "ctrl+alt+space"
+				"key": "ctrl+alt+space",
+				"when": "resourceLangId == dltxt"
 			}
 		],
 		"menus": {
