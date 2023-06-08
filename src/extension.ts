@@ -592,6 +592,13 @@ export function activate(context: vscode.ExtensionContext) {
 		clearSpellCheck();
 	});
 
+	let customWriteStrCmd = vscode.commands.registerCommand('Extension.dltxt.customWriteString', (args) => {
+		const arg = args.arg1;
+		const config = vscode.workspace.getConfiguration("dltxt");
+		const s = config.get(arg) as string;
+		motion.editorWriteString(s);
+	});
+
 
 	context.subscriptions.push(
 		copyToClipboardCmd,
@@ -620,6 +627,7 @@ export function activate(context: vscode.ExtensionContext) {
 		packCmd,
 		spellCheckCmd,
 		spellCheckClearCmd,
+		customWriteStrCmd,
 		removeTempListerner
 	);
 	

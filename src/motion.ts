@@ -9,7 +9,7 @@ function getTranslatedPrefixRegex() {
 function getSkipCharsSet() {
   const config = vscode.workspace.getConfiguration("dltxt");
   const skipCharsStr = config.get('core.z.skipCharsPrefix') as string;
-  let skipCharsSet =  new Set<string>();
+  let skipCharsSet = new Set<string>();
   for (let i = 0; i < skipCharsStr.length; i++) {
     skipCharsSet.add(skipCharsStr[i]);
   }
@@ -55,7 +55,7 @@ export function cursorToLineHead() {
     );
 
     const translatedPrefixRegex = getTranslatedPrefixRegex();
-    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`,'m');
+    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
     const idx = searchTxt.search(reg);
     if (idx >= 0) {
       let m = utils.countCharBeforeNewline(searchTxt, idx);
@@ -73,7 +73,7 @@ export function cursorToNextLine() {
     const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
 
     const translatedPrefixRegex = getTranslatedPrefixRegex();
-    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`,'m');
+    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
     const idx = searchTxt.search(reg);
     if (idx >= 0) {
       let m = utils.countCharBeforeNewline(searchTxt, idx);
@@ -88,7 +88,7 @@ export function cursorToNextWord() {
   const editor = vscode.window.activeTextEditor;
   if (editor && editor.selection.isEmpty) {
     const c = editor.selection.start;
-    const text = editor.document.getText(new vscode.Range(c, c.with(c.line, c.character+2)));
+    const text = editor.document.getText(new vscode.Range(c, c.with(c.line, c.character + 2)));
     if (text === '……') {
       utils.setCursorAndScroll(editor, 0, c.character + 2, false);
     }
@@ -109,7 +109,7 @@ export function cursorToPrevWord() {
       utils.setCursorAndScroll(editor, 0, c.character - 1, false);
       return;
     }
-    const text = editor.document.getText(new vscode.Range(c, c.with(c.line, c.character-2)));
+    const text = editor.document.getText(new vscode.Range(c, c.with(c.line, c.character - 2)));
     if (text === '……')
       utils.setCursorAndScroll(editor, 0, c.character - 2, false);
     else
@@ -121,22 +121,22 @@ export function cursorToPrevWord() {
 
 export function cursorToPrevLine() {
   const editor = vscode.window.activeTextEditor;
-		if (editor && editor.selection.isEmpty) {
-			const startLine = Math.max(0, editor.selection.start.line - 16);
-			const endLine = Math.max(0, editor.selection.start.line - 1);
-			const sStart = editor.selection.start.with(startLine, 0);
-			const sEnd = editor.selection.start.with(endLine, 100);
-			const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-      const translatedPrefixRegex = getTranslatedPrefixRegex();
-			const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
-			let startIdx = utils.findLastMatchIndex(pattern, searchTxt);
-			if (startIdx != -1) {
-				let m = utils.countCharBeforeNewline(searchTxt, startIdx);
-				m += utils.countStartingUnimportantChar(searchTxt, startIdx, getSkipCharsSet());
-        let n = utils.countLineFrom(searchTxt, startIdx);
-				utils.setCursorAndScroll(editor, -n, m);
-			}
-		}
+  if (editor && editor.selection.isEmpty) {
+    const startLine = Math.max(0, editor.selection.start.line - 16);
+    const endLine = Math.max(0, editor.selection.start.line - 1);
+    const sStart = editor.selection.start.with(startLine, 0);
+    const sEnd = editor.selection.start.with(endLine, 100);
+    const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
+    const translatedPrefixRegex = getTranslatedPrefixRegex();
+    const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
+    let startIdx = utils.findLastMatchIndex(pattern, searchTxt);
+    if (startIdx != -1) {
+      let m = utils.countCharBeforeNewline(searchTxt, startIdx);
+      m += utils.countStartingUnimportantChar(searchTxt, startIdx, getSkipCharsSet());
+      let n = utils.countLineFrom(searchTxt, startIdx);
+      utils.setCursorAndScroll(editor, -n, m);
+    }
+  }
 }
 
 
@@ -152,7 +152,7 @@ export function moveToNextLine() {
   const sStart = editor.selection.start.with(editor.selection.start.line + 1, 0);
   const sEnd = editor.selection.start.with(editor.selection.start.line + 16);
   const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-  
+
   const idx = searchTxt.search(pattern);
   if (idx >= 0) {
     let m = utils.countCharBeforeNewline(searchTxt, idx);
@@ -171,7 +171,7 @@ export function moveToNextLine() {
       editbuilder.insert(toInsert, sline);
     });
     const config = vscode.workspace.getConfiguration("dltxt");
-    if(config.get('motion.moveToNextLine.moveCursor') as boolean) {
+    if (config.get('motion.moveToNextLine.moveCursor') as boolean) {
       utils.setCursorAndScroll(editor, n, m + sline.length);
     }
   }
@@ -198,8 +198,10 @@ export function deleteUntil(all: boolean, doDelete: boolean) {
   let iend = position.character + curLineAfter.length;
   if (all) {
     const pattern = /」|』/;
-    while(iend >= 0 && pattern.test(curLine[iend-1])) {
-      iend--;
+    for (let i = position.character; i < curLine.length; i++) {
+      if (pattern.test(curLine[i])) {
+        iend = i;
+      }
     }
   } else {
     const delimMatch = getTextDelimiter().exec(curLineAfter)
@@ -210,7 +212,7 @@ export function deleteUntil(all: boolean, doDelete: boolean) {
       iend++;
     }
   }
-  
+
   if (doDelete) {
     const toDelete = new vscode.Range(
       position.with(position.line, position.character),
@@ -229,7 +231,7 @@ export function cursorToSublineHead() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  
+
   const delimiterPattern = getTextDelimiter();
   const position = editor.selection.active;
   const curLine = editor.document.getText(
@@ -270,27 +272,27 @@ export function moveToPrevLine() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-    const startLine = Math.max(0, editor.selection.start.line - 16);
-    const endLine = Math.max(0, editor.selection.start.line - 1);
-    const sStart = editor.selection.start.with(startLine, 0);
-    const sEnd = editor.selection.start.with(endLine, INT_MAX);
-    const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-    const translatedPrefixRegex = getTranslatedPrefixRegex();
-    const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
-    let idx = utils.findLastMatchIndex(pattern, searchTxt);
-    if (idx != -1) {
-      let n = utils.countLineFrom(searchTxt, idx);
-      const position = editor.selection.active;
-      const strThisLine = getCurrentLine();
-      let t = strThisLine.search(pattern);
-      if (t == -1)
-        return;
-      t += utils.countStartingUnimportantChar(strThisLine, t, getSkipCharsSet());
-      const toMove = new vscode.Range(
-        position.with(position.line, t),
-        position.with(position.line, position.character))
-      const toInsert = new vscode.Position(
-        position.line - n, INT_MAX
+  const startLine = Math.max(0, editor.selection.start.line - 16);
+  const endLine = Math.max(0, editor.selection.start.line - 1);
+  const sStart = editor.selection.start.with(startLine, 0);
+  const sEnd = editor.selection.start.with(endLine, INT_MAX);
+  const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
+  const translatedPrefixRegex = getTranslatedPrefixRegex();
+  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
+  let idx = utils.findLastMatchIndex(pattern, searchTxt);
+  if (idx != -1) {
+    let n = utils.countLineFrom(searchTxt, idx);
+    const position = editor.selection.active;
+    const strThisLine = getCurrentLine();
+    let t = strThisLine.search(pattern);
+    if (t == -1)
+      return;
+    t += utils.countStartingUnimportantChar(strThisLine, t, getSkipCharsSet());
+    const toMove = new vscode.Range(
+      position.with(position.line, t),
+      position.with(position.line, position.character))
+    const toInsert = new vscode.Position(
+      position.line - n, INT_MAX
     );
     let sline = editor.document.getText(toMove);
     editor.edit((editbuilder) => {
@@ -298,4 +300,13 @@ export function moveToPrevLine() {
       editbuilder.insert(toInsert, sline);
     });
   }
+}
+
+export function editorWriteString(s: string) {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return;
+    editor.edit((editbuilder) => {
+      editbuilder.insert(editor.selection.active, s);
+    });
 }

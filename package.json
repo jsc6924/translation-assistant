@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.25.6",
+	"version": "2.26.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -85,14 +85,6 @@
 			]
 		},
 		"commands": [
-			{
-				"command": "cwt_cucumber.item_clicked",
-				"title": "cwt tree view item"
-			},
-			{
-				"command": "cwt_cucumber.refresh",
-				"title": "refresh"
-			},
 			{
 				"command": "Extension.dltxt.copyToClipboard",
 				"title": "复制到剪贴板",
@@ -231,6 +223,24 @@
 				"command": "Extension.dltxt.repeatFirst",
 				"key": "ctrl+alt+space",
 				"when": "resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.customWriteString",
+				"key": "alt+1",
+				"when": "resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString1" }
+			},
+			{
+				"command": "Extension.dltxt.customWriteString",
+				"key": "alt+2",
+				"when": "resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString2" }
+			},
+			{
+				"command": "Extension.dltxt.customWriteString",
+				"key": "alt+3",
+				"when": "resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString3" }
 			}
 		],
 		"menus": {
@@ -283,13 +293,6 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.spellCheckClear",
 					"group": "dltxt.edit"
-				}
-			],
-			"view/title": [
-				{
-					"command": "cwt_cucumber.refresh",
-					"when": "view == cwt_cucumber",
-					"group": "navigation@0"
 				}
 			]
 		},
@@ -415,6 +418,21 @@
 					"type": "boolean",
 					"default": true,
 					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
+				},
+				"dltxt.motion.customInsertString1": {
+					"type": "string",
+					"default": "～",
+					"description": "快捷键：插入自定义字符串1"
+				},
+				"dltxt.motion.customInsertString2": {
+					"type": "string",
+					"default": "♪",
+					"description": "快捷键：插入自定义字符串2"
+				},
+				"dltxt.motion.customInsertString3": {
+					"type": "string",
+					"default": "＠",
+					"description": "快捷键：插入自定义字符串3"
 				},
 				"dltxt.z.api.baidu.AccessKey": {
 					"type": "string",
