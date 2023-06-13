@@ -161,12 +161,18 @@ export function spellCheck(context: vscode.ExtensionContext) {
     }, (e) => {
         vscode.window.showErrorMessage(`${e}`);
     }).then((values) => {
+        const configuration = vscode.workspace.getConfiguration('dltxt');
+        const skipList: string[] = configuration.get('spellingCheck.skipSet', []);
+        const skipSet: Set<string> = new Set(skipList);
         let value_list = values as any[];
         for (let i = 0; i < value_list.length; i++) {
             try {
                 const offsetMap = offsetMaps[i];
                 const corrections = value_list[i].item.vec_fragment as any[];
                 for(let j = 0; j < corrections.length; j++) {
+                    if (skipSet.has(corrections[j].ori_frag)) {
+                        continue;
+                    }
                     const [lineNumber, offset, prefixLen] = queryLineNumber(offsetMap, corrections[j].begin_pos)
                     if (lineNumber == -1 || corrections[j].ori_frag === corrections[j].correct_frag) {
                         continue;

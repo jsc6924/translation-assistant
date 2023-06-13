@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.26.0",
+	"version": "2.27.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -413,6 +413,14 @@
 					"additionalProperties": {
 						"type": "string"
 					}
+				},
+				"dltxt.spellingCheck.skipSet": {
+					"type": "array",
+					"default": [],
+					"items": {
+					  "type": "string"
+					},
+					"description": "错别字检查：跳过的字段（例如人名）"
 				},
 				"dltxt.motion.moveToNextLine.moveCursor": {
 					"type": "boolean",
