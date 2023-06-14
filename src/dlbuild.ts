@@ -264,7 +264,8 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
                 const [fullTag, tag] = m;
 
                 while (j < trLines.length) {
-                    if (trLines[j].trim().startsWith('☆') && trLines[j].includes(tag)) {
+                    const decoratedTag = `☆${tag}☆`
+                    if (trLines[j].trim().startsWith('☆') && trLines[j].includes(decoratedTag)) {
                         break;
                     }
                     j++;
