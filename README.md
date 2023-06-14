@@ -68,7 +68,7 @@ DLTXT默认支持以下格式（用横线隔开）
 4. 关闭语法高亮：`Ctrl + Shift + P`, 输入`color theme`, 选择一个不属于dltxt的theme（因为无法支持语法高亮）
 
 ## 语法高亮
-  区分人名栏，原文，译文。
+  区分人名栏，原文，译文。（注：需要选择Theme：DLTXT Dark+/Light+）
   ![img1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/1.png?raw=true)
 
 ## 错误检测
