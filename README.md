@@ -12,7 +12,7 @@
 
 **[视频教程](https://www.bilibili.com/video/BV1Sh4y1R7ii/)**
 
-注：2.22更新了部分快捷键默认配置，如果更改过默认配置可能需要重新绑定快捷键（Settings - Keyboard Shortcuts）。
+注：2.28更新了部分快捷键默认配置，如果更改过默认配置可能需要重新绑定快捷键（Settings - Keyboard Shortcuts）。
 
 ## 功能列表
 - [格式支持](#格式支持)

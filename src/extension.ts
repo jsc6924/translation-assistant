@@ -28,7 +28,8 @@ import * as mode from './mode';
 export function activate(context: vscode.ExtensionContext) {
 	let timeout: NodeJS.Timer | undefined = undefined;
 
-	VSCodeContext.set('dltxt.mode', mode.Mode[mode.Mode.Normal]);
+	mode.setMode(mode.Mode.Normal);
+	VSCodeContext.set('dltxt.modeSwitchedMsgShowed', false);
 	registerCommand(context, "Extension.dltxt.setMode", (args) => {
 		mode.setModeStr(args.arg);
 	});
