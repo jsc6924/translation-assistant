@@ -33,6 +33,10 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, "Extension.dltxt.setMode", (args) => {
 		mode.setModeStr(args.arg);
 	});
+	registerCommand(context, "Extension.dltxt.toggleMode", () => {
+		const m = VSCodeContext.get('dltxt.mode') as string;
+		mode.setModeStr(mode.getNextMode(m));
+	});
 
 	let copyToClipboardCmd = vscode.commands.registerCommand('Extension.dltxt.copyToClipboard', (arg) => {
         vscode.env.clipboard.writeText(arg.text).then(
