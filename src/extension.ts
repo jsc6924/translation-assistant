@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import axios from 'axios';
 import open = require('open');
 import * as motion from './motion';
-import { setCursorAndScroll, getOrCreateDiagnosticCollection } from './utils';
+import { setCursorAndScroll, getOrCreateDiagnosticCollection, VSCodeContext, registerCommand } from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
 import {
@@ -15,6 +15,9 @@ import { batchConvertFilesEncoding } from './encoding';
 import { extract, pack } from './dlbuild';
 import { dltxt } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
+import * as mode from './mode';
+
+
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -24,6 +27,11 @@ import { spellCheck, clearSpellCheck } from './spellcheck';
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 	let timeout: NodeJS.Timer | undefined = undefined;
+
+	VSCodeContext.set('dltxt.mode', mode.Mode[mode.Mode.Normal]);
+	registerCommand(context, "Extension.dltxt.setMode", (args) => {
+		mode.setModeStr(args.arg);
+	});
 
 	let copyToClipboardCmd = vscode.commands.registerCommand('Extension.dltxt.copyToClipboard', (arg) => {
         vscode.env.clipboard.writeText(arg.text).then(
@@ -512,35 +520,41 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	let cursorNextLineCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToNextLine', () => {
-		motion.cursorToNextLine();
-	});
+	let cursorNextLineCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToNextLine', motion.cursorToNextLine);
+	registerCommand(context, 'Extension.dltxt.cursorToNextLine+ctrl', motion.cursorToNextLine);
+	registerCommand(context, 'Extension.dltxt.cursorToNextLine+t', motion.cursorToNextLine);
 
-	let cursorPrevLineCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToPrevLine', () => {
-		motion.cursorToPrevLine();
-	});
+	let cursorPrevLineCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToPrevLine', motion.cursorToPrevLine);
+	registerCommand(context, 'Extension.dltxt.cursorToPrevLine+ctrl', motion.cursorToPrevLine);
+	registerCommand(context, 'Extension.dltxt.cursorToPrevLine+t', motion.cursorToPrevLine);
 
-	let cursorNextWordCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToNextWord', () => {
-		motion.cursorToNextWord();
-	});
+	let cursorNextWordCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToNextWord', motion.cursorToNextWord);
+    registerCommand(context, 'Extension.dltxt.cursorToNextWord+t', motion.cursorToNextWord);
 
-	let cursorPrevWordCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToPrevWord', () => {
-		motion.cursorToPrevWord();
-	});
+	let cursorPrevWordCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToPrevWord', motion.cursorToPrevWord);
+	registerCommand(context, 'Extension.dltxt.cursorToPrevWord+t', motion.cursorToPrevWord);
 
-	let cursorToLineHeadCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToLineHead', () => {
-		motion.cursorToLineHead();
-	});
+	let cursorToLineHeadCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToLineHead', motion.cursorToLineHead);
+	registerCommand(context, 'Extension.dltxt.cursorToLineHead+t', motion.cursorToLineHead);
 
 	let cursorToLineEndCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToLineEnd', () => {
+		motion.deleteUntil(true, false);
+	});
+	registerCommand(context, 'Extension.dltxt.cursorToLineEnd+t', () => {
 		motion.deleteUntil(true, false);
 	});
 
 	let cursorToSublineHeadCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToSublineHead', () => {
 		motion.cursorToSublineHead();
 	});
+	registerCommand(context, 'Extension.dltxt.cursorToSublineHead+t', () => {
+		motion.cursorToSublineHead();
+	});
 
 	let cursorToSublineEndCmd = vscode.commands.registerCommand('Extension.dltxt.cursorToSublineEnd', () => {
+		motion.deleteUntil(false, false);
+	});
+	registerCommand(context, 'Extension.dltxt.cursorToSublineEnd+t', () => {
 		motion.deleteUntil(false, false);
 	});
 
@@ -548,21 +562,33 @@ export function activate(context: vscode.ExtensionContext) {
 	let moveToNextLineCmd = vscode.commands.registerCommand('Extension.dltxt.moveToNextLine', () => {
 		motion.moveToNextLine();
 	});
+	registerCommand(context, 'Extension.dltxt.moveToNextLine+t', () => {
+		motion.moveToNextLine();
+	});
 
 	let moveToPrevLineCmd = vscode.commands.registerCommand('Extension.dltxt.moveToPrevLine', () => {
+		motion.moveToPrevLine();
+	});
+	registerCommand(context, 'Extension.dltxt.moveToPrevLine+t', () => {
 		motion.moveToPrevLine();
 	});
 
 	let deleteUntilPuncCmd = vscode.commands.registerCommand('Extension.dltxt.deleteUntilPunc', () => {
 		motion.deleteUntil(false, true);
 	});
+	registerCommand(context, 'Extension.dltxt.deleteUntilPunc+t', () => {
+		motion.deleteUntil(false, true);
+	});
 
 	let deleteAllAfterCmd = vscode.commands.registerCommand('Extension.dltxt.deleteAllAfter', () => {
 		motion.deleteUntil(true, true);
 	});
+	registerCommand(context, 'Extension.dltxt.deleteAllAfter+t', () => {
+		motion.deleteUntil(true, true);
+	});
 
 
-	let repeatFirst = vscode.commands.registerCommand('Extension.dltxt.repeatFirst', () => {
+	const repeatFirstFunc = () => {
 		let editor = vscode.window.activeTextEditor;
 		let document = editor?.document;
 		if (!editor || !document) 
@@ -571,7 +597,9 @@ export function activate(context: vscode.ExtensionContext) {
 			repeatFirstChar(context, editor as vscode.TextEditor, editBuilder);
 		})
 		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
-	});
+	};
+	let repeatFirst = vscode.commands.registerCommand('Extension.dltxt.repeatFirst', repeatFirstFunc);
+	registerCommand(context, 'Extension.dltxt.repeatFirst+t', repeatFirstFunc);
 
 	let convertEncoding = vscode.commands.registerCommand('Extension.dltxt.convertToEncoding', 
 		batchConvertFilesEncoding);

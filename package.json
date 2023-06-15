@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.27.1",
+	"version": "2.28.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -152,95 +152,154 @@
 			{
 				"command": "Extension.dltxt.cursorToNextLine",
 				"key": "alt+enter",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextLine+t",
+				"key": "enter",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{
 				"command": "Extension.dltxt.cursorToPrevLine",
 				"key": "alt+\\",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.cursorToNextLine",
+				"command": "Extension.dltxt.cursorToNextLine+ctrl",
 				"key": "ctrl+enter",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.cursorToPrevLine",
+				"command": "Extension.dltxt.cursorToPrevLine+ctrl",
 				"key": "ctrl+\\",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToNextWord",
 				"key": "alt+]",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToPrevWord",
 				"key": "alt+[",
-				"when": "resourceLangId == dltxt"
-			},
-			{
-				"command": "Extension.dltxt.cursorToLineHead",
-				"key": "alt+u",
-				"when": "resourceLangId == dltxt"
-			},
-			{
-				"command": "Extension.dltxt.cursorToLineEnd",
-				"key": "alt+p",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToSublineHead",
-				"key": "alt+i",
-				"when": "resourceLangId == dltxt"
+				"key": "shift+alt+[",
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.cursorToSublineEnd",
-				"key": "alt+o",
-				"when": "resourceLangId == dltxt"
+				"key": "shift+alt+]",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineHead",
+				"key": "ctrl+alt+[",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineEnd",
+				"key": "ctrl+alt+]",
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.moveToNextLine",
 				"key": "ctrl+alt+enter",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.moveToPrevLine",
 				"key": "ctrl+alt+\\",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.deleteUntilPunc",
 				"key": "alt+backspace",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.deleteAllAfter",
 				"key": "alt+delete",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.repeatFirst",
 				"key": "ctrl+alt+space",
-				"when": "resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+1",
-				"when": "resourceLangId == dltxt",
+				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": { "arg1": "motion.customInsertString1" }
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+2",
-				"when": "resourceLangId == dltxt",
+				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": { "arg1": "motion.customInsertString2" }
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+3",
-				"when": "resourceLangId == dltxt",
+				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": { "arg1": "motion.customInsertString3" }
+			},
+			{
+				"command": "type",
+				"key": "shift+`",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "～" }
+			},
+			{
+				"command": "type",
+				"key": "1",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "！" }
+			},
+			{
+				"command": "type",
+				"key": "2",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "♪" }
+			},
+			{
+				"command": "type",
+				"key": "3",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "？" }
+			},
+			{
+				"command": "type",
+				"key": "6",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "……" }
+			},
+			{
+				"command": "type",
+				"key": "-",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "——" }
+			},
+			{
+				"command": "type",
+				"key": "space",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": { "soucre": "keyboard", "text": "　" }
+			},
+			{
+				"command": "Extension.dltxt.setMode",
+				"key": "escape",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode != 'Normal'",
+				"args": { "arg": "Normal" }
+			},
+			{
+				"command": "Extension.dltxt.setMode",
+				"key": "alt+t",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'",
+				"args": { "arg": "Translate" }
 			}
 		],
 		"menus": {
