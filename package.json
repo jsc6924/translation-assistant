@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.28.3",
+	"version": "2.28.4",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -226,11 +226,11 @@
 			},
 			{
 				"command": "Extension.dltxt.deleteUntilPunc",
-				"key": "backspace",
+				"key": "=",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{
-				"command": "deleteLeft",
+				"command": "Extension.dltxt.deleteAllAfter",
 				"key": "alt+backspace",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
