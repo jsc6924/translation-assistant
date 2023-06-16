@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.28.4",
+	"version": "2.29.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -155,7 +155,7 @@
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.cursorToNextLine+t",
+				"command": "Extension.dltxt.cursorToNextLine",
 				"key": "enter",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
@@ -165,17 +165,17 @@
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.cursorToPrevLine+t",
+				"command": "Extension.dltxt.cursorToPrevLine",
 				"key": "\\",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{
-				"command": "Extension.dltxt.cursorToNextLine+ctrl",
+				"command": "Extension.dltxt.cursorToNextLine",
 				"key": "ctrl+enter",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.cursorToPrevLine+ctrl",
+				"command": "Extension.dltxt.cursorToPrevLine",
 				"key": "ctrl+\\",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
@@ -261,6 +261,60 @@
 				"key": "alt+3",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": { "arg1": "motion.customInsertString3" }
+			},
+			{
+				"command": "Extension.dltxt.customWriteString",
+				"key": "alt+4",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString4" }
+			},
+			{
+				"command": "Extension.dltxt.customWriteString",
+				"key": "alt+5",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString5" }
+			},
+			{
+				"command": "Extension.dltxt.customWriteString",
+				"key": "alt+6",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString6" }
+			},
+			{
+				"command": "Extension.dltxt.setCustomString",
+				"key": "ctrl+alt+1",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString1" }
+			},
+			{
+				"command": "Extension.dltxt.setCustomString",
+				"key": "ctrl+alt+2",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString2" }
+			},
+			{
+				"command": "Extension.dltxt.setCustomString",
+				"key": "ctrl+alt+3",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString3" }
+			},
+			{
+				"command": "Extension.dltxt.setCustomString",
+				"key": "ctrl+alt+4",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString4" }
+			},
+			{
+				"command": "Extension.dltxt.setCustomString",
+				"key": "ctrl+alt+5",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString5" }
+			},
+			{
+				"command": "Extension.dltxt.setCustomString",
+				"key": "ctrl+alt+6",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": { "arg1": "motion.customInsertString6" }
 			},
 			{
 				"command": "type",
@@ -513,8 +567,23 @@
 				},
 				"dltxt.motion.customInsertString3": {
 					"type": "string",
-					"default": "＠",
+					"default": "♥",
 					"description": "快捷键：插入自定义字符串3"
+				},
+				"dltxt.motion.customInsertString4": {
+					"type": "string",
+					"default": "ー",
+					"description": "快捷键：插入自定义字符串4"
+				},
+				"dltxt.motion.customInsertString5": {
+					"type": "string",
+					"default": "『",
+					"description": "快捷键：插入自定义字符串5"
+				},
+				"dltxt.motion.customInsertString6": {
+					"type": "string",
+					"default": "』",
+					"description": "快捷键：插入自定义字符串6"
 				},
 				"dltxt.z.api.baidu.AccessKey": {
 					"type": "string",
