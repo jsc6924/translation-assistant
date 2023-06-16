@@ -17,6 +17,7 @@ export function getNextMode(mode: string): string {
 }
 export const StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
 StatusBarItem.command = 'Extension.dltxt.toggleMode';
+StatusBarItem.tooltip = 'Click to toggle mode'
 
 export function setMode(newMode: Mode) {
     VSCodeContext.set('dltxt.mode', Mode[newMode]);
