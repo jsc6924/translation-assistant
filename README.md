@@ -95,6 +95,8 @@ DLTXT默认支持以下格式（用横线隔开）
 
 注：翻译模式尚在测试阶段，默认绑定随版本变化可能随时改动
 
+![demo](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo.gif?raw=true)
+
 #### 默认快捷键绑定如下
 
 | 快捷键 | 功能 | 支持的模式<1> |
@@ -155,8 +157,6 @@ DLTXT默认支持以下格式（用横线隔开）
 | 5 |『|
 | 6 |』|
 
-
-![demo](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo.gif?raw=true)
 ## 批量编辑
 
 #### 文本格式化
