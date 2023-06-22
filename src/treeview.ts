@@ -18,7 +18,7 @@ export namespace dltxt
     
     // 1. we'll export this class and use it in our extension later
     // 2. we need to implement vscode.TreeDataProvider
-    export class TreeView implements vscode.TreeDataProvider<CustomItem>
+    export class DictTreeView implements vscode.TreeDataProvider<CustomItem>
     {
         // with the vscode.EventEmitter we can refresh our  tree view
         private m_onDidChangeTreeData: vscode.EventEmitter<CustomItem | undefined> = new vscode.EventEmitter<CustomItem | undefined>();
@@ -75,5 +75,38 @@ export namespace dltxt
             this.m_onDidChangeTreeData.fire(undefined);
         }
 
+    }
+
+    export class ClipBoardTreeView implements vscode.TreeDataProvider<vscode.TreeItem>
+    {
+        // with the vscode.EventEmitter we can refresh our  tree view
+        private m_onDidChangeTreeData: vscode.EventEmitter<CustomItem | undefined> = new vscode.EventEmitter<CustomItem | undefined>();
+        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
+        readonly onDidChangeTreeData ? : vscode.Event<CustomItem | undefined> = this.m_onDidChangeTreeData.event;
+
+        items: vscode.TreeItem[] = [];
+
+        constructor() {
+            this.refresh();
+        }
+        getTreeItem(item: vscode.TreeItem): vscode.TreeItem {
+            return item;
+        }
+    
+        getChildren(element?: vscode.TreeItem): Thenable<vscode.TreeItem[]> {
+            return Promise.resolve(this.items);
+        }
+
+        refresh() {
+            const config = vscode.workspace.getConfiguration('dltxt');
+            const prefix = 'motion.customInsertString';
+            this.items = []
+            for (let i = 1; i <= 6; i++) {
+                const k = prefix + String(i);
+                const v = config.get(k) as string;
+                this.items.push(new vscode.TreeItem(`${i}: ${v}`));
+            }
+            this.m_onDidChangeTreeData.fire(undefined);
+        }
     }
 }

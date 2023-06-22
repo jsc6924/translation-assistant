@@ -235,8 +235,15 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}, null, context.subscriptions);
 
-	let tree = new dltxt.TreeView();
+	let tree = new dltxt.DictTreeView();
 	vscode.window.registerTreeDataProvider('dltxt_dict', tree);
+	let clipboard_view = new dltxt.ClipBoardTreeView();
+	vscode.window.registerTreeDataProvider('dltxt_clipboard', clipboard_view);
+    const onDidChangeConfigDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+		if (event.affectsConfiguration('dltxt.motion')) {
+			clipboard_view.refresh();
+		}
+	});
 
 	let syncDatabaseCommand = vscode.commands.registerCommand('Extension.dltxt.sync_database', function () {
 		const config = vscode.workspace.getConfiguration("dltxt");
@@ -607,13 +614,14 @@ export function activate(context: vscode.ExtensionContext) {
 		let editor = vscode.window.activeTextEditor;
 		if (!editor) return;
 		const text = editor.document.getText(editor.selection);
-		if (text) {
-			config.update(arg, text, vscode.ConfigurationTarget.Workspace);
-			vscode.window.showInformationMessage(`已复制到${reg_num}号剪贴板：[${text}]`);
-		} else {
-			config.update(arg, undefined, vscode.ConfigurationTarget.Workspace);
-			vscode.window.showInformationMessage(`已清空${reg_num}号剪贴板`);
-		}
+		config.update(arg, text ? text : undefined, vscode.ConfigurationTarget.Workspace).then(() => {
+			if (text) {
+				vscode.window.showInformationMessage(`已复制到${reg_num}号剪贴板：[${text}]`);
+			} else {
+				vscode.window.showInformationMessage(`已清空${reg_num}号剪贴板`);
+			}
+			clipboard_view.refresh();
+		})
 	});
 
 
@@ -645,7 +653,8 @@ export function activate(context: vscode.ExtensionContext) {
 		spellCheckCmd,
 		spellCheckClearCmd,
 		customWriteStrCmd,
-		removeTempListerner
+		removeTempListerner,
+		onDidChangeConfigDisposable
 	);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {

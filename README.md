@@ -145,7 +145,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 例：`Alt + 1`黏贴1号剪贴板的内容。`Ctrl + Alt + 2`把当前选中的文字复制到2号剪贴板（Workspace级别）。如果在执行`Ctrl + Alt + 数字`命令时没有选中任何内容，则会清空该剪贴板的Workspace级别的设置。
 
-剪贴板的内容可以在插件设置中查看并更改(`dltxt.motion.customInsertString`)。
+剪贴板的内容可以在插件设置中查看并更改(`dltxt.motion.customInsertString`)。也可以在侧边栏中查看内容。
 剪贴板的User级别的默认设置为
 
 | 编号 | 默认内容 |
@@ -313,6 +313,8 @@ vsce publish
 
 ---
 ## Release Notes
+#### 2.30
+- 可在侧边栏中查看剪贴板内容
 #### 2.29
 - 可使用6个自定义剪贴板`Alt+(1-6)`
 - 调整翻译模式部分快捷键

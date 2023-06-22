@@ -307,6 +307,10 @@ export function editorWriteString(s: string) {
   if (!editor)
     return;
     editor.edit((editbuilder) => {
-      editbuilder.insert(editor.selection.active, s);
+      if (editor.selection.start != editor.selection.end) {
+        editbuilder.replace(editor.selection, s);
+      } else {
+        editbuilder.insert(editor.selection.active, s);
+      }
     });
 }
