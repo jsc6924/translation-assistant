@@ -211,6 +211,12 @@ export function deleteUntil(all: boolean, doDelete: boolean) {
     if (iend == position.character) {
       iend++;
     }
+
+    const text = editor.document.getText(new vscode.Range(
+      position.with(position.line, iend-1), position.with(position.line, iend+1)));
+    if (text === '……') {
+      iend++;
+    }
   }
 
   if (doDelete) {
@@ -259,6 +265,11 @@ export function cursorToSublineHead() {
   }
   if (i == curChar) {
     i--;
+    const text = editor.document.getText(new vscode.Range(
+      position.with(position.line, i-1), position.with(position.line, i+1)));
+    if (text === '……') {
+      i--;
+    }
   }
   if (i < prefixLen) {
     i = prefixLen;

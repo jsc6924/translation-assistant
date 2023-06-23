@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.30.0",
+	"version": "2.30.1",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -185,6 +185,16 @@
 			},
 			{
 				"command": "Extension.dltxt.cursorToNextWord",
+				"key": "]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevWord",
+				"key": "[",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextWord",
 				"key": "alt+]",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
@@ -204,6 +214,16 @@
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
+				"command": "Extension.dltxt.cursorToSublineHead",
+				"key": "shift+[",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineEnd",
+				"key": "shift+]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
 				"command": "Extension.dltxt.cursorToLineHead",
 				"key": "ctrl+alt+[",
 				"when": "editorTextFocus && resourceLangId == dltxt"
@@ -212,6 +232,16 @@
 				"command": "Extension.dltxt.cursorToLineEnd",
 				"key": "ctrl+alt+]",
 				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineHead",
+				"key": "ctrl+[",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineEnd",
+				"key": "ctrl+]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{
 				"command": "Extension.dltxt.moveToNextLine",
