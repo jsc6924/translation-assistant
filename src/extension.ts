@@ -211,12 +211,17 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		timeout = setTimeout(updateDecorations, 1000);
 	}
-	setInterval(() => {
-		const config = vscode.workspace.getConfiguration("dltxt");
-		if (vscode.window.activeTextEditor && config.get("simpleTM.project")) {
-			vscode.commands.executeCommand('Extension.dltxt.sync_database');
-		}
-	}, 30000);
+
+	const syncInterval = configInit.get("simpleTM.syncInterval") as number;
+	if (syncInterval > 0) {
+		let syncIntervalMS = Math.max(syncInterval, 30) * 1000;
+		setInterval(() => {
+			const config = vscode.workspace.getConfiguration("dltxt");
+			if (vscode.window.activeTextEditor && config.get("simpleTM.project")) {
+				vscode.commands.executeCommand('Extension.dltxt.sync_database');
+			}
+		}, syncIntervalMS);
+	}
 
 	if (activeEditor) {
 		triggerUpdateDecorations();
@@ -236,9 +241,9 @@ export function activate(context: vscode.ExtensionContext) {
 	}, null, context.subscriptions);
 
 	let tree = new dltxt.DictTreeView();
-	vscode.window.registerTreeDataProvider('dltxt_dict', tree);
+	vscode.window.registerTreeDataProvider('dltxt-dict', tree);
 	let clipboard_view = new dltxt.ClipBoardTreeView();
-	vscode.window.registerTreeDataProvider('dltxt_clipboard', clipboard_view);
+	vscode.window.registerTreeDataProvider('dltxt-clipboard', clipboard_view);
     const onDidChangeConfigDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
 		if (event.affectsConfiguration('dltxt.motion')) {
 			clipboard_view.refresh();
@@ -300,7 +305,7 @@ export function activate(context: vscode.ExtensionContext) {
 						}
 					}).then(response => {
 							if (response.data.Result === 'True') {
-								vscode.window.showInformationMessage("Insert Success!\n" + msg);
+								vscode.window.showInformationMessage("词条添加成功!\n" + msg);
 							}
 							else {
 								vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
@@ -313,7 +318,7 @@ export function activate(context: vscode.ExtensionContext) {
 					} 
 			})
 	});
-	let dictUpdateCmd = vscode.commands.registerCommand('Extension.dltxt.dict_update',　function (arg) {
+	let dictUpdateCmd = vscode.commands.registerCommand('Extension.dltxt.dict_update',　function (arg, wantDelete = false) {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		const username: string = config.get("simpleTM.username") as string;
 		const apiToken: string = config.get("simpleTM.apiToken") as string;
@@ -335,29 +340,18 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!rawText) {
 			return;
 		}
-		vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文` })
-			.then((translate: string | undefined) => {
-				if (translate === undefined) {
-					return; //cancelled
-				}
-				let fullURL = "";
-				var msg = "";
-				if (translate) {
-					msg = rawText + "->" + translate;
-					fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + rawText + "/" + translate;
-					fullURL = encodeURI(fullURL);
-				} else {
-					msg = "deleted: " + rawText;
-					fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + rawText
-					fullURL = encodeURI(fullURL);
-				}
+		const updateFunc = (translate: string | undefined) => {
+			if (translate === undefined) {
+				return; //cancelled
+			}
+			const makeRequest = (fullURL: string) => {
 				axios.get(fullURL, {
 					auth: {
 						username: username, password: apiToken
 					}
 				}).then(response => {
 						if (response.data.Result === 'True') {
-							vscode.window.showInformationMessage("Update Success!\n" + msg);
+							vscode.window.showInformationMessage("词条更新成功!\n" + msg);
 						}
 						else {
 							vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
@@ -367,7 +361,33 @@ export function activate(context: vscode.ExtensionContext) {
 					.catch(error => {
 						vscode.window.showInformationMessage("unexpected error:\n" + error);
 					});
-			})
+			};
+
+			let fullURL = "";
+			var msg = "";
+			if (translate) {
+				msg = rawText + "->" + translate;
+				fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + rawText + "/" + translate;
+				fullURL = encodeURI(fullURL);
+				makeRequest(fullURL);
+			} else {
+				msg = "deleted: " + rawText;
+				fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + rawText
+				fullURL = encodeURI(fullURL);
+				vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否')
+				.then(result => {
+					if (result == '是') {
+						makeRequest(fullURL);
+					}
+				});
+			}
+		};
+		if (!wantDelete) {
+			vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，点击空白处取消` })
+				.then(updateFunc);
+		} else {
+			updateFunc(''); //delete
+		}
 	});
 	let newContextMenu_Update = vscode.commands.registerCommand('Extension.dltxt.context_menu_update',　function () {
 		let editor = vscode.window.activeTextEditor;

@@ -6,12 +6,13 @@ export namespace dltxt
     class CustomItem extends vscode.TreeItem {
         raw: string = '';
         value: string = '';
-        constructor(label: string, value: string) {
-            super(`${label}: ${value}`, vscode.TreeItemCollapsibleState.None);
+        contextValue = 'key-value-item';
+        constructor(raw: string, value: string) {
+            super(`${raw}: ${value}`, vscode.TreeItemCollapsibleState.None);
             if (!value) {
-                this.label = label;
+                this.label = raw;
             }
-            this.raw = label;
+            this.raw = raw;
             this.value = value;
         }
     }
@@ -30,15 +31,13 @@ export namespace dltxt
 
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
         public constructor()  {
-            vscode.commands.registerCommand('Extension.dltxt.treeview.onItemClicked', r => this.onItemClicked(r));
+            vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
+            vscode.commands.registerCommand('Extension.dltxt.treeview.deleteItem', r => this.deleteItem(r));
         }
 
         getTreeItem(item: CustomItem): vscode.TreeItem {
-            let title = item.label ? item.label.toString() : "";
-            let result = new vscode.TreeItem(title, item.collapsibleState);
-            // here we add our command which executes our memberfunction
-            result.command = { command: 'Extension.dltxt.treeview.onItemClicked', title : title, arguments: [item] };
-            return result;
+            item.command = { command: 'Extension.dltxt.copyToClipboard', title : 'copy value', arguments: [{text: item.value}] };
+            return item;
         }
     
         getChildren(element?: CustomItem): Thenable<CustomItem[]> {
@@ -49,8 +48,13 @@ export namespace dltxt
         }
 
         // this is called when we click an item
-        public onItemClicked(item: CustomItem) {
+        public editItem(item: CustomItem) {
             vscode.commands.executeCommand('Extension.dltxt.dict_update', item.raw)
+        }
+
+        // this is called when we click an item
+        public deleteItem(item: CustomItem) {
+            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.raw, true)
         }
 
         refresh(context: vscode.ExtensionContext) {
@@ -77,23 +81,38 @@ export namespace dltxt
 
     }
 
-    export class ClipBoardTreeView implements vscode.TreeDataProvider<vscode.TreeItem>
+
+    class ValueItem extends vscode.TreeItem {
+        value: string = '';
+        contextValue = 'value-item';
+        constructor(label: string, value: string) {
+            super(label, vscode.TreeItemCollapsibleState.None);
+            this.value = value;
+            this.command = { 
+                command: 'Extension.dltxt.copyToClipboard', 
+                title : 'copy value', 
+                arguments: [{text: value}] 
+            };
+        }
+    }
+
+    export class ClipBoardTreeView implements vscode.TreeDataProvider<ValueItem>
     {
         // with the vscode.EventEmitter we can refresh our  tree view
         private m_onDidChangeTreeData: vscode.EventEmitter<CustomItem | undefined> = new vscode.EventEmitter<CustomItem | undefined>();
         // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
         readonly onDidChangeTreeData ? : vscode.Event<CustomItem | undefined> = this.m_onDidChangeTreeData.event;
 
-        items: vscode.TreeItem[] = [];
+        items: ValueItem[] = [];
 
         constructor() {
             this.refresh();
         }
-        getTreeItem(item: vscode.TreeItem): vscode.TreeItem {
+        getTreeItem(item: ValueItem): vscode.TreeItem {
             return item;
         }
     
-        getChildren(element?: vscode.TreeItem): Thenable<vscode.TreeItem[]> {
+        getChildren(element?: ValueItem): Thenable<ValueItem[]> {
             return Promise.resolve(this.items);
         }
 
@@ -104,7 +123,7 @@ export namespace dltxt
             for (let i = 1; i <= 6; i++) {
                 const k = prefix + String(i);
                 const v = config.get(k) as string;
-                this.items.push(new vscode.TreeItem(`${i}: ${v}`));
+                this.items.push(new ValueItem(`${i}: ${v}`, v));
             }
             this.m_onDidChangeTreeData.fire(undefined);
         }
