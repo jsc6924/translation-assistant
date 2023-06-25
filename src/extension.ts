@@ -16,6 +16,7 @@ import { extract, pack } from './dlbuild';
 import { dltxt } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import * as mode from './mode';
+import * as clipboard from './clipboard';
 
 
 /*
@@ -242,13 +243,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let tree = new dltxt.DictTreeView();
 	vscode.window.registerTreeDataProvider('dltxt-dict', tree);
-	let clipboard_view = new dltxt.ClipBoardTreeView();
-	vscode.window.registerTreeDataProvider('dltxt-clipboard', clipboard_view);
-    const onDidChangeConfigDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-		if (event.affectsConfiguration('dltxt.motion')) {
-			clipboard_view.refresh();
-		}
-	});
+
 
 	let syncDatabaseCommand = vscode.commands.registerCommand('Extension.dltxt.sync_database', function () {
 		const config = vscode.workspace.getConfiguration("dltxt");
@@ -621,29 +616,12 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let customWriteStrCmd = vscode.commands.registerCommand('Extension.dltxt.customWriteString', (args) => {
-		const arg = args.arg1;
-		const config = vscode.workspace.getConfiguration("dltxt");
-		const s = config.get(arg) as string;
+		const k = args.arg1;
+		const s = clipboard.ClipBoardManager.get(context, k);
 		motion.editorWriteString(s);
 	});
 
-	registerCommand(context, 'Extension.dltxt.setCustomString', (args) => {
-		const arg = args.arg1;
-		const reg_num = arg[arg.length - 1]
-		const config = vscode.workspace.getConfiguration("dltxt");
-		let editor = vscode.window.activeTextEditor;
-		if (!editor) return;
-		const text = editor.document.getText(editor.selection);
-		config.update(arg, text ? text : undefined, vscode.ConfigurationTarget.Workspace).then(() => {
-			if (text) {
-				vscode.window.showInformationMessage(`已复制到${reg_num}号剪贴板：[${text}]`);
-			} else {
-				vscode.window.showInformationMessage(`已清空${reg_num}号剪贴板`);
-			}
-			clipboard_view.refresh();
-		})
-	});
-
+	clipboard.activate(context);
 
 	context.subscriptions.push(
 		copyToClipboardCmd,
@@ -673,8 +651,7 @@ export function activate(context: vscode.ExtensionContext) {
 		spellCheckCmd,
 		spellCheckClearCmd,
 		customWriteStrCmd,
-		removeTempListerner,
-		onDidChangeConfigDisposable
+		removeTempListerner
 	);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {

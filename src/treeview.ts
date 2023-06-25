@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import { ClipBoardManager } from './clipboard';
 
 // lets put all in a cwt namespace
 export namespace dltxt
@@ -82,13 +83,15 @@ export namespace dltxt
     }
 
 
-    class ValueItem extends vscode.TreeItem {
+    export class ValueItem extends vscode.TreeItem {
         value: string = '';
+        index: string;
         contextValue = 'value-item';
-        constructor(label: string, value: string) {
+        constructor(label: string, index: string, value: string) {
             super(label, vscode.TreeItemCollapsibleState.None);
+            this.index = index;
             this.value = value;
-            this.command = { 
+            this.command = {
                 command: 'Extension.dltxt.copyToClipboard', 
                 title : 'copy value', 
                 arguments: [{text: value}] 
@@ -99,14 +102,14 @@ export namespace dltxt
     export class ClipBoardTreeView implements vscode.TreeDataProvider<ValueItem>
     {
         // with the vscode.EventEmitter we can refresh our  tree view
-        private m_onDidChangeTreeData: vscode.EventEmitter<CustomItem | undefined> = new vscode.EventEmitter<CustomItem | undefined>();
+        private m_onDidChangeTreeData: vscode.EventEmitter<ValueItem | undefined> = new vscode.EventEmitter<ValueItem | undefined>();
         // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-        readonly onDidChangeTreeData ? : vscode.Event<CustomItem | undefined> = this.m_onDidChangeTreeData.event;
+        readonly onDidChangeTreeData ? : vscode.Event<ValueItem | undefined> = this.m_onDidChangeTreeData.event;
 
         items: ValueItem[] = [];
 
-        constructor() {
-            this.refresh();
+        constructor(context: vscode.ExtensionContext) {
+            this.refresh(context);
         }
         getTreeItem(item: ValueItem): vscode.TreeItem {
             return item;
@@ -116,14 +119,13 @@ export namespace dltxt
             return Promise.resolve(this.items);
         }
 
-        refresh() {
-            const config = vscode.workspace.getConfiguration('dltxt');
-            const prefix = 'motion.customInsertString';
+        refresh(context: vscode.ExtensionContext) {
+            const prefix = 'clipboard.customString';
             this.items = []
             for (let i = 1; i <= 6; i++) {
                 const k = prefix + String(i);
-                const v = config.get(k) as string;
-                this.items.push(new ValueItem(`${i}: ${v}`, v));
+                const v = ClipBoardManager.get(context, k);
+                this.items.push(new ValueItem(`${i}: ${v}`, String(i), v));
             }
             this.m_onDidChangeTreeData.fire(undefined);
         }

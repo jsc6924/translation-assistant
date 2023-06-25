@@ -144,3 +144,4 @@ export function registerCommand(
 	context.subscriptions.push(disposable);
 }
 
+
