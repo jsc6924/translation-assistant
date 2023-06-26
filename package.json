@@ -93,14 +93,18 @@
 				"command": "Extension.dltxt.copyToClipboard",
 				"title": "复制到剪贴板",
 				"args": [
-					{ "name": "text", "type": "string", "description": "Text to copy" }
+					{
+						"name": "text",
+						"type": "string",
+						"description": "Text to copy"
+					}
 				]
 			},
 			{
 				"command": "Extension.dltxt.sync_database",
 				"title": "拉取云端词条",
 				"category": "DLTXT",
-				"icon":{
+				"icon": {
 					"dark": "icons/dark/sync.svg",
 					"light": "icons/light/sync.svg"
 				}
@@ -310,127 +314,176 @@
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+1",
 				"when": "editorTextFocus && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString1" }
+				"args": {
+					"arg1": "clipboard.customString1"
+				}
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+2",
 				"when": "editorTextFocus && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString2" }
+				"args": {
+					"arg1": "clipboard.customString2"
+				}
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+3",
 				"when": "editorTextFocus && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString3" }
+				"args": {
+					"arg1": "clipboard.customString3"
+				}
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+4",
 				"when": "editorTextFocus && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString4" }
+				"args": {
+					"arg1": "clipboard.customString4"
+				}
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+5",
 				"when": "editorTextFocus && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString5" }
+				"args": {
+					"arg1": "clipboard.customString5"
+				}
 			},
 			{
 				"command": "Extension.dltxt.customWriteString",
 				"key": "alt+6",
 				"when": "editorTextFocus && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString6" }
+				"args": {
+					"arg1": "clipboard.customString6"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setClipboardString",
 				"key": "ctrl+alt+1",
 				"when": "editorTextFocus  && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString1"}
+				"args": {
+					"arg1": "clipboard.customString1"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setClipboardString",
 				"key": "ctrl+alt+2",
 				"when": "editorTextFocus  && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString2"}
+				"args": {
+					"arg1": "clipboard.customString2"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setClipboardString",
 				"key": "ctrl+alt+3",
 				"when": "editorTextFocus  && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString3"}
+				"args": {
+					"arg1": "clipboard.customString3"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setClipboardString",
 				"key": "ctrl+alt+4",
 				"when": "editorTextFocus  && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString4"}
+				"args": {
+					"arg1": "clipboard.customString4"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setClipboardString",
 				"key": "ctrl+alt+5",
 				"when": "editorTextFocus  && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString5"}
+				"args": {
+					"arg1": "clipboard.customString5"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setClipboardString",
 				"key": "ctrl+alt+6",
 				"when": "editorTextFocus  && resourceLangId == dltxt",
-				"args": { "arg1": "clipboard.customString6"}
+				"args": {
+					"arg1": "clipboard.customString6"
+				}
 			},
 			{
 				"command": "type",
 				"key": "shift+`",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "～" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "～"
+				}
 			},
 			{
 				"command": "type",
 				"key": "1",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "！" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "！"
+				}
 			},
 			{
 				"command": "type",
 				"key": "2",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "♪" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "♪"
+				}
 			},
 			{
 				"command": "type",
 				"key": "3",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "？" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "？"
+				}
 			},
 			{
 				"command": "type",
 				"key": "6",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "……" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "……"
+				}
 			},
 			{
 				"command": "type",
 				"key": "-",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "——" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "——"
+				}
 			},
 			{
 				"command": "type",
 				"key": "space",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
-				"args": { "soucre": "keyboard", "text": "　" }
+				"args": {
+					"soucre": "keyboard",
+					"text": "　"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setMode",
 				"key": "escape",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode != 'Normal'",
-				"args": { "arg": "Normal" }
+				"args": {
+					"arg": "Normal"
+				}
 			},
 			{
 				"command": "Extension.dltxt.setMode",
 				"key": "alt+t",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'",
-				"args": { "arg": "Translate" }
+				"args": {
+					"arg": "Translate"
+				}
 			}
 		],
 		"menus": {
@@ -492,7 +545,7 @@
 					"group": "navigation@1"
 				}
 			],
-			"view/item/context":[
+			"view/item/context": [
 				{
 					"command": "Extension.dltxt.treeview.editItem",
 					"when": "view == dltxt-dict && viewItem == key-value-item",
@@ -637,7 +690,7 @@
 					"type": "array",
 					"default": [],
 					"items": {
-					  "type": "string"
+						"type": "string"
 					},
 					"description": "错别字检查：跳过的字段（例如人名）"
 				},
@@ -686,8 +739,10 @@
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
+		"flexsearch": "^0.7.31",
 		"iconv-lite": "^0.6.3",
 		"js-yaml": "^4.1.0",
+		"kuromoji": "^0.1.2",
 		"open": "^7.4.2",
 		"request": "^2.88.2"
 	},
