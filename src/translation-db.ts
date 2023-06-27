@@ -1,17 +1,26 @@
-import * as flexsearch from "flexsearch-ts";
 import * as kuromoji from 'kuromoji';
 import * as vscode from 'vscode';
 import { mapToObject } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
+import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
+
+interface IndexedDocument {
+    id: number;
+    context: string;
+}
 
 export class SearchIndex {
-    index: flexsearch.Index;
+    index: Index<IndexedDocument>;
     idToFilename: Map<number, string> = new Map();
     filenameToId: Map<string, number> = new Map();
     nextId: number = 0;
     constructor() {
-        this.index = new flexsearch.Index();
+        this.index = FlexSearch.create({
+            tokenize: 'strict',
+            split: /\s+/,
+            async: false
+        });
     }
 
     add(filename: string, content: string) {
@@ -24,24 +33,25 @@ export class SearchIndex {
 
     save(context: vscode.ExtensionContext){
         let savedObj: any = {};
-        fs.mkdirSync(path.join(context.globalStoragePath, 'SearchIndex'), {
-            recursive: true
-        });
-        this.index.export((key, value) => {
-            const savePath = path.join(context.globalStoragePath, 'SearchIndex/', `${key}`);
-            fs.writeFileSync(savePath, value,  { encoding: 'utf8' });
-        })
+        const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
+        fs.mkdirSync(SearchIndexPath, {recursive: true});
+
+        const indexContent = this.index.export()
+        const IndexPath = path.join(SearchIndexPath, 'Index.json');
+        fs.writeFileSync(IndexPath, indexContent, { encoding: 'utf8' });
+        
         savedObj['idToFilename'] = mapToObject(this.idToFilename);
         savedObj['filenameToId'] = mapToObject(this.filenameToId);
         savedObj['nextId'] = this.nextId;
         const jsonString = JSON.stringify(savedObj);
-        const savePath = path.join(context.globalStoragePath, 'SearchIndex.json');
+        const savePath = path.join(SearchIndexPath, 'SearchIndex.json');
         fs.writeFileSync(savePath, jsonString, { encoding: 'utf8' });
         
     }
 
     load(context: vscode.ExtensionContext) {
-        const savePath = path.join(context.globalStoragePath, 'SearchIndex.json');
+        const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
+        const savePath = path.join(SearchIndexPath, 'SearchIndex.json');
         const jsonString = fs.readFileSync(savePath, 'utf8');
         const savedObj: any = JSON.parse(jsonString);
 
@@ -52,20 +62,15 @@ export class SearchIndex {
         Object.entries(savedObj['filenameToId']).forEach(([key, value]) => {
             this.filenameToId.set(String(key), Number(value));
         });
-        const dirPath = path.join(context.globalStoragePath, 'SearchIndex/');
-        const indexFileNames = fs.readdirSync(dirPath);
-        indexFileNames.forEach((fileName) => {
-            const filePath = path.join(dirPath, fileName);
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            this.index.import(fileName, fileContent);
-        })
-
+        const IndexPath = path.join(SearchIndexPath, 'Index.json');
+        const IndexContent = fs.readFileSync(IndexPath, 'utf8');
+        this.index.import(IndexContent);
     }
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    //testLoad(context);
-    testSave(context);
+    testLoad(context);
+    //testSave(context);
 }
 
 export class Tokenizer {
@@ -97,7 +102,7 @@ async function testSave(context: vscode.ExtensionContext) {
 
     // Example Japanese text
     const japaneseText = '日本語のテキストです。';
-    // Tokenize the Japanese text using Kuromoji
+    // // Tokenize the Japanese text using Kuromoji
     const tokenizer = await Tokenizer.getAsync()
     const tokens = tokenizer.tokenize(japaneseText);
     const tokenizedText = tokens.map((token) => token.surface_form).join(' ');

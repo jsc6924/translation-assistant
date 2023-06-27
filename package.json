@@ -740,7 +740,7 @@
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
-		"flexsearch-ts": "^0.7.35",
+		"flexsearch": "^0.6.32",
 		"iconv-lite": "^0.6.3",
 		"js-yaml": "^4.1.0",
 		"kuromoji": "^0.1.2",
