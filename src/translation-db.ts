@@ -4,6 +4,7 @@ import { mapToObject } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
+import { StopWordsSet } from './stopwords-jp';
 
 interface IndexedDocument {
     id: number;
@@ -17,9 +18,12 @@ export class SearchIndex {
     nextId: number = 0;
     constructor() {
         this.index = FlexSearch.create({
-            tokenize: 'strict',
+            tokenize: 'forward',
             split: /\s+/,
-            async: false
+            async: false,
+            filter: function(value){
+                return !StopWordsSet.has(value);
+            }
         });
     }
 
@@ -68,15 +72,15 @@ export class SearchIndex {
     }
 }
 
-export function activate(context: vscode.ExtensionContext) {
-    testLoad(context);
-    //testSave(context);
+export async function activate(context: vscode.ExtensionContext) {
+    await testSave(context);
+    await testLoad(context);
 }
 
 export class Tokenizer {
     static tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | undefined;
-    static getAsync(): Promise<kuromoji.Tokenizer<kuromoji.IpadicFeatures>> {
-        if (!this.tokenizer) {
+    static getAsync(): Promise<Tokenizer> {
+        if (!Tokenizer.tokenizer) {
             return new Promise((resolve, reject) => {
                 kuromoji
                 .builder({ dicPath: 'C://Users//jsc//source//repos//translation-assistant//data//dict'})
@@ -86,14 +90,21 @@ export class Tokenizer {
                         reject(err);
                         return;
                     }
-                    this.tokenizer = tokenizer;
-                    resolve(tokenizer);
+                    Tokenizer.tokenizer = tokenizer;
+                    resolve(new Tokenizer());
                 })
             })
             
         } else {
-            return Promise.resolve(this.tokenizer);
+            return Promise.resolve(new Tokenizer);
         }
+    }
+
+    tokenize(text: string): string {
+        if (!Tokenizer.tokenizer) {
+            return '';
+        }
+        return Tokenizer.tokenizer.tokenize(text).map((token) => token.surface_form).join(' ');
     }
 }
 
@@ -101,33 +112,45 @@ async function testSave(context: vscode.ExtensionContext) {
     const index = new SearchIndex();
 
     // Example Japanese text
-    const japaneseText = '日本語のテキストです。';
+    const japaneseText = '日本語を話すのが好きなのはあなたらしい。';
     // // Tokenize the Japanese text using Kuromoji
     const tokenizer = await Tokenizer.getAsync()
-    const tokens = tokenizer.tokenize(japaneseText);
-    const tokenizedText = tokens.map((token) => token.surface_form).join(' ');
+    const tokenizedText = tokenizer.tokenize(japaneseText);
 
     // Add the tokenized text to the FlexSearch index
     index.add('my-doc-1', tokenizedText);
 
     // Perform a search
-    const query = 'テキスト';
+    const query = '話す';
     const results = index.index.search(query);
 
     console.log('Search results:', results);
     index.save(context);
 }
 
-function testLoad(context: vscode.ExtensionContext) {
+async function testLoad(context: vscode.ExtensionContext) {
     const index = new SearchIndex();
     index.load(context);
     // Perform a search
-    const query = 'テキスト';
+    const query = '日本語';
     const results = index.index.search(query);
 
-    const query2 = 'aa';
+    const query2 = 'を';
     const results2 = index.index.search(query2);
 
     console.log('Search results:', results);
     console.log('Search results2:', results2);
+
+    const query3 = '日本語を喋るのが好きなのはあなたらしくない。';
+    const tokenizer = await Tokenizer.getAsync();
+    const tokenizedQuery3 = tokenizer.tokenize(query3);
+    const results3 = index.index.search(tokenizedQuery3, {
+        suggest: true
+    });
+    console.log('Search results3:', results3);
+
+    const query4 = 'らし';
+    const results4 = index.index.search(query4);
+
+    console.log('Search results4:', results4);
 }
