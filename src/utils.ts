@@ -145,3 +145,10 @@ export function registerCommand(
 }
 
 
+export function mapToObject<K, V>(map: Map<K, V>) : any {
+  const plainObject: any = {};
+  map.forEach((value, key) => {
+    plainObject[key] = value;
+  });
+  return plainObject;
+}

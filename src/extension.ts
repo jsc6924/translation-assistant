@@ -17,6 +17,7 @@ import { dltxt } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
+import * as trdb from './translation-db';
 
 
 /*
@@ -622,6 +623,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	clipboard.activate(context);
+	trdb.activate(context);
 
 	context.subscriptions.push(
 		copyToClipboardCmd,

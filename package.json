@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.32.0",
+	"version": "2.33.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -725,6 +725,7 @@
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
 		"@types/js-yaml": "^4.0.5",
+		"@types/kuromoji": "^0.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
 		"@types/vscode": "^1.47.0",
@@ -739,7 +740,7 @@
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
-		"flexsearch": "^0.7.31",
+		"flexsearch-ts": "^0.7.35",
 		"iconv-lite": "^0.6.3",
 		"js-yaml": "^4.1.0",
 		"kuromoji": "^0.1.2",
