@@ -399,7 +399,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let dlEditor: vscode.TextEditor | undefined = undefined;
 	let extractSingleline = vscode.commands.registerCommand('Extension.dltxt.extract_single_line', () => {
-		console.log('extract single line');
 		const document = vscode.window.activeTextEditor?.document;
 		if (!document) return;
 		const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;

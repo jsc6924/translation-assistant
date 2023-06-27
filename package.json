@@ -182,6 +182,22 @@
 					"light": "icons/light/edit.svg",
 					"dark": "icons/dark/edit.svg"
 				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.addDocument",
+				"title": "添加当前文本到翻译数据库",
+				"icon": {
+					"dark": "icons/dark/add.svg",
+					"light": "icons/light/add.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.searchText",
+				"title": "在翻译数据库搜索",
+				"icon": {
+					"dark": "icons/dark/search.svg",
+					"light": "icons/light/search.svg"
+				}
 			}
 		],
 		"keybindings": [
