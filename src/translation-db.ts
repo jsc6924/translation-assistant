@@ -29,18 +29,22 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         const files = fs.readdirSync(folderPath);
         let successCount = 0;
+        let totalCount = 0;
         for(const file of files) {
             const filePath = path.join(folderPath, file);
             if (!file.endsWith('txt')) {
                 continue;
             }
+            totalCount++;
             const success = await addDocumentPath(context, filePath, false);
             if (success) {
                 successCount++;
+            } else {
+                channel.appendLine(`添加失败：${file}`);
             }
         }
         saveIndex(context);
-        vscode.window.showInformationMessage(`添加到翻译数据库：共${files.length}个文件，成功${successCount}个`);
+        vscode.window.showInformationMessage(`添加到翻译数据库：共${totalCount}个文件，成功${successCount}个`);
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.deleteDoc", async (arg) => {
