@@ -86,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext) {
             return;
         }
         const res = index.search(query, {
-            limit: 20
+            limit: 50
         });
         showSearchResults(context, query, res);
         
@@ -109,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const tokenizer = await Tokenizer.getAsync(context);
         query = tokenizer.tokenize(query);
         const res = index.search(query, {
-            limit: 20,
+            limit: 50,
             suggest: true
         });
         showSearchResults(context, query, res);
@@ -165,7 +165,7 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
         totalTrLines.push('');
     }
     const res = memoryIndex.search(query, {
-        limit: 20,
+        limit: 50,
         suggest: true
     }) as any as number[];
 
