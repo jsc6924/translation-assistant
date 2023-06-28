@@ -32,14 +32,18 @@ export async function activate(context: vscode.ExtensionContext) {
         let totalCount = 0;
         for(const file of files) {
             const filePath = path.join(folderPath, file);
-            if (!file.endsWith('txt')) {
+            if (!fs.statSync(filePath).isFile() && !file.endsWith('.txt')) {
                 continue;
             }
             totalCount++;
-            const success = await addDocumentPath(context, filePath, false);
-            if (success) {
-                successCount++;
-            } else {
+            try {
+                const success = await addDocumentPath(context, filePath, false);
+                if (success) {
+                    successCount++;
+                } else {
+                    channel.appendLine(`添加失败：${file}`);
+                }
+            } catch (err) {
                 channel.appendLine(`添加失败：${file}`);
             }
         }
