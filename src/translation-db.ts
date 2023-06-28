@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
 import { StopWordsSet } from './stopwords-jp';
-import { registerCommand, showOutputText } from './utils';
+import { registerCommand, showOutputText, downloadFile, unzipFile } from './utils';
 import { getRegex, MatchedGroups } from './formatter';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
@@ -15,18 +15,6 @@ export async function activate(context: vscode.ExtensionContext) {
     if(index.load(context)) {
         vscode.window.showInformationMessage(`已读取翻译数据库`);
     }
-    
-    registerCommand(context, "Extension.dltxt.trdb.addDoc", async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
-        }
-
-        const document = vscode.window.activeTextEditor?.document;
-        if (!document) return;
-
-        addDocument(context, document, true);
-    });
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
         addDocumentPath(context, arg.fsPath, true);
@@ -48,6 +36,13 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }
         vscode.window.showInformationMessage(`添加到翻译数据库：共${files.length}个文件，成功${successCount}个`);
+    }, false);
+
+    registerCommand(context, "Extension.dltxt.trdb.context.deleteDoc", async (arg) => {
+        if(await deleteDocumentPath(context, arg.fsPath)) {
+            const {base} = path.parse(arg.fsPath);
+            vscode.window.showInformationMessage(`已从翻译数据库移除${base}`)
+        }
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.saveDB", async () => {
@@ -78,7 +73,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (!query) {
             return;
         }
-        const tokenizer = await Tokenizer.getAsync();
+        const tokenizer = await Tokenizer.getAsync(context);
         query = tokenizer.tokenize(query);
         const res = index.search(query, {
             limit: 20,
@@ -152,10 +147,12 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
         lineNumberSeen.add(i);
         const file = findFileByLineNumber(i);
         outputLines.push(`-----------------------[${k++}]${file}-----------------------`);
+        outputLines.push('');
         for(let j = i-1; j <= i+1; j++) {
             if (j > 0 && j < totalTrLines.length) {
                 outputLines.push(totalRawLines[j].replace(/\s+/g, ''));
                 outputLines.push(totalTrLines[j]);
+                outputLines.push('');
             }
         }
     }
@@ -172,6 +169,34 @@ async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string,
     const lines = content.split('\n');
     const documentFilename = path.parse(fsPath).base;
     return addDocumentLines(context, documentFilename, lines, verbose);
+}
+async function deleteDocumentPath(context: vscode.ExtensionContext, fsPath: string) {
+    const documentFilename = path.parse(fsPath).base;
+    const config = vscode.workspace.getConfiguration('dltxt');
+    let GameTitle: string = config.get("trdb.project") as string;
+
+    if (!GameTitle) {
+        vscode.window.showErrorMessage("请在设置中填写项目名后再使用此功能");
+        return false;
+    }
+    const databasePath = path.join(context.globalStoragePath, 'trdb');
+    fs.mkdirSync(path.join(databasePath, 'raw', GameTitle), {recursive: true});
+    fs.mkdirSync(path.join(databasePath, 'tr', GameTitle), {recursive: true});
+    const indexedFilenamePrefix = `${documentFilename}`;
+    const files = fs.readdirSync(path.join(databasePath, "raw", GameTitle)).filter((file) => {
+        return file.startsWith(indexedFilenamePrefix);
+    });
+    if (files.length == 0) {
+        vscode.window.showErrorMessage(`翻译数据库中未找到${documentFilename}`);
+        return false;
+    }
+    for(const file of files) {
+        fs.unlinkSync(path.join(databasePath, 'raw', GameTitle, file));
+        fs.unlinkSync(path.join(databasePath, 'tr', GameTitle, file));
+        const indexedFilename = `${GameTitle}/${file}`;
+        index.remove(indexedFilename);
+    }
+    return true;
 }
 async function addDocument(context: vscode.ExtensionContext, document: vscode.TextDocument, verbose: boolean) {
     let lines: string[] = [];
@@ -226,7 +251,7 @@ async function addDocumentLines(context: vscode.ExtensionContext, documentFilena
         clines = tr;
     }
 
-    const tokenizer = await Tokenizer.getAsync();
+    const tokenizer = await Tokenizer.getAsync(context);
     for(let i = 0; i < lines.length; i++) {
         lines[i] = tokenizer.tokenize(lines[i]);
     }
@@ -322,6 +347,17 @@ export class SearchIndex {
         return true;
     }
 
+    remove(filename: string): boolean {
+        if (!this.filenameToId.has(filename)) {
+            return false;
+        }
+        const id = this.filenameToId.get(filename) as number;
+        this.index.remove(id);
+        this.idToFilename.delete(id);
+        this.filenameToId.delete(filename);
+        return true;
+    }
+
     search(query: string, options?: number | SearchOptions | undefined): string[] {
         const res = this.index.search(query, options) as any as number[];
         const r: string[] = [];
@@ -379,12 +415,23 @@ export class SearchIndex {
 }
 
 export class Tokenizer {
+    static downloadURL = 'https://github.com/jsc6924/translation-assistant/releases/download/v2.32.0/dict.zip'
     static tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | undefined;
-    static getAsync(): Promise<Tokenizer> {
+    static async getAsync(context: vscode.ExtensionContext): Promise<Tokenizer> {
         if (!Tokenizer.tokenizer) {
+            const dictPath = path.join(context.globalStoragePath, "dict");
+            if (!fs.existsSync(dictPath)) {
+                channel.show();
+                channel.appendLine(`正在从${Tokenizer.downloadURL}下载词典...`);
+                const zipFile = await downloadFile(Tokenizer.downloadURL, path.join(context.globalStoragePath, "dict.zip"));
+                channel.appendLine(`下载完成，正在解压...`);
+                fs.mkdirSync(dictPath, {recursive: true});
+                const files = await unzipFile(zipFile, dictPath);
+                channel.appendLine(`解压完成`);
+            }
             return new Promise((resolve, reject) => {
                 kuromoji
-                    .builder({ dicPath: 'C://Users//jsc//source//repos//translation-assistant//data//dict' })
+                    .builder({ dicPath: dictPath })
                     .build((err, tokenizer) => {
                         if (err) {
                             console.error('Kuromoji initialization error:', err);
@@ -408,53 +455,5 @@ export class Tokenizer {
         return Tokenizer.tokenizer.tokenize(text).map((token) => token.surface_form).join(' ');
     }
 }
-
-async function testSave(context: vscode.ExtensionContext) {
-    const index = new SearchIndex();
-
-    // Example Japanese text
-    const japaneseText = '日本語を話すのが好きなのはあなたらしい。';
-    // // Tokenize the Japanese text using Kuromoji
-    const tokenizer = await Tokenizer.getAsync()
-    const tokenizedText = tokenizer.tokenize(japaneseText);
-
-    // Add the tokenized text to the FlexSearch index
-    index.add('my-doc-1', tokenizedText);
-
-    // Perform a search
-    const query = '話す';
-    const results = index.index.search(query);
-
-    console.log('Search results:', results);
-    index.save(context);
-}
-
-async function testLoad(context: vscode.ExtensionContext) {
-    const index = new SearchIndex();
-    index.load(context);
-    // Perform a search
-    const query = '日本語';
-    const results = index.index.search(query);
-
-    const query2 = 'を';
-    const results2 = index.index.search(query2);
-
-    console.log('Search results:', results);
-    console.log('Search results2:', results2);
-
-    const query3 = '日本語を喋るのが好きなのはあなたらしくない。';
-    const tokenizer = await Tokenizer.getAsync();
-    const tokenizedQuery3 = tokenizer.tokenize(query3);
-    const results3 = index.index.search(tokenizedQuery3, {
-        suggest: true
-    });
-    console.log('Search results3:', results3);
-
-    const query4 = 'らし';
-    const results4 = index.index.search(query4);
-
-    console.log('Search results4:', results4);
-}
-
 
 const index = new SearchIndex;

@@ -184,21 +184,16 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.trdb.addDoc",
-				"title": "添加当前文本到翻译数据库",
-				"category": "DLTXT",
-				"icon": {
-					"dark": "icons/dark/add.svg",
-					"light": "icons/light/add.svg"
-				}
-			},
-			{
 				"command": "Extension.dltxt.trdb.context.addDoc",
-				"title": "添加当前文本到翻译数据库"
+				"title": "添加到翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addFolder",
-				"title": "添加当前文件夹到翻译数据库"
+				"title": "添加文件夹到翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.deleteDoc",
+				"title": "从翻译数据库中移除"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.saveDB",
@@ -542,16 +537,21 @@
 				{
 					"when": "resourceLangId == dltxt && resourceScheme == file",
 					"command": "Extension.dltxt.trdb.context.addDoc",
-					"group": "dltxt.trdb"
+					"group": "dltxt.trdb@1"
 				},
 				{
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.trdb.context.addFolder",
-					"group": "dltxt.trdb"
+					"group": "dltxt.trdb@1"
+				},
+				{
+					"when": "resourceLangId == dltxt && resourceScheme == file",
+					"command": "Extension.dltxt.trdb.context.deleteDoc",
+					"group": "dltxt.trdb@2"
 				},
 				{
 					"command": "Extension.dltxt.trdb.context.saveDB",
-					"group": "dltxt.trdb"
+					"group": "dltxt.trdb@3"
 				}
 			],
 			"editor/context": [
@@ -789,6 +789,8 @@
 		"test-compile": "tsc -p ./"
 	},
 	"devDependencies": {
+		"@types/adm-zip": "^0.5.0",
+		"@types/decompress": "^4.2.4",
 		"@types/glob": "^7.1.1",
 		"@types/js-yaml": "^4.0.5",
 		"@types/kuromoji": "^0.1.1",
@@ -806,12 +808,14 @@
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
+		"decompress": "^4.2.1",
 		"flexsearch": "^0.6.32",
 		"iconv-lite": "^0.6.3",
 		"js-yaml": "^4.1.0",
 		"kuromoji": "^0.1.2",
 		"open": "^7.4.2",
-		"request": "^2.88.2"
+		"request": "^2.88.2",
+		"typed-rest-client": "^1.8.11"
 	},
 	"repository": {
 		"type": "git",
