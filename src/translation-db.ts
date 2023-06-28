@@ -415,19 +415,20 @@ export class SearchIndex {
 }
 
 export class Tokenizer {
-    static downloadURL = 'https://github.com/jsc6924/translation-assistant/releases/download/v2.32.0/dict.zip'
+    static downloadURL = 'https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip'
     static tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | undefined;
     static async getAsync(context: vscode.ExtensionContext): Promise<Tokenizer> {
         if (!Tokenizer.tokenizer) {
             const dictPath = path.join(context.globalStoragePath, "dict");
-            if (!fs.existsSync(dictPath)) {
+            if (!fs.existsSync(path.join(context.globalStoragePath, "dict", "base.dat.gz"))) {
                 channel.show();
-                channel.appendLine(`正在从${Tokenizer.downloadURL}下载词典...`);
+                channel.appendLine(`正在从 ${Tokenizer.downloadURL} 下载词典...`);
                 const zipFile = await downloadFile(Tokenizer.downloadURL, path.join(context.globalStoragePath, "dict.zip"));
                 channel.appendLine(`下载完成，正在解压...`);
                 fs.mkdirSync(dictPath, {recursive: true});
                 const files = await unzipFile(zipFile, dictPath);
                 channel.appendLine(`解压完成`);
+                fs.unlinkSync(zipFile);
             }
             return new Promise((resolve, reject) => {
                 kuromoji
