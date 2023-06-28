@@ -98,6 +98,18 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
     let totalRawLines = [''];
     let totalTrLines = [''];
     let lineCount = totalRawLines.length;
+    let lastLine: number[] = [];
+    let usedFiles: string[] = [];
+    function findFileByLineNumber(line: number): string {
+        let i = 0;
+        while(i < lastLine.length) {
+            if (line < lastLine[i]) {
+                return usedFiles[i];
+            }
+            i++;
+        }
+        return '';
+    }
     for(const file of matchedFiles) {
         const rawFilePath = path.join(rawTextsPath, file);
         const rawContent = fs.readFileSync(rawFilePath, { encoding: 'utf8' });
@@ -110,10 +122,16 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
             continue;
         }
         for(let i = 0; i < rawLines.length; i++) {
-            memoryIndex.add(lineCount++, rawLines[i]);
+            // 1 pading, no need to index
+            if (i > 0 && i < rawLines.length - 1) {
+                memoryIndex.add(lineCount, rawLines[i]);
+            }
+            lineCount++;
             totalRawLines.push(rawLines[i]);
             totalTrLines.push(trLines[i]);
         }
+        lastLine.push(lineCount);
+        usedFiles.push(file);
         lineCount++;
         totalRawLines.push('');
         totalTrLines.push('');
@@ -132,7 +150,8 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
             continue;
         }
         lineNumberSeen.add(i);
-        outputLines.push(`---------------------------[${k++}]---------------------------`);
+        const file = findFileByLineNumber(i);
+        outputLines.push(`-----------------------[${k++}]${file}-----------------------`);
         for(let j = i-1; j <= i+1; j++) {
             if (j > 0 && j < totalTrLines.length) {
                 outputLines.push(totalRawLines[j].replace(/\s+/g, ''));
@@ -177,8 +196,9 @@ async function addDocumentLines(context: vscode.ExtensionContext, documentFilena
         return false;
     }
 
-    let lines = [];
-    let clines = [];
+    //padding 1
+    let lines = [''];
+    let clines = [''];
 
     for (let i = 0; i < documentLines.length; i++) {
         const line = documentLines[i].trim();
@@ -211,26 +231,29 @@ async function addDocumentLines(context: vscode.ExtensionContext, documentFilena
         lines[i] = tokenizer.tokenize(lines[i]);
     }
 
-    const rawContent = lines.join('\n');
-    const trContent = clines.join('\n');
+    //padding 1
+    lines.push('');
+    clines.push('');
     
     const databasePath = path.join(context.globalStoragePath, 'trdb');
-    const rawTextsPath = path.join(databasePath, 'raw', GameTitle);
-    const trTextPath   = path.join(databasePath, 'tr', GameTitle);
-    fs.mkdirSync(rawTextsPath, {recursive: true});
-    fs.mkdirSync(trTextPath, {recursive: true});
+    fs.mkdirSync(path.join(databasePath, 'raw', GameTitle), {recursive: true});
+    fs.mkdirSync(path.join(databasePath, 'tr', GameTitle), {recursive: true});
 
-    const indexedFilename = `${GameTitle}/${documentFilename}`;
-    if (!index.add(indexedFilename, rawContent)) {
-        if (verbose) {
-            vscode.window.showErrorMessage('当前项目下已存在同名文件');
-        }
-        return false;
+    const ChunkSize = 500;
+    for(let k = 1; k < lines.length-1; k += ChunkSize) {
+        const indexedFilename = `${GameTitle}/${documentFilename}.${k}.txt`;
+        const rIndexLines = lines.slice(k-1, k+ChunkSize+1);
+        const rawContent = rIndexLines.join('\n');
+        index.add(indexedFilename, rawContent);
+
+        const trContent = clines.slice(k-1, k+ChunkSize+1).join('\n');
+
+        fs.writeFileSync(path.join(databasePath, 'raw', indexedFilename), rawContent, { encoding: 'utf8'});
+        fs.writeFileSync(path.join(databasePath, 'tr', indexedFilename), trContent, { encoding: 'utf8'});
     }
-    fs.writeFileSync(path.join(rawTextsPath, documentFilename), rawContent, { encoding: 'utf8'});
-    fs.writeFileSync(path.join(trTextPath, documentFilename), trContent, { encoding: 'utf8'});
+
     if (verbose) {
-        vscode.window.showInformationMessage(`${indexedFilename}添加成功`);
+        vscode.window.showInformationMessage(`${GameTitle}/${documentFilename}添加成功`);
     }
     return true;
 }
@@ -287,6 +310,8 @@ export class SearchIndex {
     add(filename: string, content: string): boolean
     {
         if (this.filenameToId.has(filename)) {
+            const id = this.filenameToId.get(filename) as number;
+            this.index.update(id, content);
             return false;
         }
         const id = this.nextId;
