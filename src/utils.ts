@@ -152,3 +152,22 @@ export function mapToObject<K, V>(map: Map<K, V>) : any {
   });
   return plainObject;
 }
+
+
+export function showOutputText(title:string, output: string) {
+  // Create a new webview panel
+  const panel = vscode.window.createWebviewPanel(
+    'outputPanel',
+    title,
+    vscode.ViewColumn.Active,
+    {
+      enableScripts: false, // Disable JavaScript execution
+      retainContextWhenHidden: true, // Retain webview content when panel is hidden
+    }
+  );
+
+  // Set the HTML content of the webview
+  panel.webview.html = output;
+  panel.reveal();
+  return panel;
+}

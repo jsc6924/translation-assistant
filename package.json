@@ -184,16 +184,39 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.trdb.addDocument",
+				"command": "Extension.dltxt.trdb.addDoc",
 				"title": "添加当前文本到翻译数据库",
+				"category": "DLTXT",
 				"icon": {
 					"dark": "icons/dark/add.svg",
 					"light": "icons/light/add.svg"
 				}
 			},
 			{
+				"command": "Extension.dltxt.trdb.context.addDoc",
+				"title": "添加当前文本到翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.addFolder",
+				"title": "添加当前文件夹到翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.saveDB",
+				"title": "保存翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.searchWord",
+				"title": "在翻译数据库搜索单词",
+				"category": "DLTXT",
+				"icon": {
+					"dark": "icons/dark/search.svg",
+					"light": "icons/light/search.svg"
+				}
+			},
+			{
 				"command": "Extension.dltxt.trdb.searchText",
-				"title": "在翻译数据库搜索",
+				"title": "在翻译数据库搜索句子",
+				"category": "DLTXT",
 				"icon": {
 					"dark": "icons/dark/search.svg",
 					"light": "icons/light/search.svg"
@@ -506,15 +529,29 @@
 			"explorer/context": [
 				{
 					"command": "Extension.dltxt.convertToEncoding",
-					"group": "navigation"
+					"group": "dltxt.dlbuild"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.extract",
-					"group": "navigation"
+					"group": "dltxt.dlbuild"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.pack",
-					"group": "navigation"
+					"group": "dltxt.dlbuild"
+				},
+				{
+					"when": "resourceLangId == dltxt && resourceScheme == file",
+					"command": "Extension.dltxt.trdb.context.addDoc",
+					"group": "dltxt.trdb"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.trdb.context.addFolder",
+					"group": "dltxt.trdb"
+				},
+				{
+					"command": "Extension.dltxt.trdb.context.saveDB",
+					"group": "dltxt.trdb"
 				}
 			],
 			"editor/context": [
@@ -603,6 +640,19 @@
 					"type": "integer",
 					"default": 300,
 					"description": "SimpleTM数据库自动同步间隔（单位：秒，最小30秒。填0不自动更新）"
+				},
+				"dltxt.trdb.project": {
+					"type": "string",
+					"description": "翻译数据库项目名（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.fileEncoding": {
+					"type": "string",
+					"default": "utf8",
+					"description": "翻译数据库打开文件时的encoding（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.filteredLine": {
+					"type": "string",
+					"description": "添加至翻译数据库时需要过滤的行的正则表达式（建议在Workspace中填写）"
 				},
 				"dltxt.core.originalTextPrefixRegex": {
 					"type": "string",

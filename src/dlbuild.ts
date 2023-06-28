@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as iconv from "iconv-lite";
 import { encodeWithBom } from './encoding';
 
-const channel = vscode.window.createOutputChannel("DLTXT");
+export const channel = vscode.window.createOutputChannel("DLTXT");
 
 // Read YAML from a file
 function readYamlFile(filePath: string): any {
