@@ -240,7 +240,7 @@ DLTXT默认支持以下格式（用横线隔开）
 - 只读：用户只能查寻词条，但不能对词条进行更新
 - 读写：用户可以读取词条、更新词条、增加新词条
 - 管理员：在读写权限的基础上，用户还能改变当前项目中其他用户的权限，并可以删除该项目
-----
+
 
 ## 解封包相关操作
 
@@ -316,9 +316,10 @@ pack: #配置替换操作
 3. 如果文本内有其他代码，填写`Filtered Line`可在添加至数据库时过滤（例：`[A-Za-z0-9]+\.[A-Za-z0-9]+`）
 4. 左侧文件资源管理器中，在文件或文件夹上右键，可看到“添加到翻译数据库”，“从翻译数据库中移除”。如果添加文件夹，则会把文件夹下所有文件都添加到数据库（不支持多级目录）。
 5. 如果将同项目中的同名文件添加到数据库中，会覆盖之前的内容。
-5. 第一次使用翻译数据库时，会自动下载分词器使用的词典（大约15MB）。如果下载失败，请手动从[这里]('https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip')下载，并解压到`C:\Users\{你的用户名}\AppData\Roaming\Code\User\globalStorage\jsc723.translateassistant\dict`目录下
+5. 第一次使用翻译数据库时，会自动下载分词器使用的词典（大约15MB）。如果下载失败，请手动从[这里](https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip)下载，并解压到`C:\Users\{你的用户名}\AppData\Roaming\Code\User\globalStorage\jsc723.translateassistant\dict`目录下
 6. 在文本中选中一段文字右键，可以看到“在翻译数据库搜索单词”和“在翻译数据库搜索句子”。这两者的区别是：搜索单词时不会经过自动分词器，搜索句子时会，而且搜索句子时会开模糊匹配。搜索单词的时候也可以搜索多个单词，中间用空格隔开。
 
+![trdb-search](https://github.com/jsc6924/translation-assistant/blob/master/imgs/trdb-search.png?raw=true)
 
 ## 其他
 #### 如何设置插件
