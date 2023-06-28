@@ -196,26 +196,16 @@
 				"title": "从翻译数据库中移除"
 			},
 			{
-				"command": "Extension.dltxt.trdb.context.saveDB",
-				"title": "保存翻译数据库"
+				"command": "Extension.dltxt.trdb.context.loadDB",
+				"title": "重新加载翻译数据库"
 			},
 			{
-				"command": "Extension.dltxt.trdb.searchWord",
-				"title": "在翻译数据库搜索单词",
-				"category": "DLTXT",
-				"icon": {
-					"dark": "icons/dark/search.svg",
-					"light": "icons/light/search.svg"
-				}
+				"command": "Extension.dltxt.trdb.editor.searchWord",
+				"title": "在翻译数据库搜索单词"
 			},
 			{
-				"command": "Extension.dltxt.trdb.searchText",
-				"title": "在翻译数据库搜索句子",
-				"category": "DLTXT",
-				"icon": {
-					"dark": "icons/dark/search.svg",
-					"light": "icons/light/search.svg"
-				}
+				"command": "Extension.dltxt.trdb.editor.searchText",
+				"title": "在翻译数据库搜索句子"
 			}
 		],
 		"keybindings": [
@@ -550,7 +540,7 @@
 					"group": "dltxt.trdb@2"
 				},
 				{
-					"command": "Extension.dltxt.trdb.context.saveDB",
+					"command": "Extension.dltxt.trdb.context.loadDB",
 					"group": "dltxt.trdb@3"
 				}
 			],
@@ -564,6 +554,16 @@
 					"when": "editorHasSelection && resourceLangId == dltxt",
 					"command": "Extension.dltxt.context_menu_update",
 					"group": "dltxt.simpleTM.a"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.trdb.editor.searchWord",
+					"group": "dltxt.trdb@1"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.trdb.editor.searchText",
+					"group": "dltxt.trdb@2"
 				},
 				{
 					"when": "resourceLangId == dltxt",

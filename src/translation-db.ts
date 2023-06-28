@@ -17,7 +17,8 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
-        addDocumentPath(context, arg.fsPath, true);
+        await addDocumentPath(context, arg.fsPath, true);
+        saveIndex(context);
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.addFolder", async (arg) => {
@@ -30,30 +31,41 @@ export async function activate(context: vscode.ExtensionContext) {
         let successCount = 0;
         for(const file of files) {
             const filePath = path.join(folderPath, file);
+            if (!file.endsWith('txt')) {
+                continue;
+            }
             const success = await addDocumentPath(context, filePath, false);
             if (success) {
                 successCount++;
             }
         }
+        saveIndex(context);
         vscode.window.showInformationMessage(`添加到翻译数据库：共${files.length}个文件，成功${successCount}个`);
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.deleteDoc", async (arg) => {
         if(await deleteDocumentPath(context, arg.fsPath)) {
             const {base} = path.parse(arg.fsPath);
+            saveIndex(context);
             vscode.window.showInformationMessage(`已从翻译数据库移除${base}`)
         }
     }, false);
 
-    registerCommand(context, "Extension.dltxt.trdb.context.saveDB", async () => {
-        saveIndex(context);
-        vscode.window.showInformationMessage(`已保存翻译数据库`);
+    registerCommand(context, "Extension.dltxt.trdb.context.loadDB", async () => {
+        index.load(context);
+        vscode.window.showInformationMessage(`已重新加载翻译数据库`);
     }, false);
 
 
-    registerCommand(context, "Extension.dltxt.trdb.searchWord", async () => {
+    registerCommand(context, "Extension.dltxt.trdb.editor.searchWord", async () => {
+        let editor = vscode.window.activeTextEditor;
+        let text = '';
+        if (editor && !editor.selection.isEmpty) {
+            text = editor.document.getText(editor.selection);
+        }
         let query = await vscode.window.showInputBox({
-            prompt: '输入要搜索的内容'
+            prompt: '输入要搜索的内容',
+            value: text
         });
         if (!query) {
             return;
@@ -63,12 +75,18 @@ export async function activate(context: vscode.ExtensionContext) {
         });
         showSearchResults(context, query, res);
         
-    }, false);
+    }, true);
 
 
-    registerCommand(context, "Extension.dltxt.trdb.searchText", async () => {
+    registerCommand(context, "Extension.dltxt.trdb.editor.searchText", async () => {
+        let editor = vscode.window.activeTextEditor;
+        let text = '';
+        if (editor && !editor.selection.isEmpty) {
+            text = editor.document.getText(editor.selection);
+        }
         let query = await vscode.window.showInputBox({
-            prompt: '输入要搜索的内容'
+            prompt: '输入要搜索的内容',
+            value: text
         });
         if (!query) {
             return;
