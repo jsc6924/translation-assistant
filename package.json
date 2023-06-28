@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.32.0",
+	"version": "2.33.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -181,6 +181,40 @@
 				"icon": {
 					"light": "icons/light/edit.svg",
 					"dark": "icons/dark/edit.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.addDoc",
+				"title": "添加到翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.addFolder",
+				"title": "添加文件夹到翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.deleteDoc",
+				"title": "从翻译数据库中移除"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.saveDB",
+				"title": "保存翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.searchWord",
+				"title": "在翻译数据库搜索单词",
+				"category": "DLTXT",
+				"icon": {
+					"dark": "icons/dark/search.svg",
+					"light": "icons/light/search.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.searchText",
+				"title": "在翻译数据库搜索句子",
+				"category": "DLTXT",
+				"icon": {
+					"dark": "icons/dark/search.svg",
+					"light": "icons/light/search.svg"
 				}
 			}
 		],
@@ -490,15 +524,34 @@
 			"explorer/context": [
 				{
 					"command": "Extension.dltxt.convertToEncoding",
-					"group": "navigation"
+					"group": "dltxt.dlbuild"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.extract",
-					"group": "navigation"
+					"group": "dltxt.dlbuild"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.pack",
-					"group": "navigation"
+					"group": "dltxt.dlbuild"
+				},
+				{
+					"when": "resourceLangId == dltxt && resourceScheme == file",
+					"command": "Extension.dltxt.trdb.context.addDoc",
+					"group": "dltxt.trdb@1"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.trdb.context.addFolder",
+					"group": "dltxt.trdb@1"
+				},
+				{
+					"when": "resourceLangId == dltxt && resourceScheme == file",
+					"command": "Extension.dltxt.trdb.context.deleteDoc",
+					"group": "dltxt.trdb@2"
+				},
+				{
+					"command": "Extension.dltxt.trdb.context.saveDB",
+					"group": "dltxt.trdb@3"
 				}
 			],
 			"editor/context": [
@@ -587,6 +640,19 @@
 					"type": "integer",
 					"default": 300,
 					"description": "SimpleTM数据库自动同步间隔（单位：秒，最小30秒。填0不自动更新）"
+				},
+				"dltxt.trdb.project": {
+					"type": "string",
+					"description": "翻译数据库项目名（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.fileEncoding": {
+					"type": "string",
+					"default": "utf8",
+					"description": "翻译数据库打开文件时的encoding（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.filteredLine": {
+					"type": "string",
+					"description": "添加至翻译数据库时需要过滤的行的正则表达式（建议在Workspace中填写）"
 				},
 				"dltxt.core.originalTextPrefixRegex": {
 					"type": "string",
@@ -723,8 +789,10 @@
 		"test-compile": "tsc -p ./"
 	},
 	"devDependencies": {
+		"@types/decompress": "^4.2.4",
 		"@types/glob": "^7.1.1",
 		"@types/js-yaml": "^4.0.5",
+		"@types/kuromoji": "^0.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
 		"@types/vscode": "^1.47.0",
@@ -739,12 +807,14 @@
 	},
 	"dependencies": {
 		"axios": "^0.19.2",
-		"flexsearch": "^0.7.31",
+		"decompress": "^4.2.1",
+		"flexsearch": "^0.6.32",
 		"iconv-lite": "^0.6.3",
 		"js-yaml": "^4.1.0",
 		"kuromoji": "^0.1.2",
 		"open": "^7.4.2",
-		"request": "^2.88.2"
+		"request": "^2.88.2",
+		"typed-rest-client": "^1.8.11"
 	},
 	"repository": {
 		"type": "git",

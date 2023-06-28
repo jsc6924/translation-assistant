@@ -1,4 +1,9 @@
 import * as vscode from "vscode";
+import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
+const decompress = require("decompress");
+import { HttpClient } from "typed-rest-client/HttpClient";
 
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
   if (pattern.flags.indexOf('g') == -1) {
@@ -145,3 +150,53 @@ export function registerCommand(
 }
 
 
+export function mapToObject<K, V>(map: Map<K, V>) : any {
+  const plainObject: any = {};
+  map.forEach((value, key) => {
+    plainObject[key] = value;
+  });
+  return plainObject;
+}
+
+
+export function showOutputText(title:string, output: string) {
+  // Create a new webview panel
+  const panel = vscode.window.createWebviewPanel(
+    'outputPanel',
+    title,
+    vscode.ViewColumn.Active,
+    {
+      enableScripts: false, // Disable JavaScript execution
+      retainContextWhenHidden: true, // Retain webview content when panel is hidden
+    }
+  );
+
+  // Set the HTML content of the webview
+  panel.webview.html = output;
+  panel.reveal();
+  return panel;
+}
+
+
+export async function downloadFile(url: string, filePath: string): Promise<string> {
+  const client = new HttpClient("clientTest");
+  const response = await client.get(url);
+  const file: NodeJS.WritableStream = fs.createWriteStream(filePath);
+  
+  if (response.message.statusCode !== 200) {
+      const err: Error = new Error(`Unexpected HTTP response: ${response.message.statusCode}`);
+      throw err;
+  }
+  return new Promise((resolve, reject) => {
+      file.on("error", (err) => reject(err));
+      const stream = response.message.pipe(file);
+      stream.on("close", () => {
+          try { resolve(filePath); } catch (err) {
+              reject(err);
+          }
+      });
+  });
+}
+export function unzipFile(zipFilePath: string, destinationPath: string) {
+  return decompress(zipFilePath, destinationPath)
+}

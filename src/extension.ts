@@ -17,6 +17,7 @@ import { dltxt } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
+import * as trdb from './translation-db';
 
 
 /*
@@ -398,7 +399,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let dlEditor: vscode.TextEditor | undefined = undefined;
 	let extractSingleline = vscode.commands.registerCommand('Extension.dltxt.extract_single_line', () => {
-		console.log('extract single line');
 		const document = vscode.window.activeTextEditor?.document;
 		if (!document) return;
 		const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
@@ -622,6 +622,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	clipboard.activate(context);
+	trdb.activate(context);
 
 	context.subscriptions.push(
 		copyToClipboardCmd,
