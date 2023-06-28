@@ -12,16 +12,18 @@ import { channel } from './dlbuild';
 
 
 export async function activate(context: vscode.ExtensionContext) {
-    if(index.load(context)) {
+    if(index.load(context, true)) {
         vscode.window.showInformationMessage(`已读取翻译数据库`);
     }
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
+        index.load(context);
         await addDocumentPath(context, arg.fsPath, true);
         saveIndex(context);
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.addFolder", async (arg) => {
+        index.load(context);
         const folderPath = arg.fsPath;
         if (!fs.statSync(folderPath).isDirectory()){
             vscode.window.showInformationMessage('请选中一个文件夹');
@@ -51,7 +53,12 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(`添加到翻译数据库：共${totalCount}个文件，成功${successCount}个`);
     }, false);
 
+    registerCommand(context, "Extension.dltxt.trdb.debug.showDB", () => {
+        index.show();
+    }, false)
+
     registerCommand(context, "Extension.dltxt.trdb.context.deleteDoc", async (arg) => {
+        index.load(context);
         if(await deleteDocumentPath(context, arg.fsPath)) {
             const {base} = path.parse(arg.fsPath);
             saveIndex(context);
@@ -60,7 +67,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.loadDB", async () => {
-        index.load(context);
+        index.load(context, true);
         vscode.window.showInformationMessage(`已重新加载翻译数据库`);
     }, false);
 
@@ -354,6 +361,7 @@ export class SearchIndex {
     idToFilename: Map<number, string> = new Map();
     filenameToId: Map<string, number> = new Map();
     nextId: number = 0;
+    version: number = -1;
     constructor() {
         this.index = createFlexSearchIndex();
     }
@@ -397,6 +405,7 @@ export class SearchIndex {
     }
 
     save(context: vscode.ExtensionContext) {
+        this.version++;
         let savedObj: any = {};
         const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
         fs.mkdirSync(SearchIndexPath, { recursive: true });
@@ -408,13 +417,13 @@ export class SearchIndex {
         savedObj['idToFilename'] = mapToObject(this.idToFilename);
         savedObj['filenameToId'] = mapToObject(this.filenameToId);
         savedObj['nextId'] = this.nextId;
+        savedObj['version'] = this.version;
         const jsonString = JSON.stringify(savedObj);
         const savePath = path.join(SearchIndexPath, 'SearchIndex.json');
         fs.writeFileSync(savePath, jsonString, { encoding: 'utf8' });
-
     }
 
-    load(context: vscode.ExtensionContext): boolean {
+    load(context: vscode.ExtensionContext, forced: boolean = false): boolean {
         const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
         const SearchIndexJsonPath = path.join(SearchIndexPath, 'SearchIndex.json');
         const IndexPath = path.join(SearchIndexPath, 'Index.json');
@@ -426,7 +435,18 @@ export class SearchIndex {
         const jsonString = fs.readFileSync(SearchIndexJsonPath, 'utf8');
         const savedObj: any = JSON.parse(jsonString);
 
+        let savedVersion = savedObj['version'] as number;
+        if (savedVersion == undefined) {
+            savedVersion = 0;
+        }
+        if (this.version >= savedVersion && !forced) {
+            return true;
+        }
+
+        this.version = savedVersion;
         this.nextId = savedObj['nextId'] as number;
+        this.idToFilename.clear();
+        this.filenameToId.clear();
         Object.entries(savedObj['idToFilename']).forEach(([key, value]) => {
             this.idToFilename.set(Number(key), String(value));
         });
@@ -437,6 +457,18 @@ export class SearchIndex {
         const IndexContent = fs.readFileSync(IndexPath, 'utf8');
         this.index.import(IndexContent);
         return true;
+    }
+
+    show() {
+        channel.appendLine(`-------------trdb------------`);
+        channel.appendLine(`version: ${this.version}`);
+        channel.appendLine(`nextId: ${this.nextId}`);
+        channel.appendLine(`${this.filenameToId.size} files`);
+        // for(const file of this.filenameToId.keys()) {
+        //     channel.appendLine(file);
+        // }
+        channel.appendLine(`-----------------------------`);
+        channel.show();
     }
 }
 

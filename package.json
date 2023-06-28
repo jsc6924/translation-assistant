@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.33.2",
+	"version": "2.33.3",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -206,6 +206,11 @@
 			{
 				"command": "Extension.dltxt.trdb.editor.searchText",
 				"title": "在翻译数据库搜索句子"
+			},
+			{
+				"command": "Extension.dltxt.trdb.debug.showDB",
+				"category": "DLTXT",
+				"title": "查看翻译数据库当前状态"
 			}
 		],
 		"keybindings": [
