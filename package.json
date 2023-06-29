@@ -79,12 +79,16 @@
 		"views": {
 			"dltxt-view-container": [
 				{
+					"id": "dltxt-clipboard",
+					"name": "clickboard"
+				},
+				{
 					"id": "dltxt-dict",
 					"name": "dictionary"
 				},
 				{
-					"id": "dltxt-clipboard",
-					"name": "clickboard"
+					"id": "dltxt-trdb",
+					"name": "translation db"
 				}
 			]
 		},
@@ -184,16 +188,28 @@
 				}
 			},
 			{
+				"command": "Extension.dltxt.trdb.treeview.deleteDoc",
+				"title": "从翻译数据库中移除",
+				"icon": {
+					"light": "icons/light/trash.svg",
+					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.deleteFolder",
+				"title": "从翻译数据库中移除",
+				"icon": {
+					"light": "icons/light/trash.svg",
+					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
 				"command": "Extension.dltxt.trdb.context.addDoc",
 				"title": "添加到翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addFolder",
 				"title": "添加文件夹到翻译数据库"
-			},
-			{
-				"command": "Extension.dltxt.trdb.context.deleteDoc",
-				"title": "从翻译数据库中移除"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.loadDB",
@@ -540,11 +556,6 @@
 					"group": "dltxt.trdb@1"
 				},
 				{
-					"when": "resourceLangId == dltxt && resourceScheme == file",
-					"command": "Extension.dltxt.trdb.context.deleteDoc",
-					"group": "dltxt.trdb@2"
-				},
-				{
 					"command": "Extension.dltxt.trdb.context.loadDB",
 					"group": "dltxt.trdb@3"
 				}
@@ -617,6 +628,16 @@
 				{
 					"command": "Extension.dltxt.treeview.setClipboardString",
 					"when": "view == dltxt-clipboard && viewItem == value-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.deleteDoc",
+					"when": "view == dltxt-trdb && viewItem == trdb-file",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.deleteFolder",
+					"when": "view == dltxt-trdb && viewItem == trdb-folder",
 					"group": "inline@1"
 				}
 			]

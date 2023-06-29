@@ -245,7 +245,6 @@ export function activate(context: vscode.ExtensionContext) {
 	let tree = new dltxt.DictTreeView();
 	vscode.window.registerTreeDataProvider('dltxt-dict', tree);
 
-
 	let syncDatabaseCommand = vscode.commands.registerCommand('Extension.dltxt.sync_database', function () {
 		const config = vscode.workspace.getConfiguration("dltxt");
 		const username: string = config.get("simpleTM.username") as string;
@@ -622,7 +621,10 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	clipboard.activate(context);
-	trdb.activate(context);
+	let trdb_tree = new dltxt.TRDBTreeView(context, trdb.TRDBIndex);
+	trdb.activate(context, trdb_tree);
+	vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
+
 
 	context.subscriptions.push(
 		copyToClipboardCmd,

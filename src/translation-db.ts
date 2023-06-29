@@ -9,21 +9,23 @@ import { registerCommand, showOutputText, downloadFile, unzipFile } from './util
 import { getRegex, MatchedGroups } from './formatter';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
+import { dltxt } from './treeview';
 
 
-export async function activate(context: vscode.ExtensionContext) {
-    if(index.load(context, true)) {
+export async function activate(context: vscode.ExtensionContext, treeView: dltxt.TRDBTreeView) {
+    if(index.load(context, treeView, true)) {
         vscode.window.showInformationMessage(`已读取翻译数据库`);
     }
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
-        index.load(context);
+        index.load(context, treeView);
         await addDocumentPath(context, arg.fsPath, true);
+        treeView.refresh(context);
         saveIndex(context);
     }, false);
 
     registerCommand(context, "Extension.dltxt.trdb.context.addFolder", async (arg) => {
-        index.load(context);
+        index.load(context, treeView);
         const folderPath = arg.fsPath;
         if (!fs.statSync(folderPath).isDirectory()){
             vscode.window.showInformationMessage('请选中一个文件夹');
@@ -52,6 +54,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }
         saveIndex(context);
+        treeView.refresh(context);
         vscode.window.showInformationMessage(`添加到翻译数据库：共${totalCount}个文件，成功${successCount}个`);
     }, false);
 
@@ -59,17 +62,55 @@ export async function activate(context: vscode.ExtensionContext) {
         index.show();
     }, false)
 
-    registerCommand(context, "Extension.dltxt.trdb.context.deleteDoc", async (arg) => {
-        index.load(context);
-        if(await deleteDocumentPath(context, arg.fsPath)) {
-            const {base} = path.parse(arg.fsPath);
-            saveIndex(context);
-            vscode.window.showInformationMessage(`已从翻译数据库移除${base}`)
+    registerCommand(context, "Extension.dltxt.trdb.treeview.deleteDoc", async (arg) => {
+        const folder = arg.folder;
+        const filename = arg.filename;
+        if (await vscode.window.showWarningMessage(`确认要将${folder}/${filename}从翻译数据库中移除吗`,
+            "是", "否") != "是") {
+            return;
         }
-    }, false);
+        index.load(context, treeView);
+        if(await deleteDocument(context, folder, filename)) {
+            saveIndex(context);
+            treeView.refresh(context);
+            vscode.window.showInformationMessage(`已从翻译数据库移除${filename}`)
+        }
+    });
+
+    registerCommand(context, "Extension.dltxt.trdb.treeview.deleteFolder", async (arg) => {
+        const folder = arg.folder;
+        if (await vscode.window.showWarningMessage(`确认要将${folder}中所有文件从翻译数据库中移除吗`,
+            "是", "否") != "是") {
+            return;
+        }
+        index.load(context, treeView);
+        const files = index.virtualDirectory.get(folder);
+        if (!files) {
+            vscode.window.showErrorMessage(`翻译数据库中找不到项目${folder}`);
+            return;
+        }
+        let successCount = 0;
+        for (const file of files.keys()) {
+            try {
+                const success = await deleteDocument(context, folder, file);
+                if (success) {
+                    successCount++;
+                } else {
+                    channel.appendLine(`删除失败：${file}`);
+                    channel.show();
+                }
+            } catch (err) {
+                channel.appendLine(`删除失败：${file}`);
+                channel.show();
+            }
+        }
+        saveIndex(context);
+        treeView.refresh(context);
+        vscode.window.showInformationMessage(`已从翻译数据库移除项目${folder}，共删除${successCount}个文件`)
+    });
 
     registerCommand(context, "Extension.dltxt.trdb.context.loadDB", async () => {
-        index.load(context, true);
+        index.load(context, treeView, true);
         vscode.window.showInformationMessage(`已重新加载翻译数据库`);
     }, false);
 
@@ -80,7 +121,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (editor && !editor.selection.isEmpty) {
             text = editor.document.getText(editor.selection);
         }
-        index.load(context);
+        index.load(context, treeView);
         let query = await vscode.window.showInputBox({
             prompt: '输入要搜索的内容',
             value: text
@@ -102,7 +143,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (editor && !editor.selection.isEmpty) {
             text = editor.document.getText(editor.selection);
         }
-        index.load(context);
+        index.load(context, treeView);
         let query = await vscode.window.showInputBox({
             prompt: '输入要搜索的内容',
             value: text
@@ -207,20 +248,12 @@ async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string,
     const documentFilename = path.parse(fsPath).base;
     return addDocumentLines(context, documentFilename, lines, verbose);
 }
-async function deleteDocumentPath(context: vscode.ExtensionContext, fsPath: string) {
-    const documentFilename = path.parse(fsPath).base;
-    const config = vscode.workspace.getConfiguration('dltxt');
-    let GameTitle: string = config.get("trdb.project") as string;
-
-    if (!GameTitle) {
-        vscode.window.showErrorMessage("请在设置中填写项目名后再使用此功能");
-        return false;
-    }
+async function deleteDocument(context: vscode.ExtensionContext, folder: string, documentFilename: string) {
     const databasePath = path.join(context.globalStoragePath, 'trdb');
-    fs.mkdirSync(path.join(databasePath, 'raw', GameTitle), {recursive: true});
-    fs.mkdirSync(path.join(databasePath, 'tr', GameTitle), {recursive: true});
+    fs.mkdirSync(path.join(databasePath, 'raw', folder), {recursive: true});
+    fs.mkdirSync(path.join(databasePath, 'tr', folder), {recursive: true});
     const indexedFilenamePrefix = `${documentFilename}`;
-    const files = fs.readdirSync(path.join(databasePath, "raw", GameTitle)).filter((file) => {
+    const files = fs.readdirSync(path.join(databasePath, "raw", folder)).filter((file) => {
         return file.startsWith(indexedFilenamePrefix);
     });
     if (files.length == 0) {
@@ -228,9 +261,9 @@ async function deleteDocumentPath(context: vscode.ExtensionContext, fsPath: stri
         return false;
     }
     for(const file of files) {
-        fs.unlinkSync(path.join(databasePath, 'raw', GameTitle, file));
-        fs.unlinkSync(path.join(databasePath, 'tr', GameTitle, file));
-        const indexedFilename = `${GameTitle}/${file}`;
+        fs.unlinkSync(path.join(databasePath, 'raw', folder, file));
+        fs.unlinkSync(path.join(databasePath, 'tr', folder, file));
+        const indexedFilename = `${folder}/${file}`;
         index.remove(indexedFilename);
     }
     return true;
@@ -364,12 +397,13 @@ export class SearchIndex {
     index: Index<IndexedDocument>;
     idToFilename: Map<number, string> = new Map();
     filenameToId: Map<string, number> = new Map();
-    virtualDirectory: Map<string, Set<String>> = new Map();
+    virtualDirectory: Map<string, Set<string>> = new Map();
     nextId: number = 0;
     version: number = -1;
     constructor() {
         this.index = createFlexSearchIndex();
     }
+
 
     add(filename: string, content: string): boolean
     {
@@ -430,7 +464,7 @@ export class SearchIndex {
         fs.writeFileSync(savePath, jsonString, { encoding: 'utf8' });
     }
 
-    load(context: vscode.ExtensionContext, forced: boolean = false): boolean {
+    load(context: vscode.ExtensionContext, treeview: dltxt.TRDBTreeView, forced: boolean = false): boolean {
         const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
         const SearchIndexJsonPath = path.join(SearchIndexPath, 'SearchIndex.json');
         const IndexPath = path.join(SearchIndexPath, 'Index.json');
@@ -462,6 +496,7 @@ export class SearchIndex {
         });
 
         this.refreshVirtualDirectory();
+        treeview.refresh(context);
 
         const IndexContent = fs.readFileSync(IndexPath, 'utf8');
         this.index.import(IndexContent);
@@ -568,4 +603,5 @@ export class Tokenizer {
     }
 }
 
-const index = new SearchIndex;
+export const TRDBIndex = new SearchIndex;
+const index = TRDBIndex;

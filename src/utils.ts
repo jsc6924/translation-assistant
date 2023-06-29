@@ -137,7 +137,7 @@ export function registerCommand(
 	context: vscode.ExtensionContext,
 	command: string,
 	callback: (...args: any[]) => any,
-	requiresActiveEditor: boolean = true
+	requiresActiveEditor: boolean = false
 ) {
 	const disposable = vscode.commands.registerCommand(command, async (args) => {
 		if (requiresActiveEditor && !vscode.window.activeTextEditor) {

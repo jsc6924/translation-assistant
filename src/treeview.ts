@@ -1,5 +1,7 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
+import { SearchIndex } from './translation-db';
+import { registerCommand } from './utils';
 
 // lets put all in a cwt namespace
 export namespace dltxt
@@ -127,6 +129,91 @@ export namespace dltxt
                 const v = ClipBoardManager.get(context, k);
                 this.items.push(new ValueItem(`${i}: ${v}`, String(i), v));
             }
+            this.m_onDidChangeTreeData.fire(undefined);
+        }
+    }
+
+
+    class TRDBItem extends vscode.TreeItem {
+        constructor(label: string, collapsibleState?: vscode.TreeItemCollapsibleState) {
+            super(label, collapsibleState);
+        }
+    }
+
+    export class TRDBFolderItem extends TRDBItem {
+        folder: string = '';
+        contextValue = 'trdb-folder';
+        constructor(folder: string) {
+            super(folder, vscode.TreeItemCollapsibleState.Collapsed);
+            this.folder = folder;
+        }
+    }
+
+    export class TRDBFileItem extends TRDBItem {
+        filename: string;
+        folder: string;
+        contextValue = 'trdb-file';
+        constructor(folder: string, filename: string) {
+            super(filename, vscode.TreeItemCollapsibleState.None);
+            this.folder = folder;
+            this.filename = filename;
+        }
+    }
+
+
+    export class TRDBTreeView implements vscode.TreeDataProvider<TRDBItem>
+    {
+        // with the vscode.EventEmitter we can refresh our  tree view
+        private m_onDidChangeTreeData: vscode.EventEmitter<TRDBItem | undefined> = new vscode.EventEmitter<TRDBItem | undefined>();
+        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
+        readonly onDidChangeTreeData ? : vscode.Event<TRDBItem | undefined> = this.m_onDidChangeTreeData.event;
+
+        items: TRDBItem[] = [];
+        index: SearchIndex;
+
+        constructor(context: vscode.ExtensionContext, index: SearchIndex) {
+            this.index = index;
+            this.refresh(context);
+
+        
+        }
+        getTreeItem(item: TRDBItem): vscode.TreeItem {
+            return item;
+        }
+    
+        getChildren(element?: TRDBItem): Thenable<TRDBItem[]> {
+            if (!element) {
+                return Promise.resolve(this.items);
+            }
+            if (element.contextValue == 'trdb-folder') {
+                const folderItem = element as TRDBFolderItem;
+                const files = this.index.virtualDirectory.get(folderItem.folder);
+                if (!files) {
+                    return Promise.resolve([]);
+                }
+                const items = [];
+                for(const file of files) {
+                    items.push(new TRDBFileItem(folderItem.folder, file));
+                }
+                items.sort((a, b) => {
+                    return a.filename.localeCompare(b.filename);
+                })
+                return Promise.resolve(items);
+            }
+            return Promise.resolve([]);
+        }
+
+        refresh(context: vscode.ExtensionContext) {
+            this.items = [];
+            const folders = this.index.virtualDirectory.keys();
+            const temp: TRDBFolderItem[] = [];
+            for(const folder of folders) {
+                temp.push(new TRDBFolderItem(folder));
+            }
+            temp.sort((a, b) => {
+                return a.folder.localeCompare(b.folder);
+            });
+            this.items = temp;
             this.m_onDidChangeTreeData.fire(undefined);
         }
     }
