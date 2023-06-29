@@ -204,16 +204,20 @@
 				}
 			},
 			{
+				"command": "Extension.dltxt.trdb.treeview.loadDB",
+				"title": "重新加载翻译数据库",
+				"icon": {
+					"light": "icons/light/sync.svg",
+					"dark": "icons/dark/sync.svg"
+				}
+			},
+			{
 				"command": "Extension.dltxt.trdb.context.addDoc",
 				"title": "添加到翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addFolder",
 				"title": "添加文件夹到翻译数据库"
-			},
-			{
-				"command": "Extension.dltxt.trdb.context.loadDB",
-				"title": "重新加载翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.editor.searchWord",
@@ -554,10 +558,6 @@
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.trdb.context.addFolder",
 					"group": "dltxt.trdb@1"
-				},
-				{
-					"command": "Extension.dltxt.trdb.context.loadDB",
-					"group": "dltxt.trdb@3"
 				}
 			],
 			"editor/context": [
@@ -611,6 +611,11 @@
 				{
 					"command": "Extension.dltxt.sync_database",
 					"when": "view == dltxt-dict",
+					"group": "navigation@1"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.loadDB",
+					"when": "view == dltxt-trdb",
 					"group": "navigation@1"
 				}
 			],

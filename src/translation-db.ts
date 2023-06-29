@@ -109,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
         vscode.window.showInformationMessage(`已从翻译数据库移除项目${folder}，共删除${successCount}个文件`)
     });
 
-    registerCommand(context, "Extension.dltxt.trdb.context.loadDB", async () => {
+    registerCommand(context, "Extension.dltxt.trdb.treeview.loadDB", async () => {
         index.load(context, treeView, true);
         vscode.window.showInformationMessage(`已重新加载翻译数据库`);
     }, false);
