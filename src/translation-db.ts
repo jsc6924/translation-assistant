@@ -364,6 +364,7 @@ export class SearchIndex {
     index: Index<IndexedDocument>;
     idToFilename: Map<number, string> = new Map();
     filenameToId: Map<string, number> = new Map();
+    virtualDirectory: Map<string, Set<String>> = new Map();
     nextId: number = 0;
     version: number = -1;
     constructor() {
@@ -380,6 +381,7 @@ export class SearchIndex {
         const id = this.nextId;
         this.idToFilename.set(id, filename);
         this.filenameToId.set(filename, id);
+        this.virtualDirectoryAdd(filename);
         this.index.add(id, content);
         this.nextId++;
         return true;
@@ -393,6 +395,7 @@ export class SearchIndex {
         this.index.remove(id);
         this.idToFilename.delete(id);
         this.filenameToId.delete(filename);
+        this.virtualDirectoryRemove(filename);
         return true;
     }
 
@@ -458,9 +461,55 @@ export class SearchIndex {
             this.filenameToId.set(String(key), Number(value));
         });
 
+        this.refreshVirtualDirectory();
+
         const IndexContent = fs.readFileSync(IndexPath, 'utf8');
         this.index.import(IndexContent);
         return true;
+    }
+
+    filenamePattern = /(.*)\/(.*)(\.\d+\.txt)/;
+
+    parseFilename(file: string): [string, string] {
+        const m = this.filenamePattern.exec(file);
+        if (!m) {
+            throw new Error(`error parsing filename ${file}`)
+        }
+        const folder = m[1];
+        const filename = m[2];
+        return [folder, filename];
+    }
+
+    refreshVirtualDirectory() {
+        this.virtualDirectory = new Map();
+        for(const file of this.filenameToId.keys()) {
+            this.virtualDirectoryAdd(file);
+        }
+    }
+
+    virtualDirectoryAdd(file: string) {
+        const [folder, filename] = this.parseFilename(file);
+        if (this.virtualDirectory.has(folder)) {
+            this.virtualDirectory.get(folder)?.add(filename);
+        } else {
+            this.virtualDirectory.set(folder, new Set([filename]));
+        }
+    }
+
+    virtualDirectoryRemove(file: string) {
+        const [folder, filename] = this.parseFilename(file);
+        if (this.virtualDirectory.has(folder)) {
+            let files = this.virtualDirectory.get(folder);
+            if (!files) {
+                return;
+            }
+            files.delete(filename);
+            if (files.size == 0) {
+                this.virtualDirectory.delete(folder);
+            } else {
+                this.virtualDirectory.set(folder, files);
+            }
+        }
     }
 
     show() {
