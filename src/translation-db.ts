@@ -708,15 +708,31 @@ export class Tokenizer {
         if (!Tokenizer.tokenizer) {
             const dictPath = path.join(context.globalStoragePath, "dict");
             if (!fs.existsSync(path.join(context.globalStoragePath, "dict", "base.dat.gz"))) {
-                channel.show();
-                channel.appendLine(`正在从 ${Tokenizer.downloadURL} 下载词典...`);
-                const zipFile = await downloadFile(Tokenizer.downloadURL, path.join(context.globalStoragePath, "dict.zip"));
-                channel.appendLine(`下载完成，正在解压...`);
-                fs.mkdirSync(dictPath, {recursive: true});
-                const files = await unzipFile(zipFile, dictPath);
-                channel.appendLine(`解压完成`);
-                fs.unlinkSync(zipFile);
-            }
+                const zipPath = path.join(context.globalStoragePath, "dict.zip");
+                if (fs.existsSync(zipPath)) {
+                    channel.show();
+                    channel.appendLine(`检测到目录下存在dict.zip，等待解压...`);
+                    const p = new Promise((resolve, reject) => {
+                        const watcher = fs.watch(zipPath, { persistent: false }, (event, filename) => {
+                            if (event === 'rename') {
+                                watcher.close(); // Close the watcher
+                                channel.appendLine(`解压完成，初始化分词器...`);
+                                resolve(undefined);
+                            }
+                        });
+                    });
+                    await p;
+                } else {
+                    channel.show();
+                    channel.appendLine(`正在从 ${Tokenizer.downloadURL} 下载词典...`);
+                    const zipFile = await downloadFile(Tokenizer.downloadURL, zipPath);
+                    channel.appendLine(`下载完成，正在解压...`);
+                    fs.mkdirSync(dictPath, {recursive: true});
+                    const files = await unzipFile(zipFile, dictPath);
+                    channel.appendLine(`解压完成，初始化分词器...`);
+                    fs.unlinkSync(zipFile);
+                }
+            } 
             return new Promise((resolve, reject) => {
                 kuromoji
                     .builder({ dicPath: dictPath })
@@ -726,6 +742,7 @@ export class Tokenizer {
                             reject(err);
                             return;
                         }
+                        channel.appendLine(`分词器初始化成功`);
                         Tokenizer.tokenizer = tokenizer;
                         resolve(new Tokenizer());
                     })
@@ -735,6 +752,8 @@ export class Tokenizer {
             return Promise.resolve(new Tokenizer);
         }
     }
+
+    private constructor() {}
 
     tokenize(text: string): string {
         if (!Tokenizer.tokenizer) {
