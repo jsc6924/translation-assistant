@@ -132,6 +132,16 @@ export abstract class VSCodeContext {
   }
 }
 
+export function getCurrentWorkspaceFolder(): string | undefined {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders.length > 0) {
+    // Assuming you want to get the first workspace folder
+    return workspaceFolders[0].uri.fsPath;
+  }
+  
+  return undefined;
+}
+
 
 export function registerCommand(
 	context: vscode.ExtensionContext,
@@ -199,4 +209,22 @@ export async function downloadFile(url: string, filePath: string): Promise<strin
 }
 export function unzipFile(zipFilePath: string, destinationPath: string) {
   return decompress(zipFilePath, destinationPath)
+}
+
+export function writeAtomic(filePath: string, data: string): void {
+  const tempFilePath = `${filePath}.tmp`;
+  
+  try {
+    fs.writeFileSync(tempFilePath, data);
+    // Replace existing file with the temporary file
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath); // Remove the existing file
+    }
+    fs.renameSync(tempFilePath, filePath);
+  } catch (error) {
+    console.error('Error writing file atomically:', error);
+    if (fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath); // Clean up the temporary file in case of error
+    }
+  }
 }

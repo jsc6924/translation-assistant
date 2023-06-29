@@ -1,11 +1,11 @@
 import * as kuromoji from 'kuromoji';
 import * as vscode from 'vscode';
-import { mapToObject } from "./utils";
+import { mapToObject, writeAtomic } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
 import { StopWordsSet } from './stopwords-jp';
-import { registerCommand, showOutputText, downloadFile, unzipFile } from './utils';
+import { registerCommand, showOutputText, downloadFile, unzipFile, getCurrentWorkspaceFolder } from './utils';
 import { getRegex, MatchedGroups } from './formatter';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
@@ -18,49 +18,55 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
     }
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
-        index.load(context, treeView);
-        await addDocumentPath(context, arg.fsPath, true);
-        treeView.refresh(context);
-        saveIndex(context);
-    }, false);
+        TRDBCriticalSection(context, async () => {
+            index.load(context, treeView);
+            await addDocumentPath(context, arg.fsPath);
+            treeView.refresh(context);
+            saveIndex(context);
+            const documentFilename = path.parse(arg.fsPath).base;
+            vscode.window.showInformationMessage(`${documentFilename}添加成功`);
+        });
+    });
 
     registerCommand(context, "Extension.dltxt.trdb.context.addFolder", async (arg) => {
-        index.load(context, treeView);
-        const folderPath = arg.fsPath;
-        if (!fs.statSync(folderPath).isDirectory()){
-            vscode.window.showInformationMessage('请选中一个文件夹');
-            return;
-        }
-        const files = fs.readdirSync(folderPath);
-        let successCount = 0;
-        let totalCount = 0;
-        for(const file of files) {
-            const filePath = path.join(folderPath, file);
-            if (!fs.statSync(filePath).isFile() && !file.endsWith('.txt')) {
-                continue;
+        TRDBCriticalSection(context, async() => {
+            index.load(context, treeView);
+            const folderPath = arg.fsPath;
+            if (!fs.statSync(folderPath).isDirectory()){
+                vscode.window.showInformationMessage('请选中一个文件夹');
+                return;
             }
-            totalCount++;
-            try {
-                const success = await addDocumentPath(context, filePath, false);
-                if (success) {
-                    successCount++;
-                } else {
+            const files = fs.readdirSync(folderPath);
+            let successCount = 0;
+            let totalCount = 0;
+            for(const file of files) {
+                const filePath = path.join(folderPath, file);
+                if (!fs.statSync(filePath).isFile() && !file.endsWith('.txt')) {
+                    continue;
+                }
+                totalCount++;
+                try {
+                    const success = await addDocumentPath(context, filePath);
+                    if (success) {
+                        successCount++;
+                    } else {
+                        channel.appendLine(`添加失败：${file}`);
+                        channel.show();
+                    }
+                } catch (err) {
                     channel.appendLine(`添加失败：${file}`);
                     channel.show();
                 }
-            } catch (err) {
-                channel.appendLine(`添加失败：${file}`);
-                channel.show();
             }
-        }
-        saveIndex(context);
-        treeView.refresh(context);
-        vscode.window.showInformationMessage(`添加到翻译数据库：共${totalCount}个文件，成功${successCount}个`);
-    }, false);
+            saveIndex(context);
+            treeView.refresh(context);
+            vscode.window.showInformationMessage(`添加到翻译数据库：共${totalCount}个文件，成功${successCount}个`);
+        });
+    });
 
     registerCommand(context, "Extension.dltxt.trdb.debug.showDB", () => {
         index.show();
-    }, false)
+    })
 
     registerCommand(context, "Extension.dltxt.trdb.treeview.deleteDoc", async (arg) => {
         const folder = arg.folder;
@@ -69,12 +75,14 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
             "是", "否") != "是") {
             return;
         }
-        index.load(context, treeView);
-        if(await deleteDocument(context, folder, filename)) {
-            saveIndex(context);
-            treeView.refresh(context);
-            vscode.window.showInformationMessage(`已从翻译数据库移除${filename}`)
-        }
+        TRDBCriticalSection(context, async () => {
+            index.load(context, treeView);
+            if(await deleteDocument(context, folder, filename)) {
+                saveIndex(context);
+                treeView.refresh(context);
+                vscode.window.showInformationMessage(`已从翻译数据库移除${filename}`);
+            }
+        });
     });
 
     registerCommand(context, "Extension.dltxt.trdb.treeview.deleteFolder", async (arg) => {
@@ -83,36 +91,47 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
             "是", "否") != "是") {
             return;
         }
-        index.load(context, treeView);
-        const files = index.virtualDirectory.get(folder);
-        if (!files) {
-            vscode.window.showErrorMessage(`翻译数据库中找不到项目${folder}`);
-            return;
-        }
-        let successCount = 0;
-        for (const file of files.keys()) {
-            try {
-                const success = await deleteDocument(context, folder, file);
-                if (success) {
-                    successCount++;
-                } else {
+        TRDBCriticalSection(context, async () => {
+            index.load(context, treeView);
+            const files = index.virtualDirectory.get(folder);
+            if (!files) {
+                vscode.window.showErrorMessage(`翻译数据库中找不到项目${folder}`);
+                return;
+            }
+            let successCount = 0;
+            for (const file of files.keys()) {
+                try {
+                    const success = await deleteDocument(context, folder, file);
+                    if (success) {
+                        successCount++;
+                    } else {
+                        channel.appendLine(`删除失败：${file}`);
+                        channel.show();
+                    }
+                } catch (err) {
                     channel.appendLine(`删除失败：${file}`);
                     channel.show();
                 }
-            } catch (err) {
-                channel.appendLine(`删除失败：${file}`);
-                channel.show();
             }
-        }
-        saveIndex(context);
-        treeView.refresh(context);
-        vscode.window.showInformationMessage(`已从翻译数据库移除项目${folder}，共删除${successCount}个文件`)
+            saveIndex(context);
+            treeView.refresh(context);
+            vscode.window.showInformationMessage(`已从翻译数据库移除项目${folder}，共删除${successCount}个文件`);
+        });
     });
 
     registerCommand(context, "Extension.dltxt.trdb.treeview.loadDB", async () => {
         index.load(context, treeView, true);
         vscode.window.showInformationMessage(`已重新加载翻译数据库`);
-    }, false);
+    });
+
+    registerCommand(context, "Extension.dltxt.trdb.treeview.unlock", async () => {
+        if (await vscode.window.showWarningMessage(`本操作将强制清除数据库同步锁，请确保当前翻译数据库没有任务正在执行。是否继续？`,
+            "是", "否") != "是") {
+            return;
+        }
+        unlockTRDBIndex(context, true);
+        vscode.window.showInformationMessage(`已强制清除同步锁`);
+    });
 
 
     registerCommand(context, "Extension.dltxt.trdb.editor.searchWord", async () => {
@@ -239,14 +258,14 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
     showOutputText(`"${query}"的搜索结果`, outputLines.join('<br>'));
 }
 
-async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string, verbose: boolean) {
+async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string) {
     const fBuf = fs.readFileSync(fsPath);
     const config = vscode.workspace.getConfiguration("dltxt");
     const srcEncoding = config.get('trdb.fileEncoding') as string;
     const content = iconv.decode(fBuf, srcEncoding);
     const lines = content.split('\n');
     const documentFilename = path.parse(fsPath).base;
-    return addDocumentLines(context, documentFilename, lines, verbose);
+    return addDocumentLines(context, documentFilename, lines);
 }
 async function deleteDocument(context: vscode.ExtensionContext, folder: string, documentFilename: string) {
     const databasePath = path.join(context.globalStoragePath, 'trdb');
@@ -268,17 +287,17 @@ async function deleteDocument(context: vscode.ExtensionContext, folder: string, 
     }
     return true;
 }
-async function addDocument(context: vscode.ExtensionContext, document: vscode.TextDocument, verbose: boolean) {
+async function addDocument(context: vscode.ExtensionContext, document: vscode.TextDocument) {
     let lines: string[] = [];
     for (let i = 0; i < document.lineCount; i++) {
         lines.push(document.lineAt(i).text);
     }
     const documentFilename = path.parse(document.fileName).base;
-    return addDocumentLines(context, documentFilename, lines, verbose);
+    return addDocumentLines(context, documentFilename, lines);
 }
 
 async function addDocumentLines(context: vscode.ExtensionContext, documentFilename: string
-    , documentLines: string[], verbose: boolean) {
+    , documentLines: string[]) {
     const config = vscode.workspace.getConfiguration('dltxt');
     let GameTitle: string = config.get("trdb.project") as string;
 
@@ -347,9 +366,6 @@ async function addDocumentLines(context: vscode.ExtensionContext, documentFilena
         fs.writeFileSync(path.join(databasePath, 'tr', indexedFilename), trContent, { encoding: 'utf8'});
     }
 
-    if (verbose) {
-        vscode.window.showInformationMessage(`${GameTitle}/${documentFilename}添加成功`);
-    }
     return true;
 }
 
@@ -391,6 +407,58 @@ function createFlexSearchIndex(): Index<IndexedDocument>{
             return !StopWordsSet.has(value);
         }
     });
+}
+
+export function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
+    const lockFilePath = path.join(context.globalStoragePath, "SearchIndex", "lock.json")
+    const writeObj = { workspace: getCurrentWorkspaceFolder() }
+    try {
+        // Attempt to create the lock file exclusively
+        const file = fs.openSync(lockFilePath, 'wx');
+        fs.writeFileSync(file, JSON.stringify(writeObj));
+        fs.closeSync(file);
+        // If the lock file is successfully created, no other process has acquired the lock
+        return true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+          // Another process already acquired the lock
+          return false;
+        } else {
+          // Handle any other error that occurred during lock acquisition
+          channel.appendLine(`Error acquiring lock: ${error}`);
+          channel.show();
+          return false;
+        }
+      }
+}
+
+export function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolean = false) {
+    const lockFilePath = path.join(context.globalStoragePath, "SearchIndex", "lock.json")
+    try {
+        fs.unlinkSync(lockFilePath);
+    } catch (error) {
+        if (!forced) {
+            channel.appendLine(`Error releasing lock: ${error}`);
+            channel.show();
+        }
+    }
+}
+
+export function TRDBCriticalSection(context: vscode.ExtensionContext, callback: () => any): any {
+    if (!lockTRDBIndex(context)) {
+        vscode.window.showErrorMessage(`数据库正忙，请稍后再试。如果可以确定数据库当前没有任务在运行，可尝试手动清除同步锁`);
+        return undefined;
+    }
+    try {
+        const res = callback();
+        unlockTRDBIndex(context);
+        return res;
+    } catch (error) {
+        unlockTRDBIndex(context);
+        channel.appendLine(`uncatched error in critical section: ${error}`);
+        channel.show();
+    }
+    return undefined;
 }
 
 export class SearchIndex {
@@ -452,8 +520,7 @@ export class SearchIndex {
         fs.mkdirSync(SearchIndexPath, { recursive: true });
 
         const indexContent = this.index.export()
-        const IndexPath = path.join(SearchIndexPath, 'Index.json');
-        fs.writeFileSync(IndexPath, indexContent, { encoding: 'utf8' });
+        const indexPath = path.join(SearchIndexPath, 'Index.json');
 
         savedObj['idToFilename'] = mapToObject(this.idToFilename);
         savedObj['filenameToId'] = mapToObject(this.filenameToId);
@@ -461,7 +528,9 @@ export class SearchIndex {
         savedObj['version'] = this.version;
         const jsonString = JSON.stringify(savedObj);
         const savePath = path.join(SearchIndexPath, 'SearchIndex.json');
-        fs.writeFileSync(savePath, jsonString, { encoding: 'utf8' });
+
+        writeAtomic(indexPath, indexContent);
+        writeAtomic(savePath, jsonString);
     }
 
     load(context: vscode.ExtensionContext, treeview: dltxt.TRDBTreeView, forced: boolean = false): boolean {

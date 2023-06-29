@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.34.0",
+	"version": "2.34.1",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -209,6 +209,14 @@
 				"icon": {
 					"light": "icons/light/sync.svg",
 					"dark": "icons/dark/sync.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.unlock",
+				"title": "手动清除翻译数据库同步锁",
+				"icon": {
+					"light": "icons/light/unlock.svg",
+					"dark": "icons/dark/unlock.svg"
 				}
 			},
 			{
@@ -617,6 +625,11 @@
 					"command": "Extension.dltxt.trdb.treeview.loadDB",
 					"when": "view == dltxt-trdb",
 					"group": "navigation@1"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.unlock",
+					"when": "view == dltxt-trdb",
+					"group": "navigation@2"
 				}
 			],
 			"view/item/context": [
