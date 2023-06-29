@@ -94,7 +94,13 @@ DLTXT默认支持以下格式（用横线隔开）
 ## 侧边栏
 ![treeview](https://github.com/jsc6924/translation-assistant/blob/master/imgs/treeview.png?raw=true)
 
-本插件自带一个侧边栏菜单。可查看并修改术语词条或剪贴板（将在之后的章节介绍）
+本插件自带一个侧边栏菜单。目前有以下子页面：
+
+- 剪贴板
+- 术语词典
+- 翻译数据库
+
+以上功能将在之后的章节介绍
 
 ## 键盘快捷键
 在翻译文本时可使用键盘快捷键代替鼠标操作（注：可以在vscode设置中更改默认快捷键绑定）
@@ -314,10 +320,12 @@ pack: #配置替换操作
 1. 确保设置中正确填写原文开头标签的正则表达式`Original Text Prefix Regex`和译文开头标签的正则表达式`Translated Text Prefix Regex`
 2. 设置中搜索`dltxt trdb`填写`File Encoding`（格式参考上一节中“常用的encoding”）和`Project`（相当于一个文件夹名，当前项目的文本会放入这个文件夹，防止多个项目间文件名冲突）
 3. 如果文本内有其他代码，填写`Filtered Line`可在添加至数据库时过滤（例：`[A-Za-z0-9]+\.[A-Za-z0-9]+`）
-4. 左侧文件资源管理器中，在文件或文件夹上右键，可看到“添加到翻译数据库”，“从翻译数据库中移除”。如果添加文件夹，则会把文件夹下所有文件都添加到数据库（不支持多级目录）。
+4. 左侧文件资源管理器中，在文件或文件夹上右键，可看到“添加到翻译数据库”。如果添加文件夹，则会把文件夹下所有文件都添加到数据库（不支持多级目录）。
 5. 如果将同项目中的同名文件添加到数据库中，会覆盖之前的内容。
-5. 第一次使用翻译数据库时，会自动下载分词器使用的词典（大约15MB）。如果下载失败，请手动从[这里](https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip)下载，并解压到`C:\Users\{你的用户名}\AppData\Roaming\Code\User\globalStorage\jsc723.translateassistant\dict`目录下
-6. 在文本中选中一段文字右键，可以看到“在翻译数据库搜索单词”和“在翻译数据库搜索句子”。这两者的区别是：搜索单词时不会经过自动分词器，搜索句子时会，而且搜索句子时会开模糊匹配。搜索单词的时候也可以搜索多个单词，中间用空格隔开。
+6. dltxt侧边栏的translation db分页中可查看数据库中存在的文件，并且可以删除文件或文件夹（暂不支持查看内容）。
+7. 第一次使用翻译数据库时，会自动下载分词器使用的词典（大约15MB）。如果下载失败，请手动从[这里](https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip)下载，并解压到`C:\Users\{你的用户名}\AppData\Roaming\Code\User\globalStorage\jsc723.translateassistant\dict`目录下
+8. 在文本中选中一段文字右键，可以看到“在翻译数据库搜索单词”和“在翻译数据库搜索句子”。这两者的区别是：搜索单词时不会经过自动分词器，搜索句子时会，而且搜索句子时会开模糊匹配。搜索单词的时候也可以搜索多个单词，中间用空格隔开。
+
 
 ![trdb-search](https://github.com/jsc6924/translation-assistant/blob/master/imgs/trdb-search.png?raw=true)
 
@@ -344,8 +352,14 @@ vsce publish
 
 ---
 ## Release Notes
+#### 2.34
+- 侧边栏支持翻译数据库
+- 从翻译数据库中移除文件/文件夹和重新加载功能移动到侧边栏中
 #### 2.33
 - 翻译数据库
+  - 添加文件、文件夹
+  - 删除文件
+  - 检索单词、句子
 #### 2.32
 - 剪贴板不再使用Configuration，改成使用ExtensionContext
 - 侧边栏中可编辑剪贴板的内容
