@@ -10,6 +10,7 @@ import { getRegex, MatchedGroups } from './formatter';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
 import { dltxt } from './treeview';
+const fsextra = require('fs-extra');
 
 
 export async function activate(context: vscode.ExtensionContext, treeView: dltxt.TRDBTreeView) {
@@ -150,6 +151,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
             const fsPath = saveUri.fsPath;
             const searchIndexPath = path.join(context.globalStoragePath, "SearchIndex");
             const trdbPath = path.join(context.globalStoragePath, "trdb");
+            channel.appendLine('------导出数据库-----');
             vscode.window.showInformationMessage('正在导出，请耐心等待...');
             await compressFoldersToZip([searchIndexPath, trdbPath], fsPath);
             vscode.window.showInformationMessage(`已成功导出至${fsPath}`);
@@ -157,6 +159,49 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
     });
 
     registerCommand(context, "Extension.dltxt.trdb.treeview.import", async () => {
+        if (await vscode.window.showWarningMessage(`导入的数据库将替换现在的数据库。是否继续？`,
+            "是", "否") != "是") {
+            return;
+        }
+        const options: vscode.OpenDialogOptions = {
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: {
+              'ZIP Files': ['zip'],
+              'All Files': ['*']
+            }
+          };
+        
+        const fileUris = await vscode.window.showOpenDialog(options);
+        if (fileUris && fileUris.length > 0) {
+            TRDBCriticalSection(context, async () => {
+                const filePath = fileUris[0].fsPath;
+                const tempPath = path.join(context.globalStoragePath, "trdb-import-temp");
+                channel.show();
+                channel.appendLine('------导入数据库-----');
+                channel.appendLine('正在解压...');
+                await unzipFile(filePath, tempPath);
+                channel.appendLine('正在删除原数据库...');
+                const searchIndexPath = path.join(context.globalStoragePath, "SearchIndex");
+                const trdbPath = path.join(context.globalStoragePath, "trdb");
+                fsextra.removeSync(searchIndexPath);
+                fsextra.removeSync(trdbPath);
+                channel.appendLine('正在导入新数据库...');
+                const tempSearchIndexPath = path.join(tempPath, "SearchIndex");
+                const tempTrdbPath = path.join(tempPath, "trdb");
+                fsextra.moveSync(tempSearchIndexPath, searchIndexPath);
+                fsextra.moveSync(tempTrdbPath, trdbPath);
+                fsextra.removeSync(tempPath);
+                const oldVersion = index.version;
+                index.load(context, treeView, true);
+                if (index.version < oldVersion) {
+                    index.version = oldVersion;
+                }
+                index.save(context); //save as oldVersion + 1
+                channel.appendLine('导入成功');
+            });
+        }
     });
 
 
