@@ -44,9 +44,11 @@ export async function activate(context: vscode.ExtensionContext) {
                     successCount++;
                 } else {
                     channel.appendLine(`添加失败：${file}`);
+                    channel.show();
                 }
             } catch (err) {
                 channel.appendLine(`添加失败：${file}`);
+                channel.show();
             }
         }
         saveIndex(context);
@@ -78,6 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (editor && !editor.selection.isEmpty) {
             text = editor.document.getText(editor.selection);
         }
+        index.load(context);
         let query = await vscode.window.showInputBox({
             prompt: '输入要搜索的内容',
             value: text
@@ -99,6 +102,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (editor && !editor.selection.isEmpty) {
             text = editor.document.getText(editor.selection);
         }
+        index.load(context);
         let query = await vscode.window.showInputBox({
             prompt: '输入要搜索的内容',
             value: text
