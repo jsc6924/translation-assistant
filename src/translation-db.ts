@@ -1,6 +1,6 @@
 import * as kuromoji from 'kuromoji';
 import * as vscode from 'vscode';
-import { mapToObject, writeAtomic } from "./utils";
+import { compressFoldersToZip, mapToObject, writeAtomic } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
@@ -131,6 +131,32 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
         }
         unlockTRDBIndex(context, true);
         vscode.window.showInformationMessage(`已强制清除同步锁`);
+    });
+
+    registerCommand(context, "Extension.dltxt.trdb.treeview.export", async () => {
+        const saveOptions: vscode.SaveDialogOptions = {
+            title: '导出翻译数据库',
+            defaultUri: vscode.Uri.file('dltxt-trdb.zip'),
+            filters: {
+              'Zip Files': ['zip']
+            }
+          };
+        
+        const saveUri = await vscode.window.showSaveDialog(saveOptions);
+        if(!saveUri) {
+            return;
+        }
+        TRDBCriticalSection(context, async () => {
+            const fsPath = saveUri.fsPath;
+            const searchIndexPath = path.join(context.globalStoragePath, "SearchIndex");
+            const trdbPath = path.join(context.globalStoragePath, "trdb");
+            vscode.window.showInformationMessage('正在导出，请耐心等待...');
+            await compressFoldersToZip([searchIndexPath, trdbPath], fsPath);
+            vscode.window.showInformationMessage(`已成功导出至${fsPath}`);
+        });
+    });
+
+    registerCommand(context, "Extension.dltxt.trdb.treeview.import", async () => {
     });
 
 
@@ -410,7 +436,7 @@ function createFlexSearchIndex(): Index<IndexedDocument>{
 }
 
 export function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
-    const lockFilePath = path.join(context.globalStoragePath, "SearchIndex", "lock.json")
+    const lockFilePath = path.join(context.globalStoragePath, "trdb-lock.json")
     const writeObj = { workspace: getCurrentWorkspaceFolder() }
     try {
         // Attempt to create the lock file exclusively
@@ -433,7 +459,7 @@ export function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
 }
 
 export function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolean = false) {
-    const lockFilePath = path.join(context.globalStoragePath, "SearchIndex", "lock.json")
+    const lockFilePath = path.join(context.globalStoragePath, "trdb-lock.json")
     try {
         fs.unlinkSync(lockFilePath);
     } catch (error) {
@@ -444,13 +470,14 @@ export function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolea
     }
 }
 
-export function TRDBCriticalSection(context: vscode.ExtensionContext, callback: () => any): any {
+
+export async function TRDBCriticalSection(context: vscode.ExtensionContext, callback: () => any): Promise<any> {
     if (!lockTRDBIndex(context)) {
         vscode.window.showErrorMessage(`数据库正忙，请稍后再试。如果可以确定数据库当前没有任务在运行，可尝试手动清除同步锁`);
         return undefined;
     }
     try {
-        const res = callback();
+        const res = await callback();
         unlockTRDBIndex(context);
         return res;
     } catch (error) {

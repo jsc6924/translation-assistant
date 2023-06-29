@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import * as fs from 'fs';
-import * as http from 'http';
-import * as https from 'https';
+import * as path from 'path';
 const decompress = require("decompress");
 import { HttpClient } from "typed-rest-client/HttpClient";
+const archiver = require("archiver");
 
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
   if (pattern.flags.indexOf('g') == -1) {
@@ -209,6 +209,30 @@ export async function downloadFile(url: string, filePath: string): Promise<strin
 }
 export function unzipFile(zipFilePath: string, destinationPath: string) {
   return decompress(zipFilePath, destinationPath)
+}
+
+export function compressFoldersToZip(sourceFolderPaths: string[], targetZipPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(targetZipPath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    output.on('close', () => {
+      resolve();
+    });
+
+    archive.on('error', (err: any) => {
+      reject(err);
+    });
+
+    archive.pipe(output);
+
+    sourceFolderPaths.forEach((folderPath) => {
+      const folderName = path.basename(folderPath);
+      archive.directory(folderPath, folderName);
+    });
+
+    archive.finalize();
+  });
 }
 
 export function writeAtomic(filePath: string, data: string): void {
