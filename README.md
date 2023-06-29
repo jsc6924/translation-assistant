@@ -329,6 +329,12 @@ pack: #配置替换操作
 
 ![trdb-search](https://github.com/jsc6924/translation-assistant/blob/master/imgs/trdb-search.png?raw=true)
 
+#### 导入导出翻译数据库
+
+![trdb-import](https://github.com/jsc6924/translation-assistant/blob/master/imgs/trdb-import.png?raw=true)
+
+点击上图所示图标可导入、导出翻译数据库。导出的数据库被保存为一个zip文件。导入时读取zip文件，替换当前数据库。
+
 ## 其他
 #### 如何设置插件
 1. 点击左下角设置按钮，点Settings
@@ -355,6 +361,7 @@ vsce publish
 #### 2.34
 - 侧边栏支持翻译数据库
 - 从翻译数据库中移除文件/文件夹和重新加载功能移动到侧边栏中
+- 导入导出翻译数据库
 #### 2.33
 - 翻译数据库
   - 添加文件、文件夹
