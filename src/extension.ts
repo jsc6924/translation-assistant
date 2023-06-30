@@ -5,6 +5,7 @@ import axios from 'axios';
 import open = require('open');
 import * as motion from './motion';
 import { setCursorAndScroll, getOrCreateDiagnosticCollection, VSCodeContext, registerCommand } from './utils';
+import * as utils from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
 import {
@@ -396,7 +397,6 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('Extension.dltxt.dict_update', rawText);
 	});
 
-	let dlEditor: vscode.TextEditor | undefined = undefined;
 	let extractSingleline = vscode.commands.registerCommand('Extension.dltxt.extract_single_line', () => {
 		const document = vscode.window.activeTextEditor?.document;
 		if (!document) return;
@@ -433,7 +433,6 @@ export function activate(context: vscode.ExtensionContext) {
 				fs.writeFileSync(slFilePath, data);
 				fs.writeFileSync(refFilePath, prefixRegStr);
 				let setting: vscode.Uri = vscode.Uri.file(slFilePath);
-				dlEditor = vscode.window.activeTextEditor;
 				vscode.workspace.openTextDocument(setting)
 					.then((d: vscode.TextDocument) => {
 						vscode.window.showTextDocument(d, vscode.ViewColumn.Beside, false);
@@ -443,8 +442,8 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		
 	});
-	
-	let mergeIntoDoubleLine = vscode.commands.registerCommand('Extension.dltxt.merge_into_double_line', async function(){
+
+	async function merge_into_double_line(deleleTemp: boolean) {
 		if (!vscode.window.activeTextEditor) {
 			vscode.window.showErrorMessage('请先选中需要更改的双行文本');
 			return;
@@ -454,32 +453,24 @@ export function activate(context: vscode.ExtensionContext) {
 		let slFilePath: string;
 		let refFilePath: string;
 		const m = curFilePath.match(/(.*)\.dltxt\\(.*)\.sl/);
-		if (m) { //sl
-			dlFilePath = m[1] + m[2];
-			slFilePath = curFilePath;
-			if (!dlEditor || !dlEditor?.document)
-			{
-				vscode.window.showErrorMessage('请先选中需要更改的双行文本');
-				return;
-			}
-			await vscode.window.activeTextEditor.document.save();
-			refFilePath = `${m[1]}.dltxt\\${m[2]}.ref`;
-		} else { //dl
-			dlFilePath = curFilePath;
-			let dirPath = path.dirname(curFilePath);
-			const dlFileName = path.basename(curFilePath);
-			const tempDirPath = dirPath + '\\.dltxt';
-			slFilePath = tempDirPath + '\\' + dlFileName + '.sl';
-			if (fs.existsSync(slFilePath)) {
-				dlEditor = vscode.window.activeTextEditor;
-				refFilePath = tempDirPath + '\\' + dlFileName + '.ref';
-			} else {
-				vscode.window.showErrorMessage('请先提取译文');
-				return;
-			}
-			let slDocument = await vscode.workspace.openTextDocument(slFilePath);
-			await slDocument.save();
+		if (!m) {
+			vscode.window.showErrorMessage('当前编辑器中打开的不是单行文本');
+			return;
 		}
+		dlFilePath = path.join(m[1], m[2]);
+		slFilePath = curFilePath;
+		const dlEditor = utils.findEditorByUri(vscode.Uri.file(dlFilePath));
+		if (!dlEditor || !dlEditor?.document)
+		{
+			vscode.window.showErrorMessage('请先打开需要更改的双行文本');
+			return;
+		}
+		if (path.join(dlEditor.document.uri.fsPath) != dlFilePath) {
+			vscode.window.showErrorMessage('所选中的双行文本与当前单行文本不匹配');
+			return;
+		}
+		await vscode.window.activeTextEditor.document.save();
+		refFilePath = `${m[1]}.dltxt\\${m[2]}.ref`;
 		let prefixRegStr: string;
 		try {
 		  prefixRegStr = fs.readFileSync(refFilePath, 'utf8') as string;
@@ -492,7 +483,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const prefixReg = new RegExp(`^(${prefixRegStr})`);
 		const replacedLines = fs.readFileSync(slFilePath, 'utf8').split(/\r?\n/);
 		let dlDocument = dlEditor.document;
-		dlEditor?.edit(editBuilder => {
+		await dlEditor?.edit(editBuilder => {
 			let j = 0;
 			for (let i = 0; i < dlDocument.lineCount; i++) {
 				const line = dlDocument.lineAt(i);
@@ -501,36 +492,22 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			}
 		});
+
+		if (deleleTemp) {
+			await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+			fs.unlinkSync(slFilePath);
+			fs.unlinkSync(refFilePath);
+		}
+		vscode.window.showInformationMessage(`应用成功`);
+	}
+	
+	registerCommand(context, 'Extension.dltxt.merge_into_double_line', async function(){
+		merge_into_double_line(false);
 	});
 
-	// Register a tab close event listener
-	const removeTempListerner = vscode.workspace.onDidCloseTextDocument((document) => {
-		const isDltxtSingleLineFile = (filePath: string): boolean => {
-			return filePath.includes('.dltxt') && filePath.endsWith('.sl');
-		}
-
-		if (!vscode.workspace.textDocuments.includes(document)
-			&& isDltxtSingleLineFile(document.uri.fsPath)) {
-			// Delete the document file
-			const filePath = document.uri.fsPath;
-			const {dir, base, ext, name} = path.parse(filePath);
-			const refPath = path.join(dir, name + '.ref');
-			fs.unlink(filePath, (error) => {
-				if (error) {
-				console.error('Failed to delete file:', error);
-				} else {
-				// File deletion successful
-				}
-			});
-			fs.unlink(refPath, (error) => {
-				if (error) {
-					console.error('Failed to delete file:', error);
-				} else {
-					// File deletion successful
-				}
-			});
-		}
-	  });
+	registerCommand(context, 'Extension.dltxt.merge_into_double_line_del_temp', async () => {
+		merge_into_double_line(true);
+	});
 	
 
 	let copyOriginalCmd = vscode.commands.registerCommand('Extension.dltxt.copy_original', () => {
@@ -646,15 +623,13 @@ export function activate(context: vscode.ExtensionContext) {
 		deleteAllAfterCmd,
 		repeatFirst,
 		copyOriginalCmd,
-		mergeIntoDoubleLine,
 		extractSingleline,
 		convertEncoding,
 		extractCmd,
 		packCmd,
 		spellCheckCmd,
 		spellCheckClearCmd,
-		customWriteStrCmd,
-		removeTempListerner
+		customWriteStrCmd
 	);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {

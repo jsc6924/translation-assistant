@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.34.3",
+	"version": "2.34.4",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -131,6 +131,11 @@
 			{
 				"command": "Extension.dltxt.merge_into_double_line",
 				"title": "应用译文至双行文本",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.merge_into_double_line_del_temp",
+				"title": "应用译文至双行文本（删除单行文本）",
 				"category": "DLTXT"
 			},
 			{
@@ -611,8 +616,13 @@
 					"group": "dltxt.extract"
 				},
 				{
-					"when": "resourceLangId == dltxt || resourceLangId == sltxt",
+					"when": "resourceLangId == sltxt",
 					"command": "Extension.dltxt.merge_into_double_line",
+					"group": "dltxt.extract"
+				},
+				{
+					"when": "resourceLangId == sltxt",
+					"command": "Extension.dltxt.merge_into_double_line_del_temp",
 					"group": "dltxt.extract"
 				},
 				{

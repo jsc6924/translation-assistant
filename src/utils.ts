@@ -142,6 +142,16 @@ export function getCurrentWorkspaceFolder(): string | undefined {
   return undefined;
 }
 
+export function findEditorByUri(uri: vscode.Uri): vscode.TextEditor | undefined {
+  const editors = vscode.window.visibleTextEditors;
+  for (const editor of editors) {
+    if (editor.document.uri.toString() === uri.toString()) {
+      return editor;
+    }
+  }
+  return undefined;
+}
+
 
 export function registerCommand(
 	context: vscode.ExtensionContext,

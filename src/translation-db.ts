@@ -693,9 +693,6 @@ export class SearchIndex {
         channel.appendLine(`version: ${this.version}`);
         channel.appendLine(`nextId: ${this.nextId}`);
         channel.appendLine(`${this.filenameToId.size} files`);
-        // for(const file of this.filenameToId.keys()) {
-        //     channel.appendLine(file);
-        // }
         channel.appendLine(`-----------------------------`);
         channel.show();
     }
