@@ -159,7 +159,7 @@ export function registerCommand(
 	callback: (...args: any[]) => any,
 	requiresActiveEditor: boolean = false
 ) {
-	const disposable = vscode.commands.registerCommand(command, async (...args) => {
+	const disposable = vscode.commands.registerCommand(command, async (...args: any[]) => {
 		if (requiresActiveEditor && !vscode.window.activeTextEditor) {
 			return;
 		}
@@ -261,4 +261,53 @@ export function writeAtomic(filePath: string, data: string): void {
       fs.unlinkSync(tempFilePath); // Clean up the temporary file in case of error
     }
   }
+}
+
+
+export class ContextHolder {
+  private static context: vscode.ExtensionContext | undefined;
+  static set(context: vscode.ExtensionContext) {
+    ContextHolder.context = context;
+  }
+  static get() {
+    if (!ContextHolder.context) {
+      throw new Error('context is not initialized');
+    }
+    return ContextHolder.context;
+  }
+}
+
+
+export class DictSettings {
+  static getGameTitle() {
+      return ContextHolder.get().workspaceState.get('dltxt.simpleTM.gameTitle') as string;
+  }
+  static setGameTitle(value: string) {
+      return ContextHolder.get().workspaceState.update('dltxt.simpleTM.gameTitle', value);
+  }
+  static getSimpleTMApiToken() {
+      return ContextHolder.get().globalState.get('dltxt.simpleTM.api') as string;
+  }
+  static setSimpleTMApiToken(value: string) {
+      return ContextHolder.get().globalState.update('dltxt.simpleTM.api', value);
+  }
+  static getSimpleTMUrl() {
+      return ContextHolder.get().globalState.get('dltxt.simpleTM.url') as string;
+  }
+  static setSimpleTMUrl(value: string) {
+      return ContextHolder.get().globalState.update('dltxt.simpleTM.url', value);
+  }
+  static getSimpleTMUsername() {
+      return ContextHolder.get().globalState.get('dltxt.simpleTM.username') as string;
+  }
+  static setSimpleTMUsername(value: string) {
+      return ContextHolder.get().globalState.update('dltxt.simpleTM.username', value);
+  }
+  static getSimpleTMDictKeys(game: string) {
+    return ContextHolder.get().globalState.get(`dltxt.simpleTM.dictkey.${game}`) as Array<any>;
+  }
+  static setSimpleTMDickKeys(game: string, value: any) {
+      return ContextHolder.get().globalState.update(`dltxt.simpleTM.dictkey.${game}`, value);
+  }
+  
 }

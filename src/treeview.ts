@@ -1,86 +1,200 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
+import { generateKeyPair } from 'crypto';
 
 // lets put all in a cwt namespace
 export namespace dltxt
 {
-    class CustomItem extends vscode.TreeItem {
-        raw: string = '';
-        value: string = '';
-        contextValue = 'key-value-item';
-        constructor(raw: string, value: string) {
-            super(`${raw}: ${value}`, vscode.TreeItemCollapsibleState.None);
-            if (!value) {
-                this.label = raw;
-            }
-            this.raw = raw;
-            this.value = value;
+    class DictItem extends vscode.TreeItem {
+        contextValue = 'dict-item';
+        treeview: DictTreeView;
+        constructor(treeview: DictTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
+            super(label, state);
+            this.treeview = treeview;
         }
     }
+
+    class DictRootItem extends DictItem {
+        dictName: string;
+        contextValue = 'dict-root-item';
+        children: DictItem[] = [];
+        constructor(treeview: DictTreeView, dictName: string, state: vscode.TreeItemCollapsibleState) {
+            super(treeview, dictName, state);
+            this.dictName = dictName;
+            this.iconPath = new vscode.ThemeIcon('database');
+        }
+    }
+
+    class DictConfigRootItem extends DictItem {
+        contextValue = 'dict-config-root-item';
+        children: DictConfigEntryItem[] = [];
+        iconPath = new vscode.ThemeIcon('settings-gear');
+    }
+    class DictConfigEntryItem extends DictItem {
+        contextValue = 'dict-config-entry-item';
+        config: string;
+        showFullValue: boolean;
+        global: boolean;
+        initLabel: string;
+        constructor(treeview: DictTreeView, label: string, config: string, global: boolean, showFullValue: boolean) {
+            super(treeview, label, vscode.TreeItemCollapsibleState.None);
+            this.initLabel = label;
+            this.config = config;
+            this.showFullValue = showFullValue;
+            this.global = global;
+            this.iconPath = new vscode.ThemeIcon('settings');
+            this.updateLabel();
+            const cb = () => { 
+                this.updateLabel(); 
+                treeview.labelChanged(); 
+            };
+            if (global) {
+                this.command = {
+                    command: 'Extension.dltxt.setGlobalState',
+                    title: `更改全局变量${config}`,
+                    arguments: [{config: config, callback: cb}]
+                }
+            } else {
+                this.command = {
+                    command: 'Extension.dltxt.setWorkspaceState',
+                    title: `更改当前工作区变量${config}`,
+                    arguments: [{config: config, callback: cb}]
+                }
+            }
+        }
+
+        updateLabel() {
+            let v = undefined;
+            if (this.global) {
+                v = ContextHolder.get().globalState.get(this.config) as string;
+            } else {
+                v = ContextHolder.get().workspaceState.get(this.config) as string;
+            }
+            if (v !== undefined) {
+                if (!this.showFullValue) {
+                    v = v.slice(0, 3) + '******';
+                }
+                this.label = `${this.initLabel}: ${v}`
+            }
+        }
+
+        
+    }
+    class DictEntrySetItem extends DictItem {
+        contextValue = 'dict-entry-set-item';
+        children: DictEntryItem[] = [];
+        iconPath = new vscode.ThemeIcon('book');
+    }
+    class DictEntryItem extends DictItem {
+        key: string = '';
+        value: string = '';
+        contextValue = 'dict-entry-item';
+        constructor(treeview: DictTreeView, key: string, value: string) {
+            super(treeview, `${key}: ${value}`, vscode.TreeItemCollapsibleState.None);
+            if (!value) {
+                this.label = key;
+            }
+            this.key = key;
+            this.value = value;
+            this.iconPath = new vscode.ThemeIcon('circle-filled');
+            this.command = { command: 'Extension.dltxt.copyToClipboard', 
+                title : 'copy value',
+                arguments: [{text: this.value}]
+            };
+        }
+    }
+    class DictPlaceholderItem extends DictItem {
+        contextValue = 'dict-placeholder-item';
+    }
+
     
     // 1. we'll export this class and use it in our extension later
     // 2. we need to implement vscode.TreeDataProvider
-    export class DictTreeView implements vscode.TreeDataProvider<CustomItem>
+    export class DictTreeView implements vscode.TreeDataProvider<DictItem>
     {
         // with the vscode.EventEmitter we can refresh our  tree view
-        private m_onDidChangeTreeData: vscode.EventEmitter<CustomItem | undefined> = new vscode.EventEmitter<CustomItem | undefined>();
+        private m_onDidChangeTreeData: vscode.EventEmitter<DictItem | undefined> = new vscode.EventEmitter<DictItem | undefined>();
         // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-        readonly onDidChangeTreeData ? : vscode.Event<CustomItem | undefined> = this.m_onDidChangeTreeData.event;
+        readonly onDidChangeTreeData ? : vscode.Event<DictItem | undefined> = this.m_onDidChangeTreeData.event;
 
-        items: CustomItem[] = [];
+        
+        simpleTMNode: DictRootItem;
         game = '';
 
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
         public constructor()  {
+            this.simpleTMNode = new DictRootItem(this, `SimpleTM`, vscode.TreeItemCollapsibleState.Expanded);
+            const simpleTMConfigNode = new DictConfigRootItem(this, '设置', vscode.TreeItemCollapsibleState.Collapsed);
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `服务器网址`, 'dltxt.simpleTM.url', true, true));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `用户名`, 'dltxt.simpleTM.username', true, true));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `APIToken`, 'dltxt.simpleTM.api', true, false));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `项目名`, 'dltxt.simpleTM.gameTitle', false, true));
+            this.simpleTMNode.children.push(simpleTMConfigNode);
+
+            this.simpleTMNode.children.push(new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded));
+
             vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.deleteItem', r => this.deleteItem(r));
         }
 
-        getTreeItem(item: CustomItem): vscode.TreeItem {
-            item.command = { command: 'Extension.dltxt.copyToClipboard', title : 'copy value', arguments: [{text: item.value}] };
+        getTreeItem(item: DictItem): vscode.TreeItem {
             return item;
         }
     
-        getChildren(element?: CustomItem): Thenable<CustomItem[]> {
-            if (!this.game) {
-                return Promise.resolve([new CustomItem('未连接SimpleTM数据库', '')]);
+        getChildren(element?: DictItem): Thenable<DictItem[]> {
+            if (!element) {
+                return Promise.resolve([this.simpleTMNode]);
             }
-            return Promise.resolve(this.items);
+            if (element.contextValue == 'dict-root-item') {
+                return Promise.resolve((element as DictRootItem).children);
+            }
+            if (element.contextValue == 'dict-entry-set-item') {
+                return Promise.resolve((element as DictEntrySetItem).children);
+            }
+            if (element.contextValue == 'dict-config-root-item') {
+                return Promise.resolve((element as DictConfigRootItem).children);
+            }
+            return Promise.resolve([]);
         }
 
         // this is called when we click an item
-        public editItem(item: CustomItem) {
-            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.raw)
+        public editItem(item: DictEntryItem) {
+            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.key)
         }
 
         // this is called when we click an item
-        public deleteItem(item: CustomItem) {
-            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.raw, true)
+        public deleteItem(item: DictEntryItem) {
+            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.key, true)
         }
 
-        refresh(context: vscode.ExtensionContext) {
-            const config = vscode.workspace.getConfiguration("dltxt");
-            const game : string | undefined = config.get("simpleTM.project") as string;
+        labelChanged() {
+            this.m_onDidChangeTreeData.fire(undefined);
+        }
+
+        refresh() {
+            const game : string | undefined = DictSettings.getGameTitle();
             this.game = game;
             if (!game) {
                 return;
             }
 
-            this.items = []
-            const keywords = context.workspaceState.get(`${game}.dict`) as Array<any>;
+            const dictEntryItems = [];
+            const keywords = DictSettings.getSimpleTMDictKeys(game);
             for (let i = 0; i < keywords.length; i++) {
                 let v = keywords[i];
                 if(v['raw']) {
-                    this.items.push(new CustomItem(v['raw'], v['translate']));
+                    dictEntryItems.push(new DictEntryItem(this, v['raw'], v['translate']));
                 }
             }
-            this.items.sort((a, b) => {
-                return a.raw.localeCompare(b.raw);
-            })
+            dictEntryItems.sort((a, b) => {
+                return a.key.localeCompare(b.key);
+            });
+            (this.simpleTMNode.children[1] as DictEntrySetItem).children = dictEntryItems;
+
             this.m_onDidChangeTreeData.fire(undefined);
         }
 
@@ -91,6 +205,7 @@ export namespace dltxt
         value: string = '';
         index: string;
         contextValue = 'value-item';
+        iconPath = new vscode.ThemeIcon('symbol-key');
         constructor(label: string, index: string, value: string) {
             super(label, vscode.TreeItemCollapsibleState.None);
             this.index = index;
@@ -145,6 +260,7 @@ export namespace dltxt
     export class TRDBFolderItem extends TRDBItem {
         folder: string = '';
         contextValue = 'trdb-folder';
+        iconPath = new vscode.ThemeIcon('folder');
         constructor(folder: string) {
             super(folder, vscode.TreeItemCollapsibleState.Collapsed);
             this.folder = folder;
@@ -155,6 +271,7 @@ export namespace dltxt
         filename: string;
         folder: string;
         contextValue = 'trdb-file';
+        iconPath = new vscode.ThemeIcon('file');
         constructor(folder: string, filename: string) {
             super(filename, vscode.TreeItemCollapsibleState.None);
             this.folder = folder;

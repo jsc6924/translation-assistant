@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import axios from 'axios';
 import { dltxt } from './treeview';
-import { registerCommand } from './utils';
+import { registerCommand, DictSettings } from './utils';
 
 const keywordDecorationType = vscode.window.createTextEditorDecorationType({
     borderWidth: '1px',
@@ -39,14 +39,13 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.window.registerTreeDataProvider('dltxt-dict', tree);
 
 	registerCommand(context, 'Extension.dltxt.sync_database', function () {
-		const config = vscode.workspace.getConfiguration("dltxt");
-		const username: string = config.get("simpleTM.username") as string;
-		const apiToken: string = config.get("simpleTM.apiToken") as string;
+		const username: string = DictSettings.getSimpleTMUsername();
+		const apiToken: string = DictSettings.getSimpleTMApiToken();
 		if (!username || !apiToken) {
 			return;
 		}
-		const BASE_URL = config.get('simpleTM.remoteHost');
-		let GameTitle: string = config.get("simpleTM.project") as string;
+		const BASE_URL = DictSettings.getSimpleTMUrl();
+		let GameTitle: string = DictSettings.getGameTitle();
 		if (GameTitle) {
 			let fullURL = BASE_URL + "/api/querybygame/" + GameTitle;
 			axios.get(fullURL, {
@@ -56,24 +55,23 @@ export function activate(context: vscode.ExtensionContext) {
 			}).then(result => {
 				console.log(result);
 				if (result) {
-					context.workspaceState.update(`${GameTitle}.dict`, result.data);
+                    DictSettings.setSimpleTMDickKeys(GameTitle, result.data);
 					updateKeywordDecorations(context);
-					tree.refresh(context);
+					tree.refresh();
 				}
 			});
 		}
 	});
 	
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', function () {
-		const config = vscode.workspace.getConfiguration("dltxt");
-		const username: string = config.get("simpleTM.username") as string;
-		const apiToken: string = config.get("simpleTM.apiToken") as string;
+		const username: string = DictSettings.getSimpleTMUsername();
+		const apiToken: string = DictSettings.getSimpleTMApiToken();
 		if (!username || !apiToken) {
 			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
 			return;
 		}
-		const BASE_URL = config.get('simpleTM.remoteHost');
-		let GameTitle: string = config.get("simpleTM.project") as string;
+		const BASE_URL = DictSettings.getSimpleTMUrl();
+		let GameTitle: string = DictSettings.getGameTitle();
 		if (!GameTitle) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
@@ -107,15 +105,14 @@ export function activate(context: vscode.ExtensionContext) {
 			})
 	});
 	registerCommand(context, 'Extension.dltxt.dict_update',　function (arg, wantDelete = false) {
-		const config = vscode.workspace.getConfiguration("dltxt");
-		const username: string = config.get("simpleTM.username") as string;
-		const apiToken: string = config.get("simpleTM.apiToken") as string;
+		const username: string = DictSettings.getSimpleTMUsername();
+		const apiToken: string = DictSettings.getSimpleTMApiToken();
 		if (!username || !apiToken) {
 			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
 			return;
 		}
-		const BASE_URL = config.get('simpleTM.remoteHost');
-		let GameTitle: string = config.get("simpleTM.project") as string;
+		const BASE_URL = DictSettings.getSimpleTMUrl();
+		let GameTitle: string = DictSettings.getGameTitle();
 		if (!GameTitle) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
@@ -194,7 +191,7 @@ export function activate(context: vscode.ExtensionContext) {
 export function updateKeywordDecorations(context: vscode.ExtensionContext) {
     let activeEditor = vscode.window.activeTextEditor;
     const config = vscode.workspace.getConfiguration("dltxt");
-    const game : string | undefined = config.get("simpleTM.project") as string;
+    const game : string | undefined = DictSettings.getGameTitle();
     if (!activeEditor || !game) {
         return;
     }
@@ -202,7 +199,7 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
         activeEditor.setDecorations(keywordDecorationType, []);
         return;
     }
-    const keywords = context.workspaceState.get(`${game}.dict`) as Array<any>;
+    const keywords = DictSettings.getSimpleTMDictKeys(game);
     const testArray: Array<String> = [];
     for (let i = 0; i < keywords.length; i++) {
         let v = keywords[i];

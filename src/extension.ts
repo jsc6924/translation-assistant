@@ -3,7 +3,8 @@
 import * as vscode from 'vscode';
 import open = require('open');
 import * as motion from './motion';
-import { setCursorAndScroll, getOrCreateDiagnosticCollection, VSCodeContext, registerCommand } from './utils';
+import { setCursorAndScroll, getOrCreateDiagnosticCollection, VSCodeContext, registerCommand,
+	ContextHolder } from './utils';
 import {
 	formatter, copyOriginalToTranslation,
 	repeatFirstChar, getRegex
@@ -27,6 +28,7 @@ import * as singleline from './singleline';
 //https://gist.github.com/ryanmcgrath/982242
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
+	ContextHolder.set(context);
 	let timeout: NodeJS.Timer | undefined = undefined;
 
 	mode.setMode(mode.Mode.Normal);
@@ -136,6 +138,38 @@ export function activate(context: vscode.ExtensionContext) {
 			triggerUpdateDecorations();
 		}
 	}, null, context.subscriptions);
+
+	registerCommand(context, 'Extension.dltxt.setWorkspaceState', async (args) => {
+		const config = args.config;
+		const callback = args.callback;
+		const oldValue = context.workspaceState.get(config) as string;
+		const newValue = await vscode.window.showInputBox({
+			value: oldValue,
+			prompt: `输入${config}的值`
+		})
+		if (newValue === undefined) {
+			if (callback) callback();
+			return;
+		}
+		await context.workspaceState.update(config, newValue);
+		if (callback) callback();
+	})
+
+	registerCommand(context, 'Extension.dltxt.setGlobalState', async (args) => {
+		const config = args.config;
+		const callback = args.callback;
+		const oldValue = context.globalState.get(config) as string;
+		const newValue = await vscode.window.showInputBox({
+			value: oldValue,
+			prompt: `输入${config}的值`
+		});
+		if (newValue === undefined) {
+			if (callback) callback();
+			return;
+		}
+		await context.globalState.update(config, newValue);
+		if (callback) callback();
+	})
 
 	registerCommand(context, 'Extension.dltxt.copy_original', () => {
 		const editor = vscode.window.activeTextEditor;

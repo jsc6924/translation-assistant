@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.34.6",
+	"version": "3.0.0",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -167,6 +167,14 @@
 				"command": "Extension.dltxt.spellCheckClear",
 				"title": "清除错别字检查结果",
 				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.setGlobalState",
+				"title": "更改全局设置"
+			},
+			{
+				"command": "Extension.dltxt.setWorkspaceState",
+				"title": "更改当前工作区设置"
 			},
 			{
 				"command": "Extension.dltxt.treeview.editItem",
@@ -679,12 +687,12 @@
 			"view/item/context": [
 				{
 					"command": "Extension.dltxt.treeview.editItem",
-					"when": "view == dltxt-dict && viewItem == key-value-item",
+					"when": "view == dltxt-dict && viewItem == dict-entry-item",
 					"group": "inline@1"
 				},
 				{
 					"command": "Extension.dltxt.treeview.deleteItem",
-					"when": "view == dltxt-dict && viewItem == key-value-item",
+					"when": "view == dltxt-dict && viewItem == dict-entry-item",
 					"group": "inline@2"
 				},
 				{
@@ -712,23 +720,6 @@
 		"configuration": {
 			"title": "dltxt",
 			"properties": {
-				"dltxt.simpleTM.remoteHost": {
-					"type": "string",
-					"default": "https://simpletm.jscrosoft.com/",
-					"description": "SimpleTM服务器网址"
-				},
-				"dltxt.simpleTM.username": {
-					"type": "string",
-					"description": "SimpleTM用户名"
-				},
-				"dltxt.simpleTM.apiToken": {
-					"type": "string",
-					"description": "SimpleTM APIToken （登录后可以在你的主页上找到）"
-				},
-				"dltxt.simpleTM.project": {
-					"type": "string",
-					"description": "SimpleTM项目名（建议在Workspace中填写）"
-				},
 				"dltxt.simpleTM.syncInterval": {
 					"type": "integer",
 					"default": 300,
