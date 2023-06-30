@@ -217,11 +217,12 @@ export function activate(context: vscode.ExtensionContext) {
 		clearSpellCheck();
 	});
 
-	registerCommand(context, 'Extension.dltxt.customWriteString', (args) => {
+	registerCommand(context, 'Extension.dltxt.customWriteKey', (args) => {
 		const k = args.arg1;
 		const s = clipboard.ClipBoardManager.get(context, k);
 		motion.editorWriteString(s);
 	});
+	
 
 	singleline.activate(context);
 	clipboard.activate(context);

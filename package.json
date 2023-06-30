@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "2.34.4",
+	"version": "2.34.5",
 	"engines": {
 		"vscode": "^1.48.0"
 	},
@@ -190,6 +190,14 @@
 				"icon": {
 					"light": "icons/light/edit.svg",
 					"dark": "icons/dark/edit.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.writeClipboardString",
+				"title": "插入剪贴板内容",
+				"icon": {
+					"light": "icons/light/debug-step-over.svg",
+					"dark": "icons/dark/debug-step-over.svg"
 				}
 			},
 			{
@@ -389,7 +397,7 @@
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.customWriteString",
+				"command": "Extension.dltxt.customWriteKey",
 				"key": "alt+1",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": {
@@ -397,7 +405,7 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.customWriteString",
+				"command": "Extension.dltxt.customWriteKey",
 				"key": "alt+2",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": {
@@ -405,7 +413,7 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.customWriteString",
+				"command": "Extension.dltxt.customWriteKey",
 				"key": "alt+3",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": {
@@ -413,7 +421,7 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.customWriteString",
+				"command": "Extension.dltxt.customWriteKey",
 				"key": "alt+4",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": {
@@ -421,7 +429,7 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.customWriteString",
+				"command": "Extension.dltxt.customWriteKey",
 				"key": "alt+5",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": {
@@ -429,7 +437,7 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.customWriteString",
+				"command": "Extension.dltxt.customWriteKey",
 				"key": "alt+6",
 				"when": "editorTextFocus && resourceLangId == dltxt",
 				"args": {
@@ -680,9 +688,14 @@
 					"group": "inline@2"
 				},
 				{
-					"command": "Extension.dltxt.treeview.setClipboardString",
+					"command": "Extension.dltxt.treeview.writeClipboardString",
 					"when": "view == dltxt-clipboard && viewItem == value-item",
 					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.setClipboardString",
+					"when": "view == dltxt-clipboard && viewItem == value-item",
+					"group": "inline@2"
 				},
 				{
 					"command": "Extension.dltxt.trdb.treeview.deleteDoc",

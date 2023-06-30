@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { dltxt } from './treeview';
 import { registerCommand } from './utils';
+import { editorWriteString } from './motion';
 
 const ClipboardStringPrefix = 'clipboard.customString';
 
@@ -42,6 +43,12 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			clipboard_view.refresh(context);
 		})
+	});
+
+  registerCommand(context, "Extension.dltxt.treeview.writeClipboardString", (item: dltxt.ValueItem) => {
+		let editor = vscode.window.activeTextEditor;
+		if (!editor) return;
+		editorWriteString(item.value);
 	});
 
     registerCommand(context, 'Extension.dltxt.treeview.setClipboardString', (item: dltxt.ValueItem) => {
