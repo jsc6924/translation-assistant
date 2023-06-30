@@ -78,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
         }
         TRDBCriticalSection(context, async () => {
             index.load(context, treeView);
-            if(await deleteDocument(context, folder, filename)) {
+            if(deleteDocument(context, folder, filename)) {
                 saveIndex(context);
                 treeView.refresh(context);
                 vscode.window.showInformationMessage(`已从翻译数据库移除${filename}`);
@@ -102,7 +102,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
             let successCount = 0;
             for (const file of files.keys()) {
                 try {
-                    const success = await deleteDocument(context, folder, file);
+                    const success = deleteDocument(context, folder, file);
                     if (success) {
                         successCount++;
                     } else {
@@ -110,7 +110,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: dltxt
                         channel.show();
                     }
                 } catch (err) {
-                    channel.appendLine(`删除失败：${file}`);
+                    channel.appendLine(`删除失败：${file}, ${err}`);
                     channel.show();
                 }
             }
@@ -263,20 +263,20 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
     let lineCount = totalRawLines.length;
     let lastLine: number[] = [];
     let usedFiles: string[] = [];
-    function findFileByLineNumber(line: number): string {
+    function findFileByLineNumber(line: number): [string, number] {
         let i = 0;
         while(i < lastLine.length) {
             if (line < lastLine[i]) {
-                return usedFiles[i];
+                return [usedFiles[i], i == 0 ? 1 : lastLine[i-1] + 1]; //+1 padding
             }
             i++;
         }
-        return '';
+        return ['', -1];
     }
     for(const file of matchedFiles) {
         const rawFilePath = path.join(rawTextsPath, file);
         const rawContent = fs.readFileSync(rawFilePath, { encoding: 'utf8' });
-        const rawLines = rawContent.split('\n');;
+        const rawLines = rawContent.split('\n');
         const trFilePath = path.join(trTextPath, file);
         const trFileContent = fs.readFileSync(trFilePath, { encoding: 'utf8' });
         const trLines = trFileContent.split('\n');
@@ -313,13 +313,23 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
             continue;
         }
         lineNumberSeen.add(i);
-        const file = findFileByLineNumber(i);
-        outputLines.push(`-----------------------[${k++}]${file}-----------------------`);
+        const [file, offset] = findFileByLineNumber(i);
+        const filenamePattern = /(.*)\/(.*)\.(\d+)(\.txt)/;
+        const m = filenamePattern.exec(file)
+        let fileLineStart = 0;
+        let virtualFileName = file;
+        if (m) {
+            fileLineStart = Number(m[3]) - 1;
+            virtualFileName = m[1] + '/' + m[2];
+        }
+        outputLines.push(`-----------------------[${k++}]${virtualFileName}-----------------------`);
         outputLines.push('');
         for(let j = i-1; j <= i+1; j++) {
             if (j > 0 && j < totalTrLines.length) {
-                outputLines.push(totalRawLines[j].replace(/\s+/g, ''));
-                outputLines.push(totalTrLines[j]);
+                let docLine = fileLineStart + j - offset;
+                const tag = `${docLine.toString().padStart(6, '0')}`;
+                outputLines.push(`[${tag}]` + totalRawLines[j].replace(/\s+/g, ''));
+                outputLines.push(`;[${tag}]` + totalTrLines[j]);
                 outputLines.push('');
             }
         }
@@ -338,7 +348,9 @@ async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string)
     const documentFilename = path.parse(fsPath).base;
     return addDocumentLines(context, documentFilename, lines);
 }
-async function deleteDocument(context: vscode.ExtensionContext, folder: string, documentFilename: string) {
+export function findBlocksForVirtualDocument(context: vscode.ExtensionContext, 
+    folder: string, documentFilename: string): string[] 
+{
     const databasePath = path.join(context.globalStoragePath, 'trdb');
     fs.mkdirSync(path.join(databasePath, 'raw', folder), {recursive: true});
     fs.mkdirSync(path.join(databasePath, 'tr', folder), {recursive: true});
@@ -347,9 +359,13 @@ async function deleteDocument(context: vscode.ExtensionContext, folder: string, 
         return file.startsWith(indexedFilenamePrefix);
     });
     if (files.length == 0) {
-        vscode.window.showErrorMessage(`翻译数据库中未找到${documentFilename}`);
-        return false;
+        throw new Error(`翻译数据库中未找到${documentFilename}`)
     }
+    return files;
+}
+function deleteDocument(context: vscode.ExtensionContext, folder: string, documentFilename: string) {
+    const databasePath = path.join(context.globalStoragePath, 'trdb');
+    const files = findBlocksForVirtualDocument(context, folder, documentFilename);
     for(const file of files) {
         fs.unlinkSync(path.join(databasePath, 'raw', folder, file));
         fs.unlinkSync(path.join(databasePath, 'tr', folder, file));
@@ -644,7 +660,7 @@ export class SearchIndex {
         return true;
     }
 
-    filenamePattern = /(.*)\/(.*)(\.\d+\.txt)/;
+    filenamePattern = /(.*)\/(.*)(\.\d+)(\.txt)/;
 
     parseFilename(file: string): [string, string] {
         const m = this.filenamePattern.exec(file);

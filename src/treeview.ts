@@ -1,7 +1,9 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
-import { SearchIndex } from './translation-db';
-import { registerCommand } from './utils';
+import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
+import { registerCommand, showOutputText } from './utils';
+import * as fs from 'fs';
+import * as path from "path";
 
 // lets put all in a cwt namespace
 export namespace dltxt
@@ -157,6 +159,11 @@ export namespace dltxt
             super(filename, vscode.TreeItemCollapsibleState.None);
             this.folder = folder;
             this.filename = filename;
+            this.command = {
+                command: 'Extension.dltxt.trdb.openVirtualFile', 
+                title : 'copy value', 
+                arguments: [{folder: folder, filename: filename}] 
+            };
         }
     }
 
@@ -174,8 +181,39 @@ export namespace dltxt
         constructor(context: vscode.ExtensionContext, index: SearchIndex) {
             this.index = index;
             this.refresh(context);
+            registerCommand(context, "Extension.dltxt.trdb.openVirtualFile", (args) => {
+                const folder = args.folder;
+                const filename = args.filename;
+                const databasePath = path.join(context.globalStoragePath, 'trdb');
+                const files = findBlocksForVirtualDocument(context, folder, filename);
+                files.sort((a, b) => {
+                    return a.localeCompare(b);
+                });
+                const rlines = [];
+                const tlines = [];
+                for (const file of files) {
+                    const rc = fs.readFileSync(path.join(databasePath, 'raw', folder, file), {encoding: 'utf8'});
+                    const tc = fs.readFileSync(path.join(databasePath, 'tr', folder, file), {encoding: 'utf8'});
+                    const rawLines = rc.split('\n');
+                    const trLines = tc.split('\n');
+                    if (rawLines.length != trLines.length) {
+                        throw new Error(`line count not matched: ${file}`);
+                    }
+                    const rltrimed = rawLines.slice(1, rawLines.length - 1);
+                    const tltrimed = trLines.slice(1, rawLines.length - 1);
 
-        
+                    rlines.push(...rltrimed);
+                    tlines.push(...tltrimed);
+                }
+                const lines = [];
+                for(let i = 0; i < rlines.length; i++) {
+                    const tag = `${(i+1).toString().padStart(6, '0')}`;
+                    lines.push(`[${tag}]` + rlines[i].replace(/\s+/g, ''));
+                    lines.push(`;[${tag}]` + tlines[i]);
+                    lines.push('');
+                }
+                showOutputText(`${folder}/${filename}`, lines.join('<br>'));
+            })
         }
         getTreeItem(item: TRDBItem): vscode.TreeItem {
             return item;
