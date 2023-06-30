@@ -159,12 +159,12 @@ export function registerCommand(
 	callback: (...args: any[]) => any,
 	requiresActiveEditor: boolean = false
 ) {
-	const disposable = vscode.commands.registerCommand(command, async (args) => {
+	const disposable = vscode.commands.registerCommand(command, async (...args) => {
 		if (requiresActiveEditor && !vscode.window.activeTextEditor) {
 			return;
 		}
 
-		callback(args);
+		callback(...args);
 	});
 	context.subscriptions.push(disposable);
 }
