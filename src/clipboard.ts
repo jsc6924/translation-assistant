@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { dltxt } from './treeview';
 import { registerCommand } from './utils';
 import { editorWriteString } from './motion';
+import { ContextHolder } from './utils';
 
 const ClipboardStringPrefix = 'clipboard.customString';
 
@@ -16,10 +17,10 @@ let clipboardDefaultValues = new Map([
 
 export class ClipBoardManager {
   static get(context: vscode.ExtensionContext, key: string): string {
-    return context.workspaceState.get(key, clipboardDefaultValues.get(key)) as string;
+    return ContextHolder.getWorkspaceState(key, clipboardDefaultValues.get(key)) as string;
   }
-  static set(context: vscode.ExtensionContext, key: string, value: string | undefined): Thenable<void> {
-    return context.workspaceState.update(key, value);
+  static set(context: vscode.ExtensionContext, key: string, value: string | undefined) {
+    return ContextHolder.setWorkspaceState(key, value);
   }
 }
 
@@ -34,14 +35,13 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!editor) return;
 		let text = '';
 		text = editor.document.getText(editor.selection);
-		ClipBoardManager.set(context, key, text ? text : undefined).then(() => {
-			if (text) {
-				vscode.window.showInformationMessage(`已复制到${reg_num}号剪贴板：[${text}]`);
-			} else {
-				vscode.window.showInformationMessage(`已清空${reg_num}号剪贴板`);
-			}
-			clipboard_view.refresh(context);
-		})
+		ClipBoardManager.set(context, key, text ? text : undefined)
+    if (text) {
+      vscode.window.showInformationMessage(`已复制到${reg_num}号剪贴板：[${text}]`);
+    } else {
+      vscode.window.showInformationMessage(`已清空${reg_num}号剪贴板`);
+    }
+    clipboard_view.refresh(context);
 	});
 
   registerCommand(context, "Extension.dltxt.treeview.writeClipboardString", (item: dltxt.ValueItem) => {
@@ -62,9 +62,8 @@ export function activate(context: vscode.ExtensionContext) {
             if (text === undefined) {
                 return;
             }
-            ClipBoardManager.set(context, key, text ? text : undefined).then(() => {
-                clipboard_view.refresh(context);
-            })
+            ClipBoardManager.set(context, key, text ? text : undefined);
+            clipboard_view.refresh(context);
         })
 	});
 }

@@ -4,7 +4,7 @@ import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
 import { registerCommand, showOutputText, DictSettings, ContextHolder } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
-import { generateKeyPair } from 'crypto';
+import { SimpleTMDefaultURL } from './simpletm';
 
 // lets put all in a cwt namespace
 export namespace dltxt
@@ -22,7 +22,7 @@ export namespace dltxt
         dictName: string;
         contextValue = 'dict-root-item';
         children: DictItem[] = [];
-        constructor(treeview: DictTreeView, dictType: string, dictName: string, state: vscode.TreeItemCollapsibleState) {
+        constructor(treeview: DictTreeView, dictName: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, dictName, state);
             this.dictName = dictName;
             this.iconPath = new vscode.ThemeIcon('database');
@@ -33,6 +33,21 @@ export namespace dltxt
         contextValue = 'dict-config-root-item';
         children: DictConfigEntryItem[] = [];
         iconPath = new vscode.ThemeIcon('settings-gear');
+        dictName: string;
+        constructor(treeview: DictTreeView, label: string, dictName: string, state: vscode.TreeItemCollapsibleState) {
+            super(treeview, label, state);
+            this.dictName = dictName;
+        }
+
+        
+        async configUpdated() {
+            for(const child of this.children) {
+                if (!child.getValue()) {
+                    return;
+                }
+            }
+            await vscode.commands.executeCommand('Extension.dltxt.sync_database', this.dictName);
+        }
     }
     class DictConfigEntryItem extends DictItem {
         contextValue = 'dict-config-entry-item';
@@ -40,25 +55,28 @@ export namespace dltxt
         showFullValue: boolean;
         global: boolean;
         initLabel: string;
-        constructor(treeview: DictTreeView, label: string, config: string, global: boolean, showFullValue: boolean) {
+        constructor(treeview: DictTreeView, configRoot: DictConfigRootItem,
+             label: string, config: string, global: boolean, showFullValue: boolean) {
             super(treeview, label, vscode.TreeItemCollapsibleState.None);
             this.initLabel = label;
             this.config = config;
             this.showFullValue = showFullValue;
             this.global = global;
-            this.iconPath = new vscode.ThemeIcon('settings');
             this.updateLabel();
-            const cb = () => { 
+            const cb = async () => { 
                 this.updateLabel(); 
-                treeview.dataChanged(); 
+                await configRoot.configUpdated();
+                treeview.dataChanged();
             };
             if (global) {
+                this.iconPath = new vscode.ThemeIcon('symbol-property');
                 this.command = {
                     command: 'Extension.dltxt.setGlobalState',
                     title: `更改全局变量${config}`,
                     arguments: [{config: config, callback: cb}]
                 }
             } else {
+                this.iconPath = new vscode.ThemeIcon('settings');
                 this.command = {
                     command: 'Extension.dltxt.setWorkspaceState',
                     title: `更改当前工作区变量${config}`,
@@ -67,12 +85,19 @@ export namespace dltxt
             }
         }
 
+        getValue() {
+            if (this.global) {
+                return ContextHolder.getGlobalState(this.config);
+            }
+            return ContextHolder.getWorkspaceState(this.config);
+        }
+
         updateLabel() {
             let v = undefined;
             if (this.global) {
-                v = ContextHolder.get().globalState.get(this.config) as string;
+                v = ContextHolder.getGlobalState(this.config) as string;
             } else {
-                v = ContextHolder.get().workspaceState.get(this.config) as string;
+                v = ContextHolder.getWorkspaceState(this.config) as string;
             }
             if (v !== undefined) {
                 if (!this.showFullValue) {
@@ -141,12 +166,15 @@ export namespace dltxt
                 DictSettings.setSimpleTMUsername(name, values.user);
                 DictSettings.setGameTitle(name, values.game);
             }
-            const simpleTMNode = new DictRootItem(this, `remote`, name, vscode.TreeItemCollapsibleState.Expanded);
-            const simpleTMConfigNode = new DictConfigRootItem(this, '设置', vscode.TreeItemCollapsibleState.Collapsed);
-            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `服务器网址`, `dltxt.dict.${name}.url`, true, true));
-            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `用户名`, `dltxt.dict.${name}.username`, true, true));
-            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `APIToken`, `dltxt.dict.${name}.api`, true, false));
-            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, `项目名`, `dltxt.dict.${name}.gameTitle`, false, true));
+            if (!DictSettings.getSimpleTMUrl(name)) {
+                DictSettings.setSimpleTMUrl(name, SimpleTMDefaultURL);
+            }
+            const simpleTMNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
+            const simpleTMConfigNode = new DictConfigRootItem(this, '设置', name, vscode.TreeItemCollapsibleState.Collapsed);
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode,  `服务器网址`, `dltxt.dict.${name}.url`, true, true));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `用户名`, `dltxt.dict.${name}.username`, true, true));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `APIToken`, `dltxt.dict.${name}.api`, true, false));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `项目名`, `dltxt.dict.${name}.gameTitle`, false, true));
             simpleTMNode.children.push(simpleTMConfigNode);
 
             simpleTMNode.children.push(new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded));
@@ -195,6 +223,15 @@ export namespace dltxt
 
         dataChanged() {
             this.m_onDidChangeTreeData.fire(undefined);
+        }
+
+        getDictByName(name: string) {
+            for(const node of this.roots) {
+                if (node.dictName === name) {
+                    return node;
+                }
+            }
+            return undefined;
         }
 
         refresh(element?: DictItem) {

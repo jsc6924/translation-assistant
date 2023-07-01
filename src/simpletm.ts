@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import axios from 'axios';
 import { dltxt } from './treeview';
 import { registerCommand, DictSettings } from './utils';
+import { channel } from './dlbuild';
 
 const keywordDecorationType = vscode.window.createTextEditorDecorationType({
     borderWidth: '1px',
@@ -19,6 +20,8 @@ const keywordDecorationType = vscode.window.createTextEditorDecorationType({
         backgroundColor: 'darkblue'
     }
 });
+
+export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com/";
 
 let dictTree: dltxt.DictTreeView | undefined = undefined; 
 
@@ -108,8 +111,16 @@ export function activate(context: vscode.ExtensionContext) {
 				console.log(result);
 				if (result && GameTitle) {
                     DictSettings.setSimpleTMDictKeys(name, GameTitle, result.data);
-					dictTree?.refresh();
+					const dictNode = dictTree?.getDictByName(name);
+					dictTree?.refresh(dictNode);
 				}
+			}).catch((err) => {
+				if (GameTitle) {
+					DictSettings.setSimpleTMDictKeys(name, GameTitle, undefined);
+					const dictNode = dictTree?.getDictByName(name);
+					dictTree?.refresh(dictNode);
+				}
+				console.error(err);
 			});
 		}
 	}

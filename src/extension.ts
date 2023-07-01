@@ -10,7 +10,7 @@ import {
 	repeatFirstChar, getRegex
 } from "./formatter";
 import { batchConvertFilesEncoding } from './encoding';
-import { extract, pack } from './dlbuild';
+import { channel, extract, pack } from './dlbuild';
 import { dltxt } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import * as mode from './mode';
@@ -143,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.setWorkspaceState', async (args) => {
 		const config = args.config;
 		const callback = args.callback;
-		const oldValue = context.workspaceState.get(config) as string;
+		const oldValue = ContextHolder.getWorkspaceState(config) as string;
 		const newValue = await vscode.window.showInputBox({
 			value: oldValue,
 			prompt: `输入${config}的值`
@@ -152,14 +152,14 @@ export function activate(context: vscode.ExtensionContext) {
 			if (callback) callback();
 			return;
 		}
-		await context.workspaceState.update(config, newValue);
+		ContextHolder.setWorkspaceState(config, newValue);
 		if (callback) callback();
 	})
 
 	registerCommand(context, 'Extension.dltxt.setGlobalState', async (args) => {
 		const config = args.config;
 		const callback = args.callback;
-		const oldValue = context.globalState.get(config) as string;
+		const oldValue = ContextHolder.getGlobalState(config) as string;
 		const newValue = await vscode.window.showInputBox({
 			value: oldValue,
 			prompt: `输入${config}的值`
@@ -168,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
 			if (callback) callback();
 			return;
 		}
-		await context.globalState.update(config, newValue);
+		ContextHolder.setGlobalState(config, newValue);
 		if (callback) callback();
 	})
 
@@ -279,8 +279,7 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() { }
 
 async function migration(context: vscode.ExtensionContext) {
-	await context.globalState.update('dltxt.version', undefined); //TODO
-	let oldVersion = context.globalState.get('dltxt.version') as string;
+	let oldVersion = ContextHolder.getGlobalState('dltxt.version') as string;
 	if (!oldVersion) {
 		oldVersion = "2.34";
 	}
@@ -294,7 +293,7 @@ async function migration(context: vscode.ExtensionContext) {
 
 	}
 
-	context.globalState.update('dltxt.version', curVersion);
+	ContextHolder.setGlobalState('dltxt.version', curVersion);
 	
 }
 
