@@ -140,6 +140,48 @@ export function activate(context: vscode.ExtensionContext) {
 		updateKeywordDecorations(context);
 	});
 	
+	async function insertRemote(dictName: string) {
+		const username = DictSettings.getSimpleTMUsername(dictName);
+		const apiToken = DictSettings.getSimpleTMApiToken(dictName);
+		if (!username || !apiToken) {
+			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
+			return;
+		}
+		const BASE_URL = DictSettings.getSimpleTMUrl(dictName);
+		let GameTitle = DictSettings.getGameTitle(dictName);
+		if (!GameTitle) {
+			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
+			return;
+		}
+		const translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
+		let editor = vscode.window.activeTextEditor;
+		if (editor && !editor.selection.isEmpty) {
+			const raw_text = editor.document.getText(editor.selection);
+			var msg = raw_text + "->" + translate;
+			const API_Query: string = BASE_URL + "/api/insert";
+			let fullURL = API_Query + "/" + GameTitle + "/" + raw_text + "/" + translate;
+			fullURL = encodeURI(fullURL);
+			axios.get(fullURL, {
+				auth: {
+					username: username, password: apiToken
+				}
+			})
+			.then(response => {
+				if (response.data.Result === 'True') {
+					vscode.window.showInformationMessage("词条添加成功!\n" + msg);
+				}
+				else {
+					vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+				}
+				vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+			})
+			.catch(error => {
+				vscode.window.showInformationMessage("unexpected error:\n" + error);
+			});
+		}
+
+	}
+
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
 		const dictNames = DictSettings.getAllDictNames();
 		if (dictNames.length == 0) {
@@ -165,52 +207,10 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("暂不支持remote以外的术语库");
 			return;
 		}
-		const username = DictSettings.getSimpleTMUsername(name);
-		const apiToken = DictSettings.getSimpleTMApiToken(name);
-		if (!username || !apiToken) {
-			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
-			return;
-		}
-		const BASE_URL = DictSettings.getSimpleTMUrl(name);
-		let GameTitle = DictSettings.getGameTitle(name);
-		if (!GameTitle) {
-			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
-			return;
-		}
-		vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
-			.then((translate: string | undefined) => {
-				let editor = vscode.window.activeTextEditor;
-				if (editor && !editor.selection.isEmpty) {
-					const raw_text = editor.document.getText(editor.selection);
-					var msg = raw_text + "->" + translate;
-					const API_Query: string = BASE_URL + "/api/insert";
-					let fullURL = API_Query + "/" + GameTitle + "/" + raw_text + "/" + translate;
-					fullURL = encodeURI(fullURL);
-					axios.get(fullURL, {
-						auth: {
-							username: username, password: apiToken
-						}
-					}).then(response => {
-							if (response.data.Result === 'True') {
-								vscode.window.showInformationMessage("词条添加成功!\n" + msg);
-							}
-							else {
-								vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
-							}
-							vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
-						})
-						.catch(error => {
-							vscode.window.showInformationMessage("unexpected error:\n" + error);
-						});
-					} 
-			})
+		await insertRemote(name);
 	});
-	registerCommand(context, 'Extension.dltxt.dict_update',　function (name: string, key: string, wantDelete = false) {
-		const type = DictSettings.getDictType(name);
-		if (type != 'remote') {
-			vscode.window.showErrorMessage("暂不支持remote以外的术语库");
-			return;
-		}
+
+	async function updateDictRemote(name: string, rawText: string, wantDelete: boolean) {
 		const username = DictSettings.getSimpleTMUsername(name);
 		const apiToken = DictSettings.getSimpleTMApiToken(name);
 		if (!username || !apiToken) {
@@ -223,6 +223,54 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
 		}
+		let translate: string | undefined = '';
+		if (!wantDelete) {
+			translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，点击空白处取消` })	
+			if (translate === undefined) {
+				return; //cancelled
+			}
+		}
+		const makeRequest = (fullURL: string) => {
+			axios.get(fullURL, {
+				auth: {
+					username: username, password: apiToken
+				}
+			}).then(response => {
+					if (response.data.Result === 'True') {
+						vscode.window.showInformationMessage("词条更新成功!\n" + msg);
+					}
+					else {
+						vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+					}
+					vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
+				})
+				.catch(error => {
+					vscode.window.showInformationMessage("unexpected error:\n" + error);
+				});
+		};
+
+		let fullURL = "";
+		var msg = "";
+		if (translate) {
+			msg = rawText + "->" + translate;
+			fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + rawText + "/" + translate;
+			fullURL = encodeURI(fullURL);
+			makeRequest(fullURL);
+		} else {
+			msg = "deleted: " + rawText;
+			fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + rawText
+			fullURL = encodeURI(fullURL);
+			vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否')
+			.then(result => {
+				if (result == '是') {
+					makeRequest(fullURL);
+				}
+			});
+		}
+		
+	}
+
+	registerCommand(context, 'Extension.dltxt.dict_update',　async function (name: string, key: string, wantDelete = false) {
 		let editor = vscode.window.activeTextEditor;
 		let rawText = key ? key : '';
 		if (!rawText && editor && !editor.selection.isEmpty) {
@@ -231,54 +279,14 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!rawText) {
 			return;
 		}
-		const updateFunc = (translate: string | undefined) => {
-			if (translate === undefined) {
-				return; //cancelled
-			}
-			const makeRequest = (fullURL: string) => {
-				axios.get(fullURL, {
-					auth: {
-						username: username, password: apiToken
-					}
-				}).then(response => {
-						if (response.data.Result === 'True') {
-							vscode.window.showInformationMessage("词条更新成功!\n" + msg);
-						}
-						else {
-							vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
-						}
-						vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
-					})
-					.catch(error => {
-						vscode.window.showInformationMessage("unexpected error:\n" + error);
-					});
-			};
 
-			let fullURL = "";
-			var msg = "";
-			if (translate) {
-				msg = rawText + "->" + translate;
-				fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + rawText + "/" + translate;
-				fullURL = encodeURI(fullURL);
-				makeRequest(fullURL);
-			} else {
-				msg = "deleted: " + rawText;
-				fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + rawText
-				fullURL = encodeURI(fullURL);
-				vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否')
-				.then(result => {
-					if (result == '是') {
-						makeRequest(fullURL);
-					}
-				});
-			}
-		};
-		if (!wantDelete) {
-			vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，点击空白处取消` })
-				.then(updateFunc);
-		} else {
-			updateFunc(''); //delete
+		const type = DictSettings.getDictType(name);
+		if (type != 'remote') {
+			vscode.window.showErrorMessage("暂不支持remote以外的术语库");
+			return;
 		}
+
+		await updateDictRemote(name, rawText, wantDelete);
 	});
 	registerCommand(context, 'Extension.dltxt.context_menu_update', async　function () {
 		let editor = vscode.window.activeTextEditor;
@@ -375,9 +383,7 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 			keywordsDecos.push(decoration);
 		}
 	}
-
     activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
-
 }
 
 
@@ -401,5 +407,4 @@ export async function migration(context: vscode.ExtensionContext) {
 		dictTree?.addRemoteDict(name, {url: url, user: user, api: api, game: game});
 		vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
 	}
-	
 }
