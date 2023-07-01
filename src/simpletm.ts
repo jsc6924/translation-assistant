@@ -1,7 +1,8 @@
 import * as vscode from 'vscode'
 import axios from 'axios';
+import * as fs from 'fs';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings } from './utils';
+import { registerCommand, DictSettings, ContextHolder } from './utils';
 import { channel } from './dlbuild';
 
 const keywordDecorationType = vscode.window.createTextEditorDecorationType({
@@ -51,26 +52,24 @@ export function activate(context: vscode.ExtensionContext) {
 		if (type === undefined) {
 			return;
 		}
-		if (type == '远程术语库') {
-			const name = await vscode.window.showInputBox({
-				prompt: '为新建的术语库起一个名字',
-				value: "new-dictionary"
-			});
-			if (!name) {
-				return;
-			}
-			const allDicts = DictSettings.getAllDictNames();
-			if (allDicts.includes(name)) {
-				vscode.window.showErrorMessage(`术语库${name}已存在`);
-				return;
-			}
-			allDicts.push(name);
-			await DictSettings.setAllDictNames(allDicts);
-			dictTree?.addRemoteDict(name);
-		}
-		if (type == '本地术语库') {
-			vscode.window.showInformationMessage('暂不支持本地术语库');
+		const name = await vscode.window.showInputBox({
+			prompt: '为新建的术语库起一个名字',
+			value: "new-dictionary"
+		});
+		if (!name) {
 			return;
+		}
+		const allDicts = DictSettings.getAllDictNames();
+		if (allDicts.includes(name)) {
+			vscode.window.showErrorMessage(`术语库${name}已存在`);
+			return;
+		}
+		allDicts.push(name);
+		DictSettings.setAllDictNames(allDicts);
+		if (type == '远程术语库') {
+			dictTree?.addRemoteDict(name);
+		} else if (type == '本地术语库') {
+			dictTree?.addLocalDict(name);
 		}
 		dictTree?.refresh();
 	});
@@ -82,11 +81,84 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		const names = DictSettings.getAllDictNames();
-		const type = DictSettings.getDictType(item.dictName);
-		if (type == 'remote' && names.includes(item.dictName)) {
+		if (names.includes(item.dictName)) {
 			DictSettings.removeDict(item.dictName);
-			dictTree?.removeRemoteDict(item);
+			dictTree?.removeDict(item);
 		}
+	});
+
+	async function pickPath(): Promise<string| undefined> {
+		const options = ['新建本地术语库', '打开本地术语库'];
+		const r = await vscode.window.showQuickPick(options, {
+			placeHolder: '请选择一个操作继续'
+		});
+		if (r === undefined) {
+			return undefined;
+		}
+		if (r == options[0]) {
+			let res = await vscode.window.showSaveDialog({
+				defaultUri: vscode.Uri.file('dltxtLocalDict.json'),
+				title: "选择保存路径"
+			});
+			if (res === undefined) {
+				return undefined;
+			}
+			fs.writeFileSync(res.fsPath, JSON.stringify({'values': []}), { encoding: 'utf8'});
+			return res.fsPath;
+		} else {
+			const uris = await vscode.window.showOpenDialog({
+				defaultUri: vscode.Uri.file('dltxtLocalDict.json'),
+				canSelectMany: false,
+				canSelectFolders: false,
+				title: "选择要打开的术语库"
+			});
+			if (!uris || uris.length == 0) {
+				return undefined;
+			}
+			return uris[0].fsPath;
+		}
+	}
+
+	registerCommand(context, 'Extension.dltxt.setGlobalState', async (args) => {
+		const config = args.config;
+		const callback = args.callback;
+		const oldValue = ContextHolder.getGlobalState(config) as string;
+		let newValue = undefined; 
+		if (args.usePathPicker) {
+			newValue = await pickPath();
+		} else {
+			newValue = await vscode.window.showInputBox({
+				value: oldValue,
+				prompt: `输入${config}的值`
+			});
+		}
+		if (newValue === undefined) {
+			if (callback) callback();
+			return;
+		}
+		ContextHolder.setGlobalState(config, newValue);
+		if (callback) callback();
+	});
+
+	registerCommand(context, 'Extension.dltxt.setWorkspaceState', async (args) => {
+		const config = args.config;
+		const callback = args.callback;
+		const oldValue = ContextHolder.getWorkspaceState(config) as string;
+		let newValue = undefined; 
+		if (args.usePathPicker) {
+			newValue = await pickPath();
+		} else {
+			newValue = await vscode.window.showInputBox({
+				value: oldValue,
+				prompt: `输入${config}的值`
+			});
+		}
+		if (newValue === undefined) {
+			if (callback) callback();
+			return;
+		}
+		ContextHolder.setWorkspaceState(config, newValue);
+		if (callback) callback();
 	});
 
 	async function syncDatabase(name: string) {
@@ -96,7 +168,20 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		const type = DictSettings.getDictType(name);
 		if (type != 'remote') {
-			vscode.window.showErrorMessage("暂不支持remote以外的术语库");
+			try {
+				const fsPath = DictSettings.getLocalDictPath(name);
+				if (!fsPath) {
+					return;
+				}
+				const content = fs.readFileSync(fsPath, { encoding: 'utf8'});
+				const contentObj = JSON.parse(content);
+				const values: any[] = contentObj['values'];
+				DictSettings.setLocalDictKeys(name, values);
+				const dictNode = dictTree?.getDictByName(name);
+				dictTree?.refresh(dictNode);
+			} catch (error) {
+				console.error(error);
+			}
 			return;
 		}
 		const username = DictSettings.getSimpleTMUsername(name);
@@ -138,9 +223,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.sync_all_database', async function () {
 		const dictNames = DictSettings.getAllDictNames();
 		for (const name of dictNames) {
-			if (DictSettings.getDictType(name) == 'remote') {
-				await syncDatabase(name);
-			}
+			await syncDatabase(name);
 		}
 		updateKeywordDecorations(context);
 	});
@@ -343,14 +426,18 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 
 	const dictNames = DictSettings.getAllDictNames();
 	for (const dictName of dictNames) {
-		let game : string | undefined = DictSettings.getGameTitle(dictName);
+		
 		const type = DictSettings.getDictType(dictName);
-		if (!game && type === 'local') {
-			game = 'default'; //for local dict
-		} else if (!game) {
-			continue;
+		let keywords = [];
+		if (type === 'local') {
+			keywords = DictSettings.getLocalDictKeys(dictName);
+		} else {
+			let game : string | undefined = DictSettings.getGameTitle(dictName);
+			if (!game) {
+				continue;
+			}
+			keywords = DictSettings.getSimpleTMDictKeys(dictName, game);
 		}
-		const keywords = DictSettings.getSimpleTMDictKeys(dictName, game);
 		const testArray: Array<String> = [];
 		for (let i = 0; i < keywords.length; i++) {
 			let v = keywords[i];

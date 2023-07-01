@@ -1,7 +1,6 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import open = require('open');
 import * as motion from './motion';
 import { setCursorAndScroll, getOrCreateDiagnosticCollection, VSCodeContext, registerCommand,
 	ContextHolder } from './utils';
@@ -139,38 +138,6 @@ export function activate(context: vscode.ExtensionContext) {
 			triggerUpdateDecorations();
 		}
 	}, null, context.subscriptions);
-
-	registerCommand(context, 'Extension.dltxt.setWorkspaceState', async (args) => {
-		const config = args.config;
-		const callback = args.callback;
-		const oldValue = ContextHolder.getWorkspaceState(config) as string;
-		const newValue = await vscode.window.showInputBox({
-			value: oldValue,
-			prompt: `输入${config}的值`
-		})
-		if (newValue === undefined) {
-			if (callback) callback();
-			return;
-		}
-		ContextHolder.setWorkspaceState(config, newValue);
-		if (callback) callback();
-	})
-
-	registerCommand(context, 'Extension.dltxt.setGlobalState', async (args) => {
-		const config = args.config;
-		const callback = args.callback;
-		const oldValue = ContextHolder.getGlobalState(config) as string;
-		const newValue = await vscode.window.showInputBox({
-			value: oldValue,
-			prompt: `输入${config}的值`
-		});
-		if (newValue === undefined) {
-			if (callback) callback();
-			return;
-		}
-		ContextHolder.setGlobalState(config, newValue);
-		if (callback) callback();
-	})
 
 	registerCommand(context, 'Extension.dltxt.copy_original', () => {
 		const editor = vscode.window.activeTextEditor;

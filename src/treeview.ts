@@ -68,19 +68,23 @@ export namespace dict_view
                 await configRoot.configUpdated();
                 treeview.dataChanged();
             };
+            let usePathPicker = false;
+            if (config.includes('.localPath')) {
+                usePathPicker = true;
+            }
             if (global) {
                 this.iconPath = new vscode.ThemeIcon('symbol-property');
                 this.command = {
                     command: 'Extension.dltxt.setGlobalState',
                     title: `更改全局变量${config}`,
-                    arguments: [{config: config, callback: cb}]
+                    arguments: [{config: config, usePathPicker, callback: cb}]
                 }
             } else {
                 this.iconPath = new vscode.ThemeIcon('settings');
                 this.command = {
                     command: 'Extension.dltxt.setWorkspaceState',
                     title: `更改当前工作区变量${config}`,
-                    arguments: [{config: config, callback: cb}]
+                    arguments: [{config: config, usePathPicker, callback: cb}]
                 }
             }
         }
@@ -146,7 +150,6 @@ export namespace dict_view
         // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
         readonly onDidChangeTreeData ? : vscode.Event<DictItem | undefined> = this.m_onDidChangeTreeData.event;
 
-        game = '';
         roots: DictRootItem[] = [];
 
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
@@ -181,7 +184,20 @@ export namespace dict_view
             return true;
         }
 
-        removeRemoteDict(item: dict_view.DictRootItem) {
+        addLocalDict(name: string): boolean {
+            DictSettings.setDictType(name, 'local');
+            const rootNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
+            const simpleTMConfigNode = new DictConfigRootItem(this, '设置', name, vscode.TreeItemCollapsibleState.Collapsed);
+            simpleTMConfigNode.children.push(
+                new DictConfigEntryItem(this, simpleTMConfigNode, `本地路径`, `dltxt.dict.${name}.localPath`, false, true));
+            rootNode.children.push(simpleTMConfigNode);
+            rootNode.children.push(new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded));
+            this.roots.push(rootNode);
+            this.refresh(rootNode);
+            return true;
+        }
+
+        removeDict(item: dict_view.DictRootItem) {
             const index = this.roots.indexOf(item);
             if (index != -1) {
                 this.roots.splice(index, 1);
@@ -241,20 +257,28 @@ export namespace dict_view
                     const type = DictSettings.getDictType(name);
                     if (type == 'remote') {
                         this.addRemoteDict(name);
+                    } else if (type == 'local') {
+                        this.addLocalDict(name);
                     }
                 }
                 
             } 
             else if (element.contextValue == 'dict-root-item') {
                 const node = element as DictRootItem;
-                const game : string | undefined = DictSettings.getGameTitle(node.dictName);
-                if (!game) {
-                    return;
+                const type = DictSettings.getDictType(node.dictName);
+
+                let keywords: any[] = [];
+                if (type == 'remote') {
+                    const game : string | undefined = DictSettings.getGameTitle(node.dictName);
+                    if (!game) {
+                        return;
+                    }
+                    keywords = DictSettings.getSimpleTMDictKeys(node.dictName, game);
+                } else if (type == 'local') {
+                    keywords = DictSettings.getLocalDictKeys(node.dictName);
                 }
-                this.game = game;
-    
+
                 const dictEntryItems = [];
-                const keywords = DictSettings.getSimpleTMDictKeys(node.dictName, game);
                 for (let i = 0; i < keywords.length; i++) {
                     let v = keywords[i];
                     if(v['raw']) {

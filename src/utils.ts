@@ -361,7 +361,7 @@ export class DictSettings {
   static setSimpleTMUsername(name: string, value: string | undefined) {
       return ContextHolder.setGlobalState(`dltxt.dict.${name}.username`, value);
   }
-  static getSimpleTMDictKeys(name: string, game: string | undefined) {
+  static getSimpleTMDictKeys(name: string, game: string) {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`) as Array<any>;
     if (!v) {
       return [];
@@ -370,6 +370,22 @@ export class DictSettings {
   }
   static setSimpleTMDictKeys(name: string, game: string, value: any) {
       return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`, value);
+  }
+  static getLocalDictKeys(name: string, ) {
+    const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey`) as Array<any>;
+    if (!v) {
+      return [];
+    }
+    return v;
+  }
+  static setLocalDictKeys(name: string, value: any) {
+      return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey`, value);
+  }
+  static getLocalDictPath(name: string) {
+    return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.localPath`) as string;
+  }
+  static setLocalDictPath(name: string, fsPath: string | undefined) {
+    return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.localPath`, fsPath)
   }
   static removeDict(name: string) {
     let names = DictSettings.getAllDictNames();
