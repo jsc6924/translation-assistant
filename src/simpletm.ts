@@ -76,6 +76,11 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	registerCommand(context, 'Extension.dltxt.treeview.dict.removeDict', async (item: dict_view.DictRootItem) => {
+		const res = await vscode.window.showWarningMessage(`确定要断开与术语库${item.dictName}的连接吗`, 
+			"是", "否");
+		if (res != '是') {
+			return;
+		}
 		const names = DictSettings.getAllDictNames();
 		const type = DictSettings.getDictType(item.dictName);
 		if (type == 'remote' && names.includes(item.dictName)) {
