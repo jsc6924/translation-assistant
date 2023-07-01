@@ -115,12 +115,12 @@
 			},
 			{
 				"command": "Extension.dltxt.context_menu_insert",
-				"title": "添加词条",
+				"title": "添加术语库词条",
 				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.context_menu_update",
-				"title": "更新词条",
+				"title": "更新术语库词条",
 				"category": "DLTXT"
 			},
 			{
