@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import axios from 'axios';
-import { dltxt } from './treeview';
+import { dict_view } from './treeview';
 import { registerCommand, DictSettings } from './utils';
 import { channel } from './dlbuild';
 
@@ -23,7 +23,7 @@ const keywordDecorationType = vscode.window.createTextEditorDecorationType({
 
 export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com/";
 
-let dictTree: dltxt.DictTreeView | undefined = undefined; 
+let dictTree: dict_view.DictTreeView | undefined = undefined; 
 
 export function activate(context: vscode.ExtensionContext) {
 	const configInit = vscode.workspace.getConfiguration("dltxt");
@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
     
-    dictTree = new dltxt.DictTreeView();
+    dictTree = new dict_view.DictTreeView();
 	vscode.window.registerTreeDataProvider('dltxt-dict', dictTree);
 
 	registerCommand(context, 'Extension.dltxt.treeview.dict.addDict', async () => {
@@ -75,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
 		dictTree?.refresh();
 	});
 
-	registerCommand(context, 'Extension.dltxt.treeview.dict.removeDict', async (item: dltxt.DictRootItem) => {
+	registerCommand(context, 'Extension.dltxt.treeview.dict.removeDict', async (item: dict_view.DictRootItem) => {
 		const names = DictSettings.getAllDictNames();
 		const type = DictSettings.getDictType(item.dictName);
 		if (type == 'remote' && names.includes(item.dictName)) {

@@ -11,7 +11,7 @@ import {
 } from "./formatter";
 import { batchConvertFilesEncoding } from './encoding';
 import { channel, extract, pack } from './dlbuild';
-import { dltxt } from './treeview';
+import { trdb_view } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
@@ -261,7 +261,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	singleline.activate(context);
 	clipboard.activate(context);
-	let trdb_tree = new dltxt.TRDBTreeView(context, trdb.TRDBIndex);
+	let trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);
 	trdb.activate(context, trdb_tree);
 	vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
 	

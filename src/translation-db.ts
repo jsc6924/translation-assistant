@@ -9,11 +9,11 @@ import { registerCommand, showOutputText, downloadFile, unzipFile, getCurrentWor
 import { getRegex, MatchedGroups } from './formatter';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
-import { dltxt } from './treeview';
+import { trdb_view } from './treeview';
 const fsextra = require('fs-extra');
 
 
-export async function activate(context: vscode.ExtensionContext, treeView: dltxt.TRDBTreeView) {
+export async function activate(context: vscode.ExtensionContext, treeView: trdb_view.TRDBTreeView) {
     if(index.load(context, treeView, true)) {
         vscode.window.showInformationMessage(`已读取翻译数据库`);
     }
@@ -621,7 +621,7 @@ export class SearchIndex {
         writeAtomic(savePath, jsonString);
     }
 
-    load(context: vscode.ExtensionContext, treeview: dltxt.TRDBTreeView, forced: boolean = false): boolean {
+    load(context: vscode.ExtensionContext, treeview: trdb_view.TRDBTreeView, forced: boolean = false): boolean {
         const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
         const SearchIndexJsonPath = path.join(SearchIndexPath, 'SearchIndex.json');
         const IndexPath = path.join(SearchIndexPath, 'Index.json');

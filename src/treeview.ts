@@ -7,7 +7,7 @@ import * as path from "path";
 import { SimpleTMDefaultURL } from './simpletm';
 
 // lets put all in a cwt namespace
-export namespace dltxt
+export namespace dict_view
 {
     export class DictItem extends vscode.TreeItem {
         contextValue = 'dict-item';
@@ -106,8 +106,6 @@ export namespace dltxt
                 this.label = `${this.initLabel}: ${v}`
             }
         }
-
-        
     }
     class DictEntrySetItem extends DictItem {
         contextValue = 'dict-entry-set-item';
@@ -183,7 +181,7 @@ export namespace dltxt
             return true;
         }
 
-        removeRemoteDict(item: dltxt.DictRootItem) {
+        removeRemoteDict(item: dict_view.DictRootItem) {
             const index = this.roots.indexOf(item);
             if (index != -1) {
                 this.roots.splice(index, 1);
@@ -283,58 +281,8 @@ export namespace dltxt
         }
 
     }
-
-
-    export class ValueItem extends vscode.TreeItem {
-        value: string = '';
-        index: string;
-        contextValue = 'value-item';
-        iconPath = new vscode.ThemeIcon('symbol-key');
-        constructor(label: string, index: string, value: string) {
-            super(label, vscode.TreeItemCollapsibleState.None);
-            this.index = index;
-            this.value = value;
-            this.command = {
-                command: 'Extension.dltxt.copyToClipboard', 
-                title : 'copy value', 
-                arguments: [{text: value}] 
-            };
-        }
-    }
-
-    export class ClipBoardTreeView implements vscode.TreeDataProvider<ValueItem>
-    {
-        // with the vscode.EventEmitter we can refresh our  tree view
-        private m_onDidChangeTreeData: vscode.EventEmitter<ValueItem | undefined> = new vscode.EventEmitter<ValueItem | undefined>();
-        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-        readonly onDidChangeTreeData ? : vscode.Event<ValueItem | undefined> = this.m_onDidChangeTreeData.event;
-
-        items: ValueItem[] = [];
-
-        constructor(context: vscode.ExtensionContext) {
-            this.refresh(context);
-        }
-        getTreeItem(item: ValueItem): vscode.TreeItem {
-            return item;
-        }
-    
-        getChildren(element?: ValueItem): Thenable<ValueItem[]> {
-            return Promise.resolve(this.items);
-        }
-
-        refresh(context: vscode.ExtensionContext) {
-            const prefix = 'clipboard.customString';
-            this.items = []
-            for (let i = 1; i <= 6; i++) {
-                const k = prefix + String(i);
-                const v = ClipBoardManager.get(context, k);
-                this.items.push(new ValueItem(`${i}: ${v}`, String(i), v));
-            }
-            this.m_onDidChangeTreeData.fire(undefined);
-        }
-    }
-
-
+}
+export namespace trdb_view {
     class TRDBItem extends vscode.TreeItem {
         constructor(label: string, collapsibleState?: vscode.TreeItemCollapsibleState) {
             super(label, collapsibleState);

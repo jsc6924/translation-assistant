@@ -723,12 +723,12 @@
 				},
 				{
 					"command": "Extension.dltxt.treeview.writeClipboardString",
-					"when": "view == dltxt-clipboard && viewItem == value-item",
+					"when": "view == dltxt-clipboard && viewItem == clipboard-item",
 					"group": "inline@1"
 				},
 				{
 					"command": "Extension.dltxt.treeview.setClipboardString",
-					"when": "view == dltxt-clipboard && viewItem == value-item",
+					"when": "view == dltxt-clipboard && viewItem == clipboard-item",
 					"group": "inline@2"
 				},
 				{
