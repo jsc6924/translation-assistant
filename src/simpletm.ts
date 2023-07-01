@@ -270,6 +270,23 @@ export function activate(context: vscode.ExtensionContext) {
 
 	}
 
+	async function insertLocal(dictName: string) {
+		const translate = await vscode.window.showInputBox({ placeHolder: '输入译文' })
+		let editor = vscode.window.activeTextEditor;
+		if (editor && !editor.selection.isEmpty) {
+			const raw_text = editor.document.getText(editor.selection);
+			let msg = raw_text + "->" + translate;
+			try {
+				updateLocalDictKey(dictName, raw_text, translate);
+				vscode.window.showInformationMessage("词条添加成功!\n" + msg);
+			} catch (err) {
+				vscode.window.showErrorMessage(`词条添加失败：${err}`);
+			}
+			vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+		}
+	}
+
+
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
 		const dictNames = DictSettings.getAllDictNames();
 		if (dictNames.length == 0) {
@@ -292,7 +309,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		const type = DictSettings.getDictType(name);
 		if (type != 'remote') {
-			vscode.window.showErrorMessage("暂不支持remote以外的术语库");
+			insertLocal(name);
 			return;
 		}
 		await insertRemote(name);
@@ -358,6 +375,37 @@ export function activate(context: vscode.ExtensionContext) {
 		
 	}
 
+	async function updateDictLocal(name: string, rawText: string, wantDelete: boolean) {
+		let translate: string | undefined = '';
+		if (!wantDelete) {
+			translate = await vscode.window.showInputBox({ placeHolder: `输入"${rawText}"的译文，输入空字符串删除译文，点击空白处取消` })	
+			if (translate === undefined) {
+				return; //cancelled
+			}
+		}
+		if (translate) {
+			const msg = rawText + "->" + translate;
+			try {
+				updateLocalDictKey(name, rawText, translate);
+				vscode.window.showInformationMessage("词条更新成功!\n" + msg);
+			} catch (err) {
+				vscode.window.showErrorMessage(`更新词条失败：${err}`);
+			}
+		} else {
+			const msg = "deleted: " + rawText;
+			if (await vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否') == '是') {
+				try {
+					updateLocalDictKey(name, rawText, undefined);
+					vscode.window.showInformationMessage("词条更新成功!\n" + msg);
+				} catch (err) {
+					vscode.window.showErrorMessage(`更新词条失败：${err}`);
+				}
+			}
+		}
+		vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
+		
+	}
+
 	registerCommand(context, 'Extension.dltxt.dict_update',　async function (name: string, key: string, wantDelete = false) {
 		let editor = vscode.window.activeTextEditor;
 		let rawText = key ? key : '';
@@ -370,7 +418,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		const type = DictSettings.getDictType(name);
 		if (type != 'remote') {
-			vscode.window.showErrorMessage("暂不支持remote以外的术语库");
+			await updateDictLocal(name, rawText, wantDelete);
 			return;
 		}
 
@@ -476,6 +524,35 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 		}
 	}
     activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
+}
+
+function updateLocalDictKey(dictName: string, key: string, value: string | undefined): boolean {
+	let keys = DictSettings.getLocalDictKeys(dictName);
+	for(let i = 0; i < keys.length; i++) {
+		if (keys[i]['raw'] == key) {
+			if (value === undefined) {
+				keys.splice(i, 1);
+				writeLocalDictKey(dictName, keys);
+				return true;
+			} else {
+				keys[i]['translate'] = value;
+				writeLocalDictKey(dictName, keys);
+				return true;
+			}
+		}
+	}
+	if (value) {
+		keys.push({"raw": key, "translate": value});
+		writeLocalDictKey(dictName, keys);
+		return true;
+	}
+	return false;
+}
+
+function writeLocalDictKey(dictName: string, values: any[]) {
+	const path = DictSettings.getLocalDictPath(dictName);
+	const contentObj = {'values': values }
+	fs.writeFileSync(path, JSON.stringify(contentObj), {encoding: 'utf8'});
 }
 
 
