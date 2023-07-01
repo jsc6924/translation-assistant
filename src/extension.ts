@@ -29,6 +29,7 @@ import * as singleline from './singleline';
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 	ContextHolder.set(context);
+
 	let timeout: NodeJS.Timer | undefined = undefined;
 
 	mode.setMode(mode.Mode.Normal);
@@ -269,10 +270,31 @@ export function activate(context: vscode.ExtensionContext) {
 			return formatter(context, document);
 		}
 	});
-	vscode.commands.executeCommand('Extension.dltxt.sync_database');
+
+	migration(context);
 
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() { }
+
+async function migration(context: vscode.ExtensionContext) {
+	await context.globalState.update('dltxt.version', undefined); //TODO
+	let oldVersion = context.globalState.get('dltxt.version') as string;
+	if (!oldVersion) {
+		oldVersion = "2.34";
+	}
+	const curVersion = vscode.extensions.getExtension('jsc723.translateassistant')?.packageJSON.version;
+	if (!curVersion || oldVersion.length < 1 || curVersion.length < 1) {
+		return;
+	}
+	
+	if (true && oldVersion[0] == '2' && curVersion[0] == '3') {
+		simpletm.migration(context);
+
+	}
+
+	context.globalState.update('dltxt.version', curVersion);
+	
+}
 

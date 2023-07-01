@@ -275,39 +275,85 @@ export class ContextHolder {
     }
     return ContextHolder.context;
   }
+  static getGlobalState(): IterableMomento {
+    return this.get().globalState as IterableMomento;
+  }
+  static getWorkspaceState(): IterableMomento {
+    return this.get().workspaceState as IterableMomento;
+  }
 }
 
 
+interface IterableMomento extends vscode.Memento {
+  keys(): string[];
+}
+
 export class DictSettings {
-  static getGameTitle() {
-      return ContextHolder.get().workspaceState.get('dltxt.simpleTM.gameTitle') as string;
+  static getAllDictNames() {
+    let v = ContextHolder.getGlobalState().get(`dltxt.dict.list`) as Array<string>;
+    if (v === undefined) {
+      v = [];
+    }
+    return v;
   }
-  static setGameTitle(value: string) {
-      return ContextHolder.get().workspaceState.update('dltxt.simpleTM.gameTitle', value);
+  static setAllDictNames(names: string[]) {
+    return ContextHolder.getGlobalState().update(`dltxt.dict.list`, names);
   }
-  static getSimpleTMApiToken() {
-      return ContextHolder.get().globalState.get('dltxt.simpleTM.api') as string;
+  static getDictType(name: string) : string | undefined {
+    return ContextHolder.getGlobalState().get(`dltxt.dict.${name}.type`) as string;
   }
-  static setSimpleTMApiToken(value: string) {
-      return ContextHolder.get().globalState.update('dltxt.simpleTM.api', value);
+  static setDictType(name: string, value: string | undefined) {
+    return ContextHolder.getGlobalState().update(`dltxt.dict.${name}.type`, value);
   }
-  static getSimpleTMUrl() {
-      return ContextHolder.get().globalState.get('dltxt.simpleTM.url') as string;
+  static getGameTitle(name: string)  : string | undefined {
+      return ContextHolder.getWorkspaceState().get(`dltxt.dict.${name}.gameTitle`) as string;
   }
-  static setSimpleTMUrl(value: string) {
-      return ContextHolder.get().globalState.update('dltxt.simpleTM.url', value);
+  static setGameTitle(name: string, value: string | undefined) {
+      return ContextHolder.getWorkspaceState().update(`dltxt.dict.${name}.gameTitle`, value);
   }
-  static getSimpleTMUsername() {
-      return ContextHolder.get().globalState.get('dltxt.simpleTM.username') as string;
+  static getSimpleTMApiToken(name: string) : string | undefined {
+      return ContextHolder.getGlobalState().get(`dltxt.dict.${name}.api`) as string;
   }
-  static setSimpleTMUsername(value: string) {
-      return ContextHolder.get().globalState.update('dltxt.simpleTM.username', value);
+  static setSimpleTMApiToken(name: string, value: string | undefined) {
+      return ContextHolder.getGlobalState().update(`dltxt.dict.${name}.api`, value);
   }
-  static getSimpleTMDictKeys(game: string) {
-    return ContextHolder.get().globalState.get(`dltxt.simpleTM.dictkey.${game}`) as Array<any>;
+  static getSimpleTMUrl(name: string) : string | undefined{
+      return ContextHolder.getGlobalState().get(`dltxt.dict.${name}.url`) as string;
   }
-  static setSimpleTMDickKeys(game: string, value: any) {
-      return ContextHolder.get().globalState.update(`dltxt.simpleTM.dictkey.${game}`, value);
+  static setSimpleTMUrl(name: string, value: string | undefined) {
+      return ContextHolder.getGlobalState().update(`dltxt.dict.${name}.url`, value);
+  }
+  static getSimpleTMUsername(name: string)  : string | undefined {
+      return ContextHolder.getGlobalState().get(`dltxt.dict.${name}.username`) as string;
+  }
+  static setSimpleTMUsername(name: string, value: string | undefined) {
+      return ContextHolder.getGlobalState().update(`dltxt.dict.${name}.username`, value);
+  }
+  static getSimpleTMDictKeys(name: string, game: string | undefined) {
+    const v = ContextHolder.getWorkspaceState().get(`dltxt.dict.${name}.dictkey.${game}`) as Array<any>;
+    if (!v) {
+      return [];
+    }
+    return v;
+  }
+  static setSimpleTMDictKeys(name: string, game: string, value: any) {
+      return ContextHolder.getWorkspaceState().update(`dltxt.dict.${name}.dictkey.${game}`, value);
+  }
+  static removeDict(name: string) {
+    let names = DictSettings.getAllDictNames();
+    const i = names.indexOf(name);
+    if (i != -1) {
+      names.splice(i, 1)
+      DictSettings.setAllDictNames(names);
+    }
+
+    ContextHolder.getGlobalState().keys()
+      .filter(k => k.startsWith(`dltxt.dict.${name}`))
+      .map(k => ContextHolder.getGlobalState().update(k, undefined));
+
+    ContextHolder.getWorkspaceState().keys()
+      .filter(k => k.startsWith(`dltxt.dict.${name}`))
+      .map(k => ContextHolder.getWorkspaceState().update(k, undefined));
   }
   
 }

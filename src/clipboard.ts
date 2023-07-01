@@ -23,7 +23,6 @@ export class ClipBoardManager {
   }
 }
 
-
 export function activate(context: vscode.ExtensionContext) {
     let clipboard_view = new dltxt.ClipBoardTreeView(context);
 	vscode.window.registerTreeDataProvider('dltxt-clipboard', clipboard_view);
