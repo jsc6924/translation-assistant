@@ -12,6 +12,7 @@ import { batchConvertFilesEncoding } from './encoding';
 import { channel, extract, pack } from './dlbuild';
 import { trdb_view } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
+import { updateErrorDecorations } from './error-check';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
 import * as trdb from './translation-db';
@@ -52,62 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
 	let activeEditor = vscode.window.activeTextEditor;
-
-	function updateErrorDecorations() {
-		const config = vscode.workspace.getConfiguration("dltxt");
-		
-		if (!activeEditor) {
-			return;
-		}
-		const fileName = activeEditor.document.fileName;
-    	if(!fileName.endsWith('.txt')) {
-			return;
-		}
-		const diagnosticCollection = getOrCreateDiagnosticCollection(fileName);
-		if (!diagnosticCollection) {
-			return;
-		}
-		diagnosticCollection.clear();
-		let bShow = config.get<boolean>('appearance.showErrorHighlight');
-		if (!bShow) {
-			return;
-		}
-		const diagnostics: vscode.Diagnostic[] = [];
-		const valid_regs = getRegex();
-
-		let matched_count = 0;
-
-		// Example syntax error - checking if each line starts with a specific character
-		for (let lineNumber = 0; lineNumber < activeEditor.document.lineCount; lineNumber++) {
-			const lineText = activeEditor.document.lineAt(lineNumber).text;
-			if (!lineText) {
-				continue;
-			}
-			let matched = false;
-			for(let reg of valid_regs) {
-				if (reg && reg.test(lineText)) {
-					matched = true;
-					break;
-				}
-			}
-			if (!matched) {
-				const range = new vscode.Range(lineNumber, 0, lineNumber, lineText.length);
-				const diagnostic = new vscode.Diagnostic(
-					range,
-					'格式错误',
-					vscode.DiagnosticSeverity.Error
-				);
-				diagnostics.push(diagnostic);
-			} else {
-				matched_count++;
-			}
-        }
-		//在错误数小于正确数时才报告错误
-		if (diagnostics.length < matched_count) {
-			diagnosticCollection.set(activeEditor.document.uri, diagnostics);
-		}
-    }
-
 
 	function triggerUpdateDecorations() {
 		if (timeout) {

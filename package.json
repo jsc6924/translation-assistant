@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.1.0",
+	"version": "3.2.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -274,19 +274,19 @@
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addDoc",
-				"title": "添加到翻译数据库"
+				"title": "DLTXT: 添加到翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addFolder",
-				"title": "添加文件夹到翻译数据库"
+				"title": "DLTXT: 添加文件夹到翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.editor.searchWord",
-				"title": "在翻译数据库搜索单词"
+				"title": "DLTXT: 在翻译数据库搜索单词"
 			},
 			{
 				"command": "Extension.dltxt.trdb.editor.searchText",
-				"title": "在翻译数据库搜索句子"
+				"title": "DLTXT: 在翻译数据库搜索句子"
 			},
 			{
 				"command": "Extension.dltxt.trdb.debug.showDB",
@@ -596,18 +596,16 @@
 				}
 			}
 		],
+		"submenus": [
+			{
+				"id": "dltxt-submenu",
+				"label": "DLTXT"
+			}
+		],
 		"menus": {
 			"explorer/context": [
 				{
-					"command": "Extension.dltxt.convertToEncoding",
-					"group": "dltxt.dlbuild"
-				},
-				{
-					"command": "Extension.dltxt.dlbuild.extract",
-					"group": "dltxt.dlbuild"
-				},
-				{
-					"command": "Extension.dltxt.dlbuild.pack",
+					"submenu": "dltxt-submenu",
 					"group": "dltxt.dlbuild"
 				},
 				{
@@ -619,6 +617,20 @@
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.trdb.context.addFolder",
 					"group": "dltxt.trdb@1"
+				}
+			],
+			"dltxt-submenu": [
+				{
+					"command": "Extension.dltxt.convertToEncoding",
+					"group": "dltxt.dlbuild@1"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.extract",
+					"group": "dltxt.dlbuild@2"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.pack",
+					"group": "dltxt.dlbuild@3"
 				}
 			],
 			"editor/context": [
@@ -792,12 +804,22 @@
 				"dltxt.appearance.showKeywordHighlight": {
 					"type": "boolean",
 					"default": true,
-					"description": "外观：显示关键词高亮"
+					"description": "外观：显示术语高亮"
 				},
-				"dltxt.appearance.showErrorHighlight": {
+				"dltxt.appearance.showError.all": {
 					"type": "boolean",
 					"default": true,
 					"description": "外观：显示错误"
+				},
+				"dltxt.appearance.showError.checkPrefixTag": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示标签错误"
+				},
+				"dltxt.appearance.showError.checkDeletedLines": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示删行错误"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",
