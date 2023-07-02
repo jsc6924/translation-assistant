@@ -100,8 +100,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 #### 检测被误删的译文/原文行
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/error-deleteline.png?raw=true)
-  
-  如图，被误删的标签会报错
+
 #### 检测错别字
   ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
 
