@@ -18,6 +18,7 @@ import * as clipboard from './clipboard';
 import * as trdb from './translation-db';
 import * as simpletm from './simpletm';
 import * as singleline from './singleline';
+import * as auto_format from './auto-format';
 
 
 /*
@@ -68,6 +69,10 @@ export function activate(context: vscode.ExtensionContext) {
 	if (activeEditor) {
 		triggerUpdateDecorations();
 	}
+
+	registerCommand(context, 'Extension.dltxt.internal.updateDecorations', () => {
+		triggerUpdateDecorations();
+	});
 
 	simpletm.activate(context);
 
@@ -176,6 +181,7 @@ export function activate(context: vscode.ExtensionContext) {
 	let trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);
 	trdb.activate(context, trdb_tree);
 	vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
+	auto_format.activate(context);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {

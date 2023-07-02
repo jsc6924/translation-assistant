@@ -292,6 +292,11 @@
 				"command": "Extension.dltxt.trdb.debug.showDB",
 				"category": "DLTXT",
 				"title": "查看翻译数据库当前状态"
+			},
+			{
+				"command": "Extension.dltxt.core.context.autoDetectFormat",
+				"category": "DLTXT",
+				"title": "自动识别文本格式"
 			}
 		],
 		"keybindings": [
@@ -598,15 +603,19 @@
 		],
 		"submenus": [
 			{
-				"id": "dltxt-submenu",
+				"id": "dltxt-explorer-submenu",
+				"label": "DLTXT"
+			},
+			{
+				"id": "dltxt-editor-submenu",
 				"label": "DLTXT"
 			}
 		],
 		"menus": {
 			"explorer/context": [
 				{
-					"submenu": "dltxt-submenu",
-					"group": "dltxt.dlbuild"
+					"submenu": "dltxt-explorer-submenu",
+					"group": "dltxt.submenu"
 				},
 				{
 					"when": "resourceLangId == dltxt && resourceScheme == file",
@@ -619,7 +628,7 @@
 					"group": "dltxt.trdb@1"
 				}
 			],
-			"dltxt-submenu": [
+			"dltxt-explorer-submenu": [
 				{
 					"command": "Extension.dltxt.convertToEncoding",
 					"group": "dltxt.dlbuild@1"
@@ -634,6 +643,12 @@
 				}
 			],
 			"editor/context": [
+				{
+					"submenu": "dltxt-editor-submenu",
+					"group": "dltxt"
+				}
+			],
+			"dltxt-editor-submenu": [
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
 					"command": "Extension.dltxt.context_menu_insert",
@@ -683,6 +698,11 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.spellCheckClear",
 					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.core.context.autoDetectFormat",
+					"group": "dltxt.other"
 				}
 			],
 			"view/title": [
