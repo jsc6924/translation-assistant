@@ -67,25 +67,8 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
             oRegStr = forceGeneratePrefix(otherLines);
         }
     }
-    const rRegStrOriginal = rRegStr;
-    const tRegStrOriginal = tRegStr;
-
-    if (matchAnyPrefix(rRegStr, tlines)) {
-        const suffix = rRegStrOriginal ? '' : `(?=.)`;
-        if (oRegStr) {
-            rRegStr = `^(?!((${tRegStrOriginal})|(${oRegStr})))${rRegStrOriginal}${suffix}`;
-        } else {
-            rRegStr = `^(?!(${tRegStrOriginal}))${rRegStrOriginal}${suffix}`;
-        }
-    }
-    if (matchAnyPrefix(tRegStr, rlines)) {
-        const suffix = tRegStrOriginal ? '' : `(?=.)`;
-        if (oRegStr) {
-            tRegStr = `^(?!((${rRegStrOriginal})|(${oRegStr})))${tRegStrOriginal}${suffix}`;
-        } else {
-            tRegStr = `^(?!(${rRegStrOriginal}))${tRegStrOriginal}${suffix}`;
-        }
-    }
+    rRegStr = regexSubstract(rRegStr, [{otherReg: tRegStr, otherLines: tlines}, {otherReg: oRegStr, otherLines: otherLines}]);
+    tRegStr = regexSubstract(tRegStr,[{otherReg: rRegStr, otherLines: rlines}, {otherReg: oRegStr, otherLines: otherLines}]);
     if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
         vscode.window.showInformationMessage(`识别失败`);
         return;
@@ -103,11 +86,30 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage(`已应用设置`);
 }
 
+function regexSubstract(reg: string, 
+    notWanted: {
+        otherReg: string, otherLines: string[]
+    }[]) {
+    const substractSet: string[] = [];
+    const prefix = reg ? '' : '^';
+    const suffix = reg ? '' : `(?=.)`;
+    for(const {otherReg, otherLines} of notWanted) {
+        if (otherReg && matchAnyPrefix(reg, otherLines)) {
+            substractSet.push(otherReg);
+        }
+    }
+    if (substractSet.length) {
+        const toRemove = substractSet.map(s => `(${s})`).join('|');
+        return `${prefix}(?!(${toRemove}))${reg}${suffix}`
+    }
+    return `${prefix}${reg}${suffix}`;
+}
+
 function containsJapaneseCharacters(str: string): boolean {
     // Regular expression to match Japanese characters or kanji
     const regex = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}ー]/gu;
     return regex.test(str);
-  }
+}
 
 
 function commonPrefix(lines: string[]): string {

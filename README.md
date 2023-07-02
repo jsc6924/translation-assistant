@@ -88,7 +88,7 @@ DLTXT默认支持以下格式（用横线隔开）
 1. 左下角打开设置（Settings），搜索dltxt
 2. 填写原文开头标签的正则表达式`Original Text Prefix Regex`和译文开头标签的正则表达式`Translated Text Prefix Regex`
 3. 如果有除了原文和译文以外的文本（比如控制语句等），填写`Other Prefix Regex`
-4. 关闭语法高亮：`Ctrl + Shift + P`, 输入`color theme`, 选择一个不属于dltxt的theme（因为无法支持语法高亮）
+
 
 ## 语法高亮
   区分人名栏，原文，译文。（注：需要选择Theme：DLTXT Dark+/Light+）
