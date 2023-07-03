@@ -40,7 +40,7 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
         startLine = lineNumber;
         break;
     }
-    const maxCount = 10;
+    const maxCount = 30;
     const rlines = [], tlines = [];
     for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount - 1 
         && rlines.length < maxCount;) {
@@ -74,7 +74,7 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
         return;
     }
     
-    const u = await vscode.window.showInformationMessage(`识别成功！\n原文标签："${rRegStr}"\n译文标签："${tRegStr}"\n其他标签："${oRegStr}"\n是否应用？`, '是', '否');
+    const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}"，是否应用？`, '是', '否');
     if (u !== '是') {
         return;
     }
@@ -148,8 +148,23 @@ function escapeRegExp(text: string) {
     return text.replace(/[-[\]{}()*+?.,\\^$|\s]/g, '\\$&');
 }
 
+const paraMap = new Map<string, string>([
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["<", ">"],
+    ["《", "》"],
+    ["【", "】"],
+    ["（", "）"],
+]);
+const paraReverseMap = new Map<string, string>();
+for (const [k, v] of paraMap) {
+    paraReverseMap.set(v, k);
+}
+
 function generateRegex(lines: string[]): string {
     let regStr = '';
+    const openingPar = [];
     while(true) {
         const reg = new RegExp(`^(${regStr})(.*)`);
         const reminders = [];
@@ -167,13 +182,31 @@ function generateRegex(lines: string[]): string {
         }
         let candidate = commonPrefix(reminders);
         if (candidate) {
+            if (paraMap.has(candidate)) {
+                openingPar.push(candidate);
+            } else if (paraReverseMap.has(candidate)) {
+                const left = paraReverseMap.get(candidate) as string;
+                const i = openingPar.lastIndexOf(left);
+                if (i !== -1) {
+                    openingPar.splice(i, 1);
+                }
+            }
             regStr += escapeRegExp(candidate);
             continue;
+        }
+        if (openingPar.length) {
+            const left = openingPar.pop();
+            const right = paraMap.get(left as string) as string;
+            if (matchAllPrefix(`${regStr}.*?${right}`, lines)) {
+                regStr += '.*?' + escapeRegExp(right);
+                continue;
+            }
         }
         break;
     }
     return regStr;
 }
+
 
 function matchAnyPrefix(regStr: string, lines: string[]) {
     const reg = new RegExp(`^(${regStr})(.*)`);
@@ -183,6 +216,16 @@ function matchAnyPrefix(regStr: string, lines: string[]) {
         }
     }
     return false;
+}
+
+function matchAllPrefix(regStr: string, lines: string[]) {
+    const reg = new RegExp(`^(${regStr})(.*)`);
+    for(const line of lines) {
+        if (!reg.test(line)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function forceGeneratePrefix(lines: string[]) {
