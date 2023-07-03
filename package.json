@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.3.0",
+	"version": "3.3.1",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -646,18 +646,6 @@
 				{
 					"submenu": "dltxt-editor-submenu",
 					"group": "dltxt"
-				}
-			],
-			"dltxt-editor-submenu": [
-				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.context_menu_insert",
-					"group": "dltxt.simpleTM.a"
-				},
-				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.context_menu_update",
-					"group": "dltxt.simpleTM.a"
 				},
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
@@ -669,6 +657,18 @@
 					"command": "Extension.dltxt.trdb.editor.searchText",
 					"group": "dltxt.trdb@2"
 				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_insert",
+					"group": "dltxt.simpleTM.a"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_update",
+					"group": "dltxt.simpleTM.a"
+				}
+			],
+			"dltxt-editor-submenu": [
 				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.extract_single_line",
