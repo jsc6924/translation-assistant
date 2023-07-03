@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.2.2",
+	"version": "3.3.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -881,10 +881,24 @@
 					"default": true,
 					"description": "格式化文本：统一写反的、或半角的单引号、双引号（”ａ“）"
 				},
+				"dltxt.formatter.b.formatQuote.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一双引号"
+				},
+				"dltxt.formatter.b.formatQuote.specify": {
+					"type": "string",
+					"enum": [
+						"“中文双引号”",
+						"『日语双引号』"
+					],
+					"default": "“中文双引号”",
+					"description": "格式化文本：双引号统一改为"
+				},
 				"dltxt.formatter.b.h2fPunc": {
 					"type": "boolean",
 					"default": true,
-					"description": "格式化文本：将常用标点符号统一为中文全角标点（半角引号除外）"
+					"description": "格式化文本：将半角标点符号统一为中文全角标点（半角引号除外）"
 				},
 				"dltxt.formatter.b.h2fAlpha": {
 					"type": "boolean",

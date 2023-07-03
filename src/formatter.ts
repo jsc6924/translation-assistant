@@ -31,7 +31,7 @@ export interface MatchedGroups {
 }
 function checkValid(text: string): boolean[] {
   let stack: number[] = [];
-  
+
   for (let i = 0; i < text.length; i++) {
     let c = text[i];
     if (c === '『') {
@@ -43,7 +43,7 @@ function checkValid(text: string): boolean[] {
         if (k === 0) {
           if (i === text.length - 1) {
             return [true, true]
-          } 
+          }
         }
       } else if (i === text.length - 1) {
         return [false, true]
@@ -137,7 +137,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     cgrps.white = jgrps.white;
     cgrps.suffix = jgrps.suffix;
   };
-  if(config.get("formatter.a.padding"))
+  if (config.get("formatter.a.padding"))
     ops.push(padding);
 
   const ellipsis = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
@@ -147,14 +147,14 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     text = text.replace(/。{2,}/g, target);
     cgrps.text = text;
   };
-  if(config.get("formatter.a.ellipsis.enable"))
+  if (config.get("formatter.a.ellipsis.enable"))
     ops.push(ellipsis);
 
   const wave = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let target = config.get("formatter.a.wave.specify") as string;
     cgrps.text = cgrps.text.replace(/[~∼〜～]/g, target);
   };
-  if(config.get("formatter.a.wave.enable"))
+  if (config.get("formatter.a.wave.enable"))
     ops.push(wave);
 
   const horizontalLine = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
@@ -163,49 +163,9 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     text = text.replace(/[―ーー－\-]{2,}/g, target);
     cgrps.text = text;
   };
-  if(config.get("formatter.a.horizontalLine.enable"))
+  if (config.get("formatter.a.horizontalLine.enable"))
     ops.push(horizontalLine);
 
-
-  const puncMap: Array<Array<any>> = [
-    ['\\,', '，'],
-    ['\\.', '。'],
-    ['\\:', '：'],
-    ['\\;', '；'],
-    ['\\!', '！'],
-    ['\\?', '？'],
-    ['\\(', '（'],
-    ['\\)', '）'],
-    ['『', '“'],
-    ['』', '”'],
-    ['\\s', '　'],
-  ];
-  for (let entry of puncMap) {
-    let reg = new RegExp(entry[0], 'g');
-    entry.push(reg);
-  }
-  const h2fPunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    let text: string = cgrps.text as string;
-    for (const [key, val, reg] of puncMap) {
-      text = text.replace(reg, val);
-    }
-    cgrps.text = text;
-  };
-  if(config.get("formatter.b.h2fPunc"))
-    ops.push(h2fPunc);
-
-  const h2fAlpha = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    let text: string = cgrps.text as string;
-    let regAplha = /[0-9a-zA-Z]/g;
-    let match;
-    while (match = regAplha.exec(text)) {
-      text = text.replace(match[0], toDBC(match[0]));
-    }
-    cgrps.text = text;
-  };
-  if(config.get("formatter.b.h2fAlpha"))
-  ops.push(h2fAlpha);
-  
   function fixReversedQuote(qStart: string, qEnd: string, qAlter?: string) {
     return (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
       let text: string = cgrps.text as string;
@@ -230,12 +190,73 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     ops.push(fixReversedQuote('‘', '’', "'"));
   }
 
+  const puncMap: Array<Array<any>> = [
+    ['\\,', '，'],
+    ['\\.', '。'],
+    ['\\:', '：'],
+    ['\\;', '；'],
+    ['\\!', '！'],
+    ['\\?', '？'],
+    ['\\(', '（'],
+    ['\\)', '）'],
+    ['\\s', '　'],
+  ];
+  for (let entry of puncMap) {
+    let reg = new RegExp(entry[0], 'g');
+    entry.push(reg);
+  }
+  const h2fPunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    let text: string = cgrps.text as string;
+    for (const [key, val, reg] of puncMap) {
+      text = text.replace(reg, val);
+    }
+    cgrps.text = text;
+  };
+  if (config.get("formatter.b.h2fPunc"))
+    ops.push(h2fPunc);
+
+  const quoteStype = config.get("formatter.b.formatQuote.specify") as string;
+  const leftQuote = quoteStype[0];
+  const rightQuote = quoteStype[quoteStype.length - 1]
+  const quoteMap: Array<Array<any>> = [
+    ['『', leftQuote],
+    ['』', rightQuote],
+    ['“', leftQuote],
+    ['”', rightQuote],
+  ];
+  for (let entry of quoteMap) {
+    let reg = new RegExp(entry[0], 'g');
+    entry.push(reg);
+  }
+  const formatQuote = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    let text: string = cgrps.text as string;
+    for (const [key, val, reg] of quoteMap) {
+      text = text.replace(reg, val);
+    }
+    cgrps.text = text;
+  };
+  if (config.get("formatter.b.formatQuote.enable"))
+    ops.push(formatQuote);
+
+  const h2fAlpha = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    let text: string = cgrps.text as string;
+    let regAplha = /[0-9a-zA-Z]/g;
+    let match;
+    while (match = regAplha.exec(text)) {
+      text = text.replace(match[0], toDBC(match[0]));
+    }
+    cgrps.text = text;
+  };
+  if (config.get("formatter.b.h2fAlpha"))
+    ops.push(h2fAlpha);
+
+
   const omitPeriod = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     if (cgrps?.suffix === '」' || cgrps?.suffix === '』') {
       cgrps.text = cgrps.text.replace(/(?<![\.。])[\.。]$/g, '');
     }
   };
-  if(config.get("formatter.c.omitPeriod"))
+  if (config.get("formatter.c.omitPeriod"))
     ops.push(omitPeriod);
 
   const customMappingFunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
@@ -252,7 +273,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   return editTranslation(context, document, ops);
 }
 
-export function copyOriginalToTranslation(context: vscode.ExtensionContext, document: vscode.TextDocument, editBuilder: vscode.TextEditorEdit){
+export function copyOriginalToTranslation(context: vscode.ExtensionContext, document: vscode.TextDocument, editBuilder: vscode.TextEditorEdit) {
   const ops: Array<CallableFunction> = [];
   const copy = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     if (!cgrps?.text) {
@@ -266,10 +287,10 @@ export function copyOriginalToTranslation(context: vscode.ExtensionContext, docu
     editBuilder.replace(edit.range, edit.newText);
   });
 }
-export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode.TextEditor, editBuilder: vscode.TextEditorEdit){
+export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode.TextEditor, editBuilder: vscode.TextEditorEdit) {
   const document = editor.document;
   const cur = editor.selection.start;
-	const curLine = document.lineAt(editor.selection.start.line)
+  const curLine = document.lineAt(editor.selection.start.line)
   let curChar = cur.character;
   const delimiterPattern = getTextDelimiter();
   const rep = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
@@ -287,7 +308,7 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
     }
     if (i < text.length) {
       const t1 = text.substring(0, i);
-      const t2 = text.substring(i, i+1);
+      const t2 = text.substring(i, i + 1);
       const t3 = text.substring(i);
       text = t1 + t2 + '、' + t3;
     }
