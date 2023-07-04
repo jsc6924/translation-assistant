@@ -11,6 +11,7 @@
 本项目作为Visual Studio Code的插件为以上格式的双行文本的翻译校对提供全套解决方案，提高工作效率，减少错误，减少不必要的重复劳动
 
 **[视频教程（2.21版以前的功能）](https://www.bilibili.com/video/BV1Sh4y1R7ii/)**
+
 **[视频教程（v2.21 - v3.3）](https://www.bilibili.com/video/BV1xs4y167Ka/)**
 
 关于2.22版以后的功能的视频教程有空了会出
