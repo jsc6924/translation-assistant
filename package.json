@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.3.2",
+	"version": "3.3.3",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -799,6 +799,14 @@
 				"dltxt.trdb.fileEncoding": {
 					"type": "string",
 					"default": "utf8",
+					"enum": [
+						"utf8",
+						"utf16le",
+						"utf16be",
+						"gb2312",
+						"gbk",
+						"shift-jis"
+					],
 					"description": "翻译数据库打开文件时的encoding（建议在Workspace中填写）"
 				},
 				"dltxt.trdb.filteredLine": {
