@@ -1,6 +1,7 @@
 import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 import * as utils from './utils';
+import { getRegex } from './formatter';
 
 function getTranslatedPrefixRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
@@ -311,6 +312,79 @@ export function moveToPrevLine() {
       editbuilder.insert(toInsert, sline);
     });
   }
+}
+
+function repeatStr(s: string, k: number, addSuffix: boolean): string {
+  let res = '';
+  while(k>0) {
+    res += s;
+    k--;
+  }
+  if (addSuffix && k > 1) {
+    res += '～';
+  }
+  return res;
+}
+
+const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
+    [/っ/g, ''],
+    [/はむ/g, '哈姆'],
+    [/れろ/g, '啾噜'],
+    [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
+    [/[ちじぢ]ゅ/g, '啾'],
+    [/びゅ[く]?/g, (s)=>repeatStr('咻',s.length, false)],
+    [/びゅる+/g, (s)=>'咻' + repeatStr('噜',s.length-1, false)],
+    [/ど[ぷく]+/g, (s)=>'咻' + repeatStr('噗',s.length-1, false)],
+    [/や[あぁ]*/g, (s)=>'呀'+repeatStr('啊',s.length-1, true)],
+    [/[あぁ]+/g, (s)=>repeatStr('啊',s.length, true)],
+    [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
+    [/ず+/g, (s)=>repeatStr('滋',s.length, false)],
+    [/う(?=あ)/g, '哇'],
+    [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, true)],
+    [/ひ/g, '呀'],
+    [/く/g, '库'],
+    [/ぐ/g, '咕'],
+    [/ぬ/g, '努'],
+    [/ぱ[ん]?/g, '啪'],
+    [/は/g, '哈'],
+    [/ふ/g, '呼'],
+    [/ぷ/g, '噗'],
+    [/む/g, '姆'],
+    [/る/g, '噜'],
+]);
+
+export function translateCurrentLine() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return;
+  const position = editor.selection.active;
+  const curLine = editor.document.getText(
+    new vscode.Range(
+      position.with(position.line, 0),
+      position.with(position.line, INT_MAX)
+    )
+  );
+  const translatedPrefixRegex = getTranslatedPrefixRegex();
+  const pattern = new RegExp(`(${translatedPrefixRegex}).*`, 'm');
+  const transMatch = pattern.exec(curLine);
+  if (!transMatch) {
+    return;
+  }
+  let replacedLine = curLine;
+  for (const [k,v] of lineTranslateTable) {
+    if (typeof v == "string") {
+      replacedLine = replacedLine.replace(k, v);
+    } else {
+      replacedLine = replacedLine.replace(k, v);
+    }
+  }
+  editor.edit((editbuilder) => {
+    const range = new vscode.Range(
+      position.with(position.line, 0),
+      position.with(position.line, INT_MAX)
+    );
+    editbuilder.replace(range, replacedLine);
+  });
 }
 
 export function editorWriteString(s: string) {

@@ -150,6 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
 		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
 	};
 	registerCommand(context, 'Extension.dltxt.repeatFirst', repeatFirstFunc);
+	registerCommand(context, 'Extension.dltxt.translateCurrentLine', motion.translateCurrentLine);
 
 	registerCommand(context, 'Extension.dltxt.convertToEncoding', batchConvertFilesEncoding);
 

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.3.3",
+	"version": "3.4.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -423,6 +423,11 @@
 			{
 				"command": "Extension.dltxt.repeatFirst",
 				"key": "ctrl+alt+space",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.translateCurrentLine",
+				"key": "ctrl+alt+.",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
