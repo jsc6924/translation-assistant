@@ -316,11 +316,12 @@ export function moveToPrevLine() {
 
 function repeatStr(s: string, k: number, addSuffix: boolean): string {
   let res = '';
+  let n = k;
   while(k>0) {
     res += s;
     k--;
   }
-  if (addSuffix && k > 1) {
+  if (addSuffix && n > 1) {
     res += '～';
   }
   return res;
@@ -328,28 +329,30 @@ function repeatStr(s: string, k: number, addSuffix: boolean): string {
 
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/っ/g, ''],
-    [/[れぺ]ろ/g, '啾噜'],
+    [/[れぺ][ろる]/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
     [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
-    [/[ちじぢ]ゅ/g, '啾'],
+    [/[ちじぢ]ゅ[うぅ]?/g, '啾'],
+    [/りゅ/g, '噜'],
+    [/[こご]くん/g, '咕噜'],
     [/びゅ[く]?/g, (s)=>repeatStr('咻',s.length, false)],
     [/びゅる+/g, (s)=>'咻' + repeatStr('噜',s.length-1, false)],
     [/ど[ぷく]+/g, (s)=>'咻' + repeatStr('噗',s.length-1, false)],
     [/や[あぁ]*/g, (s)=>'呀'+repeatStr('啊',s.length-1, true)],
     [/[あぁ]+/g, (s)=>repeatStr('啊',s.length, true)],
-    [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
     [/ず+/g, (s)=>repeatStr('滋',s.length, false)],
+    [/ふう?/g, '呼'],
     [/う(?=あ)/g, '哇'],
     [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, true)],
-    [/ひ/g, '呀'],
+    [/[ひき][ゃ]?/g, '呀'],
     [/く/g, '库'],
     [/ぐ/g, '咕'],
     [/ぬ/g, '努'],
     [/ぱ[ん]?/g, '啪'],
-    [/は/g, '哈'],
-    [/ふ/g, '呼'],
-    [/ぷ/g, '噗'],
-    [/む/g, '姆'],
+    [/は[ん]?/g, '哈'],
+    [/ぷ[ん]?/g, '噗'],
+    [/む[ん]?/g, '姆'],
     [/る/g, '噜'],
+    [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
 ]);
 
 export function translateCurrentLine() {
