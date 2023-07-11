@@ -20,27 +20,62 @@ function getStemFromUri(uri: vscode.Uri): string {
     return name;
 }
 
-const RelativeYAMLPath = 'dlbuild.yaml';
-const RelativeLabelledPath = '.dltxt/dlbuild-labelled/'
+const buildYamlFileName = 'dlbuild.yaml';
+const relativeLabelledPath = '.dltxt/dlbuild-labelled/'
+const transformYamlFileName = 'dltransform.yaml';
 
 async function checkYaml(rootDir: string, yamlPath: string, context: vscode.ExtensionContext) {
+    const basename = path.basename(yamlPath);
     if (!fs.existsSync(yamlPath)) {
         const userSelect = await vscode.window.showQuickPick(['复制默认配置文件后继续', '复制配置文件后取消操作', '取消操作'], {
-            placeHolder: '当前目录下没有找到dlbuild.yaml，请选择一个选项继续'
+            placeHolder: `当前目录下没有找到${basename}，请选择一个选项继续`
         });
         if (userSelect == '取消操作') {
             return false;
         }
         // Get the path to the source file within your extension's package
-        const sourceFilePath = path.join(context.extensionPath, 'templates/dlbuild.yaml')
-        const destinationFilePath = path.join(rootDir, 'dlbuild.yaml')
+        const sourceFilePath = path.join(context.extensionPath, `templates/${basename}`);
+        const destinationFilePath = path.join(rootDir, basename);
         fs.copyFileSync(sourceFilePath, destinationFilePath);
-        vscode.window.showInformationMessage('已在当前目录下生成dlbuild.yaml');
+        vscode.window.showInformationMessage(`已在当前目录下生成${basename}`);
         if (userSelect == '复制配置文件后取消操作') {
             return false;
         }
     }
     return true;
+}
+
+export function readFolderRecursively(folderPath: string, 
+    relativeDirsStack: string[],
+    onFile: ((f: string, relativeDir: string)=>void) | undefined, 
+    onFolder: ((fs: string[], relativeDir: string) => void) | undefined,
+    excludePattern: RegExp | undefined = /\..*/,
+){
+    const basename = path.basename(folderPath);
+    if (excludePattern && excludePattern.test(basename)) {
+        return;
+    }
+    const files = fs.readdirSync(folderPath);
+
+    if (onFolder) {
+        onFolder(files, path.join(...relativeDirsStack.slice(1)));
+    }
+
+    relativeDirsStack.push(basename);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const filePath = path.join(folderPath, file);
+      const fileStats = fs.statSync(filePath);
+  
+      if (fileStats.isDirectory()) {
+        readFolderRecursively(filePath, relativeDirsStack, onFile, onFolder); // Recursively read subfolders
+      } else {
+        if (onFile) {
+            onFile(file, path.join(...relativeDirsStack.slice(1)));
+        }
+      }
+    }
+    relativeDirsStack.pop();
 }
 
 export async function extract(context: vscode.ExtensionContext) {
@@ -50,7 +85,7 @@ export async function extract(context: vscode.ExtensionContext) {
         return;
     }
     const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, RelativeYAMLPath);
+    const yamlPath = path.join(rootDir, buildYamlFileName);
 
     const good = await checkYaml(rootDir, yamlPath, context);
     if (!good) {
@@ -59,12 +94,12 @@ export async function extract(context: vscode.ExtensionContext) {
     const yamlData = readYamlFile(yamlPath);
     const inputPath = path.join(rootDir, yamlData.extract.input.path);
     const outPath = path.join(rootDir, yamlData.extract.output.path);
-    const labelledPath = path.join(rootDir, RelativeLabelledPath);
+    const labelledPath = path.join(rootDir, relativeLabelledPath);
 
     fs.mkdirSync(outPath, { recursive: true });
     fs.mkdirSync(labelledPath, { recursive: true });
 
-    const files = fs.readdirSync(inputPath);
+    
     let ext = yamlData.extract.input.ext;
     if (ext && ext[0] !== '.') {
         ext = '.' + ext;
@@ -72,21 +107,25 @@ export async function extract(context: vscode.ExtensionContext) {
 
     let total = 0;
     let success = 0;
-    for (const file of files) {
+    readFolderRecursively(inputPath, [], (file, relativeDir) => {
         if (ext && path.extname(file) !== ext) {
-            continue;
+            return;
         }
         total++;
-        const filePath = path.join(inputPath, file);
+        const filePath = path.join(inputPath, relativeDir, file);
         const item = vscode.Uri.file(filePath);
+        const realOutPath = path.join(outPath, relativeDir);
+        const realLabelledPath = path.join(labelledPath, relativeDir);
+        fs.mkdirSync(realOutPath, {recursive: true});
+        fs.mkdirSync(realLabelledPath, {recursive: true});
         try {
-            if (processExtract(yamlData, item, outPath, labelledPath)) {
+            if (processExtract(yamlData, item, realOutPath, realLabelledPath)) {
                 success++;
             }
         } catch (e) {
             channel.appendLine(`提取${file}时出错: ${e}`);
         }
-    }
+    }, undefined);
     vscode.window.showInformationMessage(`提取完成：共${total}个文件，成功${success}个文件`);
     if (success !== total) {
         channel.show(true);
@@ -187,7 +226,7 @@ export async function pack(context: vscode.ExtensionContext) {
         return;
     }
     const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, RelativeYAMLPath);
+    const yamlPath = path.join(rootDir, buildYamlFileName);
 
     if (!fs.existsSync(yamlPath)) {
         vscode.window.showErrorMessage('当前目录下未找到dlbuild.yaml');
@@ -196,31 +235,33 @@ export async function pack(context: vscode.ExtensionContext) {
     const yamlData = readYamlFile(yamlPath);
     const transPath = path.join(rootDir, yamlData.pack.input.path);
     const replacedPath = path.join(rootDir, yamlData.pack.output.path);
-    const labelledPath = path.join(rootDir, RelativeLabelledPath);
+    const labelledPath = path.join(rootDir, relativeLabelledPath);
 
     fs.mkdirSync(replacedPath, { recursive: true });
-
-    const files = fs.readdirSync(transPath);
 
     let total = 0;
     let success = 0;
 
-    for (const file of files) {
+    readFolderRecursively(transPath, [], (file, relativeDir) => {
         if (path.extname(file) !== '.txt') {
-            continue;
+            return;
         }
         total++;
-        const filePath = path.join(transPath, file);
+        const filePath = path.join(transPath, relativeDir, file);
+        const realLabelledPath = path.join(labelledPath, relativeDir);
+        const realReplacedPath = path.join(replacedPath, relativeDir);
+        fs.mkdirSync(realReplacedPath, {recursive: true});
         const item = vscode.Uri.file(filePath);
         try{
-            if(processPack(yamlData, item, labelledPath, replacedPath)) {
+            if(processPack(yamlData, item, realLabelledPath, realReplacedPath)) {
                 success++;
             }
         } 
         catch(e) {
             channel.appendLine(`替换${file}时出错: ${e}`);
         }
-    }
+    }, undefined);
+
     vscode.window.showInformationMessage(`替换完成：共${total}个文件，成功${success}个文件`);
     if (success !== total) {
         channel.show(true);
@@ -302,3 +343,5 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
     fs.writeFileSync(fReplaced, encodedLabelledBuffer);
     return true
 }
+
+
