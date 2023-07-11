@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from "fs";
 import * as iconv from "iconv-lite";
+const languageEncoding = require("detect-file-encoding-and-language");
 
 const srcEncodings = ['utf8', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk'];
 const dstEncodings = ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
@@ -96,4 +97,20 @@ export async function batchConvertFilesEncoding() {
     }
 
     vscode.window.showInformationMessage(`转换${selectedSrcEncoding}至${selectedDstEncoding}: 共${total}个文件，成功转换${success}个文件`);
+}
+
+export async function detectFileEncoding(fsPath: string): Promise<string>  {
+    const rawContent = fs.readFileSync(fsPath);
+    return detectEncoding(rawContent);
+}
+
+export async function detectEncoding(content: Buffer): Promise<string> {
+    try{
+        const res = await languageEncoding(content);
+        console.log(res);
+        return res.encoding;
+    } catch (e) {
+        console.debug(e);
+        return '';
+    }
 }

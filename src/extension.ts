@@ -8,7 +8,7 @@ import {
 	formatter, copyOriginalToTranslation,
 	repeatFirstChar, getRegex
 } from "./formatter";
-import { batchConvertFilesEncoding } from './encoding';
+import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
 import { channel, extract, pack } from './dlbuild';
 import { trdb_view } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
@@ -19,6 +19,7 @@ import * as trdb from './translation-db';
 import * as simpletm from './simpletm';
 import * as singleline from './singleline';
 import * as auto_format from './auto-format';
+import { deflateRawSync } from 'zlib';
 
 
 /*
@@ -176,6 +177,12 @@ export function activate(context: vscode.ExtensionContext) {
 		motion.editorWriteString(s);
 	});
 	
+	registerCommand(context, 'Extension.dltxt.detectEncoding', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) return;
+		const encoding = await detectFileEncoding(editor.document.uri.fsPath);
+		vscode.window.showInformationMessage(`encoding: ${encoding}`);
+	});
 
 	singleline.activate(context);
 	clipboard.activate(context);
