@@ -33,7 +33,7 @@
 - [键盘快捷键](#键盘快捷键)
 - [批量编辑](#批量编辑)
 - [术语库](#术语库)
-- [解封包相关操作](#解封包相关操作)
+- [多文本批量操作](#多文本批量操作)
 - [翻译数据库](#翻译数据库)
 - [其他](#其他)
 
@@ -291,7 +291,7 @@ DLTXT默认支持以下格式（用横线隔开）
 3. 不管是本地还是远程，术语库的代码目前并没有为储存大量数据做过优化。因此不建议在术语库中储存超过一千条以上的数据。
 
 
-## 解封包相关操作
+## 多文本批量操作
 
 ### 批量修改文本编码格式
 `Ctrl+Shift+P`，输入dltxt后选择`DLTXT：批量转换文件编码格式`即可使用。（在左侧explorer右键菜单中也能找到）
@@ -304,7 +304,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 选好范围以后根据提示选择文本原来的编码和想要转换到的编码就行了。任何一步不选择都会取消操作。
 
-### 游戏脚本与双行文本的转换操作
+### 游戏脚本与双行文本的转换操作(dlbuild)
 
 这个功能可以从游戏脚本中提取原文并生成双行文本，在翻译完成后可以用译文将脚本中的原文替换。
 
@@ -335,17 +335,21 @@ extract: #配置提取操作
 
 pack: #配置替换操作
   input:
-    path: './output/'  #翻译好的双行文本所在的文件夹，这个文件夹不需要与extract.output.path一致
+    path: './output/'  #翻译好的双行文本所在的文件夹，建议更改为一个与extract.output.path不同的文件夹
     encoding: 'utf16le-bom'
   output:
     path: './replaced/' #替换好的脚本会保存到这里
     encoding: 'utf16le-bom'
 
 #常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
+#*.input.encoding也可以填auto（自动识别）
+
 ```
 以上例子描述了如何从krkr引擎的脚本中提取双行文本。
 
-其中`encoding`除了以上列举的还包括iconv-lite库中支持的所有encoding。有'-bom'后缀的表示是带签名的。只在output.encoding中区分签名，在input.encoding中不区分有没有签名。
+其中目录中的子目录都会被递归访问。
+
+其中`encoding`除了以上列举的还包括iconv-lite库中支持的所有encoding。有'-bom'后缀的表示是带签名的。只在output.encoding中区分签名，在input.encoding中不区分有没有签名，且可以填'auto'（自动识别）。
 
 #### 从游戏脚本中提取原文并生成双行文本（dlbuild.extract）
 `Ctrl+Alt+P`: 搜索dlbuild，选择`将脚本提取为双行文本`即可（在左侧explorer右键菜单中也能找到）
@@ -354,6 +358,24 @@ pack: #配置替换操作
 
 #### 用双行文本的翻译替换脚本中的原文 （dlbuild.pack）
 `Ctrl+Alt+P`: 搜索dlbuild，选择`用双行文本的翻译替换脚本中的原文`即可（在左侧explorer右键菜单中也能找到）
+
+### 多文本转换操作（dltransform）
+与dlbuild相似，需要当前目录下有一个`dltransform.yaml`
+#### 把多个文本连接为单个文本（dltransform.concat）
+左侧explorer右键菜单中可找到
+
+把每个子文件夹中的所有文本会被合并成一个文件
+
+在`dltransform.yaml`中按以下格式填写即可：
+```yaml
+concat:
+  input: 
+    path: './input-folder'
+    encoding: 'auto'
+  output:
+    path: './concated'
+    encoding: 'utf16le-bom'
+```
 
 ## 翻译数据库
 可以把翻译好的文本添加到翻译数据库。以后遇到类似的句子或者表达可以搜索数据库查找自己以前的翻译。
@@ -402,6 +424,12 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.5
+- dlbuild
+  - 扫描文件夹时支持递归子目录
+  - 支持自动识别encoding
+- dltransform
+  - concat：合并多个文本
 #### 3.4
 - 自动翻译某些特殊类型的句子
 #### 3.3
