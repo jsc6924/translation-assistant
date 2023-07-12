@@ -1,3 +1,6 @@
+#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
+#*.input.encoding也可以填auto（自动识别）
+
 extract: #配置提取操作
   input:
     path: './input/'   #游戏原脚本所在的文件夹
@@ -23,10 +26,9 @@ extract: #配置提取操作
 
 pack: #配置替换操作
   input:
-    path: './output/'  #翻译好的双行文本所在的文件夹，这个文件夹不需要与extract.output.path一致
+    path: './output/'  #翻译好的双行文本所在的文件夹，建议更改为一个与extract.output.path不同的文件夹
     encoding: 'utf16le-bom'
   output:
     path: './replaced/' #替换好的脚本会保存到这里
     encoding: 'utf16le-bom'
 
-#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];

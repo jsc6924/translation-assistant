@@ -1,54 +1,55 @@
-transform:
-  log: './dltransform-transform.log'
-  input: 
-    path: './input'
-    encoding: 'utf8'
-  output:
-    path: './output'
-    encoding: 'utf8'
-  functions:
-    - function: format-document
-      enable: true
-    - function: replace
-      enable: true
-      table:
-        - from: '呵呵'
-          to: '哈哈'
-        - from: '呼呼'
-          to: '哼哼'
+#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
+#*.input.encoding也可以填auto（自动识别）
 
 concat:
   input: 
-    path: './input'
-    encoding: 'utf8'
-  output:
     path: './output'
-    encoding: 'utf8'
-
-split:
-  input: 
-    path: './input'
-    encoding: 'utf8'
+    encoding: 'auto'
   output:
-    raw:
-      path: './raw'
-      encoding: 'utf8'
-    translation:
-      path: './translation'
-      encoding: 'utf8'
+    path: './concated'
+    encoding: 'utf16le-bom'
 
-merge:
-  input:
-    raw:
-      path: './raw'
-      encoding: 'utf8'
-    translation:
-      path: './translation'
-      encoding: 'utf8'
-  output: 
-    digits: 5
-    tag: 'txt'
-    path: './input'
-    encoding: 'utf8'
+# transform:
+#   log: './dltransform-transform.log'
+#   input: 
+#     path: './input'
+#     encoding: 'utf8'
+#   output:
+#     path: './output'
+#     encoding: 'utf8'
+#   functions:
+#     - function: format-document
+#       enable: true
+#     - function: replace
+#       enable: true
+#       table:
+#         - from: '呵呵'
+#           to: '哈哈'
+#         - from: '呼呼'
+#           to: '哼哼'
 
+# split:
+#   input: 
+#     path: './input'
+#     encoding: 'utf8'
+#   output:
+#     raw:
+#       path: './raw'
+#       encoding: 'utf8'
+#     translation:
+#       path: './translation'
+#       encoding: 'utf8'
 
+# merge:
+#   input:
+#     raw:
+#       path: './raw'
+#       encoding: 'utf8'
+#     translation:
+#       path: './translation'
+#       encoding: 'utf8'
+#   output: 
+#     digits: 5
+#     tag: 'txt'
+#     path: './input'
+#     encoding: 'utf8'
