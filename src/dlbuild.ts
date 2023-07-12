@@ -4,7 +4,8 @@ import { Uri } from 'vscode';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
 import * as iconv from "iconv-lite";
-import { encodeWithBom } from './encoding';
+import { encodeWithBom, detectEncoding, detectFileEncoding } from './encoding';
+import { registerCommand } from './utils';
 
 export const channel = vscode.window.createOutputChannel("DLTXT");
 
@@ -23,6 +24,20 @@ function getStemFromUri(uri: vscode.Uri): string {
 const buildYamlFileName = 'dlbuild.yaml';
 const relativeLabelledPath = '.dltxt/dlbuild-labelled/'
 const transformYamlFileName = 'dltransform.yaml';
+
+export function activate(context: vscode.ExtensionContext) {
+    registerCommand(context, 'Extension.dltxt.dlbuild.extract', () => {
+		extract(context);
+	});
+
+	registerCommand(context, 'Extension.dltxt.dlbuild.pack', () => {
+		pack(context);
+	});
+
+	registerCommand(context, 'Extension.dltxt.dltransform.concat', () => {
+		concat(context);
+	});
+}
 
 async function checkYaml(rootDir: string, yamlPath: string, context: vscode.ExtensionContext) {
     const basename = path.basename(yamlPath);
@@ -45,10 +60,18 @@ async function checkYaml(rootDir: string, yamlPath: string, context: vscode.Exte
     return true;
 }
 
-export function readFolderRecursively(folderPath: string, 
+async function getInputEncoding(encoding: string, contentBuf: Buffer): Promise<string> {
+    if (!encoding || encoding === 'auto') {
+        encoding = (await detectEncoding(contentBuf)).toLowerCase()
+    }
+    encoding = encoding.replace(/-bom/, '');
+    return encoding;
+}
+
+export async function readFolderRecursively(folderPath: string, 
     relativeDirsStack: string[],
     onFile: ((f: string, relativeDir: string)=>void) | undefined, 
-    onFolder: ((fs: string[], relativeDir: string) => void) | undefined,
+    onFolder: ((folderName: string, fs: string[], relativeDir: string) => void) | undefined,
     excludePattern: RegExp | undefined = /\..*/,
 ){
     const basename = path.basename(folderPath);
@@ -57,28 +80,29 @@ export function readFolderRecursively(folderPath: string,
     }
     const files = fs.readdirSync(folderPath);
 
+    relativeDirsStack.push(basename);
+
     if (onFolder) {
-        onFolder(files, path.join(...relativeDirsStack.slice(1)));
+        await onFolder(basename, files, path.join(...relativeDirsStack.slice(1)));
     }
 
-    relativeDirsStack.push(basename);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const filePath = path.join(folderPath, file);
       const fileStats = fs.statSync(filePath);
   
       if (fileStats.isDirectory()) {
-        readFolderRecursively(filePath, relativeDirsStack, onFile, onFolder); // Recursively read subfolders
+        await readFolderRecursively(filePath, relativeDirsStack, onFile, onFolder); // Recursively read subfolders
       } else {
         if (onFile) {
-            onFile(file, path.join(...relativeDirsStack.slice(1)));
+            await onFile(file, path.join(...relativeDirsStack.slice(1)));
         }
       }
     }
     relativeDirsStack.pop();
 }
 
-export async function extract(context: vscode.ExtensionContext) {
+async function extract(context: vscode.ExtensionContext) {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
         vscode.window.showErrorMessage('vscode没有打开目录');
@@ -107,7 +131,7 @@ export async function extract(context: vscode.ExtensionContext) {
 
     let total = 0;
     let success = 0;
-    readFolderRecursively(inputPath, [], (file, relativeDir) => {
+    await readFolderRecursively(inputPath, [], async (file, relativeDir) => {
         if (ext && path.extname(file) !== ext) {
             return;
         }
@@ -119,7 +143,7 @@ export async function extract(context: vscode.ExtensionContext) {
         fs.mkdirSync(realOutPath, {recursive: true});
         fs.mkdirSync(realLabelledPath, {recursive: true});
         try {
-            if (processExtract(yamlData, item, realOutPath, realLabelledPath)) {
+            if (await processExtract(yamlData, item, realOutPath, realLabelledPath)) {
                 success++;
             }
         } catch (e) {
@@ -147,7 +171,7 @@ function addNewLines(str: string, k: number) {
 }
 
 
-function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labelledPath: string): boolean {
+async function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labelledPath: string): Promise<boolean> {
 
     let stem = getStemFromUri(item);
     if (!stem) {
@@ -158,7 +182,6 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
         stem = base;
     }
 
-    const srcEncoding: string = yamlData.extract.input.encoding.replace(/-bom/, '');
     const dstEncoding: string = yamlData.extract.output.encoding;
 
     const outItem = Uri.joinPath(Uri.file(outPath), `${stem}.txt`);
@@ -169,6 +192,7 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
     const fLabel = fs.openSync(labelItem.fsPath, 'w');
 
     const fInBuffer = fs.readFileSync(fIn);
+    const srcEncoding: string = await getInputEncoding(yamlData.extract.input.encoding, fInBuffer);
     const fileContent = iconv.decode(fInBuffer, srcEncoding);
     const inLines = fileContent.split('\n');
 
@@ -219,7 +243,7 @@ function processExtract(yamlData: any, item: vscode.Uri, outPath: string, labell
     return true;
 }
 
-export async function pack(context: vscode.ExtensionContext) {
+async function pack(context: vscode.ExtensionContext) {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
         vscode.window.showErrorMessage('vscode没有打开目录');
@@ -242,7 +266,7 @@ export async function pack(context: vscode.ExtensionContext) {
     let total = 0;
     let success = 0;
 
-    readFolderRecursively(transPath, [], (file, relativeDir) => {
+    await readFolderRecursively(transPath, [], async (file, relativeDir) => {
         if (path.extname(file) !== '.txt') {
             return;
         }
@@ -253,7 +277,7 @@ export async function pack(context: vscode.ExtensionContext) {
         fs.mkdirSync(realReplacedPath, {recursive: true});
         const item = vscode.Uri.file(filePath);
         try{
-            if(processPack(yamlData, item, realLabelledPath, realReplacedPath)) {
+            if(await processPack(yamlData, item, realLabelledPath, realReplacedPath)) {
                 success++;
             }
         } 
@@ -268,7 +292,7 @@ export async function pack(context: vscode.ExtensionContext) {
     }
 }
 
-function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, replacedPath: string): boolean {
+async function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, replacedPath: string) {
     const stem = getStemFromUri(item)
     if (!stem) {
         channel.appendLine(`Invalid filename: ${item.fsPath}`);
@@ -278,10 +302,11 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
     const labeledItem = path.join(labeledPath, `${stem}.label`);
     const replacedItem = ext ? path.join(replacedPath, `${stem}.${ext}`) : path.join(replacedPath, stem);
 
-    const srcEncoding: string = yamlData.pack.input.encoding.replace(/-bom/, '');
+
     const dstEncoding: string = yamlData.pack.output.encoding;
 
     const fTransBuffer = fs.readFileSync(item.fsPath);
+    const srcEncoding: string = await getInputEncoding(yamlData.pack.input.encoding, fTransBuffer);
     const fTransContent = iconv.decode(fTransBuffer, srcEncoding);
     const fLabelBuffer = fs.readFileSync(labeledItem);
     const fLabelContent = iconv.decode(fLabelBuffer, srcEncoding);
@@ -341,7 +366,66 @@ function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, repla
 
     const encodedLabelledBuffer = encodeWithBom(fReplacedStr, dstEncoding);
     fs.writeFileSync(fReplaced, encodedLabelledBuffer);
-    return true
+    return true;
 }
 
+async function concat(context: vscode.ExtensionContext) {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
 
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    const inputPath = path.join(rootDir, yamlData.concat.input.path);
+    const outputPath = path.join(rootDir, yamlData.concat.output.path);
+    let total = 0;
+    let success = 0;
+    let numFolders = 0;
+
+    await readFolderRecursively(inputPath, [], undefined, async (folderName, files, relativeDir) => {
+        const outputFilePath = path.join(outputPath, relativeDir,  folderName+'.txt');
+        numFolders++;
+        fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
+        const outContents :string[] = [];
+        for (const file of files) {
+            const inputFilePath = path.join(inputPath, relativeDir, file);
+            const fileStats = fs.statSync(inputFilePath);
+            if (!fileStats.isFile()) {
+                continue;
+            }
+            try{
+                total++;
+                if(await processConcat(yamlData, inputFilePath, outContents)) {
+                    success++;
+                }
+            } 
+            catch(e) {
+                channel.appendLine(`连接${file}时出错: ${e}`);
+            }
+        }
+        const concatedContent = outContents.join("\r\n");
+        const encodedBuf = encodeWithBom(concatedContent, yamlData.concat.output.encoding);
+        fs.writeFileSync(outputFilePath, encodedBuf);
+    });
+
+    vscode.window.showInformationMessage(`连接完成：共${total}个文件，成功${success}个文件，输出${numFolders}个文件`);
+    if (success !== total) {
+        channel.show(true);
+    }
+    
+}
+
+async function processConcat(yamlData: any, inputPath: string, outContents: string[]) {
+    const contentBuf = fs.readFileSync(inputPath);
+    const srcEncoding: string = await getInputEncoding(yamlData.concat.input.encoding, contentBuf);
+    const content = iconv.decode(contentBuf, srcEncoding);
+    outContents.push(content);
+    return true;
+}

@@ -105,12 +105,7 @@ export async function detectFileEncoding(fsPath: string): Promise<string>  {
 }
 
 export async function detectEncoding(content: Buffer): Promise<string> {
-    try{
-        const res = await languageEncoding(content);
-        console.log(res);
-        return res.encoding;
-    } catch (e) {
-        console.debug(e);
-        return '';
-    }
+    const res = await languageEncoding(content);
+    console.log(res);
+    return res.encoding;
 }

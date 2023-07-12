@@ -9,7 +9,7 @@ import {
 	repeatFirstChar, getRegex
 } from "./formatter";
 import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
-import { channel, extract, pack } from './dlbuild';
+import * as dlbuild from './dlbuild';
 import { trdb_view } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import { updateErrorDecorations } from './error-check';
@@ -152,16 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
 	};
 	registerCommand(context, 'Extension.dltxt.repeatFirst', repeatFirstFunc);
 	registerCommand(context, 'Extension.dltxt.translateCurrentLine', motion.translateCurrentLine);
-
 	registerCommand(context, 'Extension.dltxt.convertToEncoding', batchConvertFilesEncoding);
-
-	registerCommand(context, 'Extension.dltxt.dlbuild.extract', () => {
-		extract(context);
-	});
-
-	registerCommand(context, 'Extension.dltxt.dlbuild.pack', () => {
-		pack(context);
-	});
 
 	registerCommand(context, 'Extension.dltxt.spellCheck', () => {
 		spellCheck(context);
@@ -184,6 +175,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(`encoding: ${encoding}`);
 	});
 
+	dlbuild.activate(context);
 	singleline.activate(context);
 	clipboard.activate(context);
 	let trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);

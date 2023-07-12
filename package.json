@@ -159,6 +159,11 @@
 				"category": "DLTXT"
 			},
 			{
+				"command": "Extension.dltxt.dltransform.concat",
+				"title": "将文本连接 (dltransform.concat)",
+				"category": "DLTXT"
+			},
+			{
 				"command": "Extension.dltxt.spellCheck",
 				"title": "译文错别字检查",
 				"category": "DLTXT"
@@ -650,15 +655,19 @@
 			"dltxt-explorer-submenu": [
 				{
 					"command": "Extension.dltxt.convertToEncoding",
-					"group": "dltxt.dlbuild@1"
+					"group": "dltxt.dlencoding@1"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.extract",
-					"group": "dltxt.dlbuild@2"
+					"group": "dltxt.dlbuild@1"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.pack",
-					"group": "dltxt.dlbuild@3"
+					"group": "dltxt.dlbuild@2"
+				},
+				{
+					"command": "Extension.dltxt.dltransform.concat",
+					"group": "dltxt.dltransform@1"
 				}
 			],
 			"editor/context": [
