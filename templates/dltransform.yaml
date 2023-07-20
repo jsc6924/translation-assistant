@@ -3,30 +3,16 @@
 
 concat:
   input: 
-    path: './output'
+    path: './input-folder'
     encoding: 'auto'
   output:
     path: './concated'
     encoding: 'utf16le-bom'
 
-# transform:
-#   log: './dltransform-transform.log'
-#   input: 
-#     path: './input'
-#     encoding: 'utf8'
-#   output:
-#     path: './output'
-#     encoding: 'utf8'
-#   functions:
-#     - function: format-document
-#       enable: true
-#     - function: replace
-#       enable: true
-#       table:
-#         - from: '呵呵'
-#           to: '哈哈'
-#         - from: '呼呼'
-#           to: '哼哼'
+wordcount:
+  input: 
+    path: './input-folder'
+
 
 # split:
 #   input: 

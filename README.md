@@ -377,6 +377,15 @@ concat:
     encoding: 'utf16le-bom'
 ```
 
+#### 字数统计（dltransform.wordcount）
+左侧explorer右键菜单中可找到
+配置格式：
+```yaml
+wordcount:
+  input: 
+    path: './input-folder'
+```
+
 ## 翻译数据库
 可以把翻译好的文本添加到翻译数据库。以后遇到类似的句子或者表达可以搜索数据库查找自己以前的翻译。
 #### 使用场景

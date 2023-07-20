@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as iconv from "iconv-lite";
 import { encodeWithBom, detectEncoding, detectFileEncoding } from './encoding';
 import { registerCommand } from './utils';
+import { MatchedGroups, getRegex, formatter } from './formatter';
 
 export const channel = vscode.window.createOutputChannel("DLTXT");
 
@@ -37,6 +38,11 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.dltransform.concat', () => {
 		concat(context);
 	});
+
+    registerCommand(context, 'Extension.dltxt.dltransform.wordcount', () => {
+		wordcount(context);
+	});
+
 }
 
 async function checkYaml(rootDir: string, yamlPath: string, context: vscode.ExtensionContext) {
@@ -429,3 +435,55 @@ async function processConcat(yamlData: any, inputPath: string, outContents: stri
     outContents.push(content);
     return true;
 }
+
+async function wordcount(context: vscode.ExtensionContext) {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
+
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    
+    const inputPath = path.join(rootDir, yamlData.concat.input.path);
+    const [jreg, creg, oreg] = getRegex();
+    if (!jreg || !creg) {
+        throw new Error('jreg or creg undefined');
+    }
+    let total = 0;
+    let success = 0;
+    let jcount = 0, ccount = 0;
+
+    await readFolderRecursively(inputPath, [], async (file, relativeDir) => {
+        total++;
+        const inputFilePath = path.join(inputPath, relativeDir, file);
+        const contentBuf = fs.readFileSync(inputFilePath);
+        const srcEncoding = await getInputEncoding(yamlData.wordcount.input.encoding, contentBuf);
+        const content = iconv.decode(contentBuf, srcEncoding);
+        const lines = content.split('\n');
+        for (let line of lines) {
+            line = line.trim();
+            const m = jreg.exec(line);
+            if (m && m.groups) {
+                const g = m.groups as any as MatchedGroups;
+                jcount += g.text.length;
+            } else {
+                const m = creg.exec(line);
+                if (m && m.groups) {
+                    const g = m.groups as any as MatchedGroups;
+                    ccount += g.text.length;
+                }
+            }
+
+        }
+    }, undefined);
+
+    vscode.window.showInformationMessage(`字数统计：共${total}个文件, 原文${jcount}字，译文${ccount}字`);
+}
+

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.5.0",
+	"version": "3.5.1",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -161,6 +161,11 @@
 			{
 				"command": "Extension.dltxt.dltransform.concat",
 				"title": "将文本连接 (dltransform.concat)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dltransform.wordcount",
+				"title": "字数统计 (dltransform.wordcount)",
 				"category": "DLTXT"
 			},
 			{
@@ -668,6 +673,10 @@
 				{
 					"command": "Extension.dltxt.dltransform.concat",
 					"group": "dltxt.dltransform@1"
+				},
+				{
+					"command": "Extension.dltxt.dltransform.wordcount",
+					"group": "dltxt.dltransform@2"
 				}
 			],
 			"editor/context": [
