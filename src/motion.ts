@@ -191,20 +191,35 @@ export function deleteUntil(all: boolean, doDelete: boolean) {
       position.with(position.line, INT_MAX)
     )
   );
-  if (doDelete && curLine.search(pattern) == -1)
-    return;
+  if (doDelete) {
+    if (curLine.search(pattern) == -1) {
+      return;
+    }
+    if (!editor.selection.isEmpty) {
+      editor.edit((editbuilder) => {
+        editbuilder.delete(editor.selection);
+      });
+      return;
+    }
+  }
 
   const curLineAfter = curLine.substring(position.character);
 
   let iend = position.character + curLineAfter.length;
-  if (all) {
+  const getLastQuote = () => {
+    let last = position.character + curLineAfter.length;
     const pattern = /」|』/;
     for (let i = position.character; i < curLine.length; i++) {
       if (pattern.test(curLine[i])) {
-        iend = i;
+        last = i;
       }
     }
+    return last;
+  }
+  if (all) {
+    iend = getLastQuote();
   } else {
+    const lastQuote = getLastQuote();
     const delimMatch = getTextDelimiter().exec(curLineAfter)
     if (delimMatch) {
       iend = position.character + delimMatch.index;
@@ -218,16 +233,21 @@ export function deleteUntil(all: boolean, doDelete: boolean) {
     if (text === '……') {
       iend++;
     }
+    if (iend > lastQuote) {
+      iend = lastQuote;
+    }
   }
 
   if (doDelete) {
-    const toDelete = new vscode.Range(
-      position.with(position.line, position.character),
-      position.with(position.line, iend)
-    );
-    editor.edit((editbuilder) => {
-      editbuilder.delete(toDelete);
-    });
+    if (position.character < iend) {
+      const toDelete = new vscode.Range(
+        position.with(position.line, position.character),
+        position.with(position.line, iend)
+      );
+      editor.edit((editbuilder) => {
+        editbuilder.delete(toDelete);
+      });
+    }
   } else {
     const newPosition = position.with(position.line, iend);
     editor.selection = new vscode.Selection(newPosition, newPosition);
@@ -264,7 +284,7 @@ export function cursorToSublineHead() {
     }
     i += match[0].length;
   }
-  if (i == curChar) {
+  if (i == curChar && i > 0) {
     i--;
     const text = editor.document.getText(new vscode.Range(
       position.with(position.line, i-1), position.with(position.line, i+1)));
