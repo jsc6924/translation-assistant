@@ -333,18 +333,23 @@ export function moveToPrevLine() {
     });
   }
 }
-
-function repeatStr(s: string, k: number, addSuffix: boolean): string {
+function repeatN(s: string, k: number): string {
   let res = '';
-  let n = k;
-  while(k>0) {
+  while(k > 0) {
     res += s;
     k--;
   }
-  if (addSuffix && n > 1) {
-    res += '～';
-  }
   return res;
+}
+function repeatStr(s: string, k: number, addSuffix: boolean): string {
+  if (addSuffix && k >= 3) {
+    let res = '';
+    res = repeatN(s, k*2/3);
+    res += repeatN('～', k/3);
+    return res;
+  } else {
+    return repeatN(s, k);
+  }
 }
 
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
@@ -359,11 +364,11 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/ど[ぷく]+/g, (s)=>'咻' + repeatStr('噗',s.length-1, false)],
     [/や[あぁ]*/g, (s)=>'呀'+repeatStr('啊',s.length-1, true)],
     [/[あぁ]+/g, (s)=>repeatStr('啊',s.length, true)],
-    [/[おぉ]+/g, (s)=>repeatStr('哦',s.length, true)],
+    [/[おぉ]+/g, (s)=>repeatStr('哦',s.length, false)],
     [/ず+/g, (s)=>repeatStr('滋',s.length, false)],
     [/ふう?/g, '呼'],
     [/う(?=あ)/g, '哇'],
-    [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, true)],
+    [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, false)],
     [/[ひき][ゃ]?/g, '呀'],
     [/く/g, '库'],
     [/ぐ/g, '咕'],
