@@ -32,6 +32,16 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
         break;
     }
 
+    let oRegStr = '';
+    let oReg = null;
+    if (otherLines.length > 0) {
+        oRegStr = generateRegex(otherLines);
+        if (!oRegStr) {
+            oRegStr = forceGeneratePrefix(otherLines);
+        }
+        oReg = new RegExp(`^(${oRegStr})(.*)`);
+    }
+
     //find the next empty line as the startLine
     for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount; lineNumber++) {
         if (activeEditor.document.lineAt(lineNumber).text.trim()) {
@@ -46,6 +56,12 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
         && rlines.length < maxCount;) {
             const thisLine = activeEditor.document.lineAt(lineNumber).text.trim();
             const nextLine = activeEditor.document.lineAt(lineNumber + 1).text.trim();
+
+            if(oReg && oReg.test(thisLine)) {
+                lineNumber++;
+                continue;
+            }
+            
             if (containsJapaneseCharacters(thisLine) && nextLine) {
                 rlines.push(thisLine);
                 tlines.push(nextLine);
@@ -60,13 +76,7 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
     }
     let rRegStr = generateRegex(rlines);
     let tRegStr = generateRegex(tlines);
-    let oRegStr = '';
-    if (otherLines.length > 0) {
-        oRegStr = generateRegex(otherLines);
-        if (!oRegStr) {
-            oRegStr = forceGeneratePrefix(otherLines);
-        }
-    }
+    
     rRegStr = regexSubstract(rRegStr, [{otherReg: tRegStr, otherLines: tlines}, {otherReg: oRegStr, otherLines: otherLines}]);
     tRegStr = regexSubstract(tRegStr,[{otherReg: rRegStr, otherLines: rlines}, {otherReg: oRegStr, otherLines: otherLines}]);
     if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
