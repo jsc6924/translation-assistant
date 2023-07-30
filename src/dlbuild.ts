@@ -209,7 +209,7 @@ async function processExtract(yamlData: any, item: vscode.Uri, outPath: string, 
     let i = 0;
 
     inLines.forEach((line) => {
-        let lline = line.toString();
+        let lline = line.toString().trimRight();
         for (let j = 0; j < yamlData.extract.input.items.length; j++) {
             const pattern = new RegExp(yamlData.extract.input.items[j].capture, 'g');
             const tagPrefix = yamlData.extract.input.items[j].tag;
@@ -353,15 +353,14 @@ async function processPack(yamlData: any, item: vscode.Uri, labeledPath: string,
                     if(tag !== matchedTag) {
                         throw new Error('label not matched');
                     }
-                    fReplacedStr += addNewLine(lbLines[i].replace(fullTag, text));
+                    lbLines[i] = lbLines[i].replace(fullTag, text)
                 } else {
                     throw new Error('Invalid translation line: ' + trLines[j]);
                 }
             } else {
                 fReplacedStr += addNewLine(lbLines[i]);
+                i++;
             }
-
-            i++;
         }
     } catch (e) {
         channel.appendLine(`item=${item.fsPath}`);
