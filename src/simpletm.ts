@@ -286,6 +286,67 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}
 
+	async function batchInsertLocal(dictName: string) {
+		const options: vscode.OpenDialogOptions = {
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: {
+              'XLSX Files': ['xlsx'],
+              'All Files': ['*']
+            }
+          };
+        
+        const fileUris = await vscode.window.showOpenDialog(options);
+        if (fileUris && fileUris.length > 0) {
+                const filePath = fileUris[0].fsPath;
+				const XLSX = require('xlsx');
+
+				// Load the XLSX file
+				const workbook = XLSX.readFile(filePath); // Replace with the actual path to your XLSX file
+
+				// Choose the first sheet in the workbook
+				const sheetName = workbook.SheetNames[0];
+				const sheet = workbook.Sheets[sheetName];
+
+				// Parse the sheet's data into an array of objects
+				const data = XLSX.utils.sheet_to_json(sheet);
+
+				console.log(data); // Print the parsed data
+
+				batchUpdateLocalDictKey(dictName, data);
+				vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+        }
+	}
+
+	registerCommand(context, 'Extension.dltxt.batch_insert_local', async function() {
+		const dictNames = DictSettings.getAllDictNames();
+		if (dictNames.length == 0) {
+			vscode.window.showInformationMessage('需要先连接术语库');
+			return;
+		}
+		let name : string | undefined = '';
+		if (dictNames.length == 1) {
+			name = dictNames[0];
+		}
+		else {
+			name = await vscode.window.showQuickPick(dictNames, {
+				'canPickMany': false,
+				'placeHolder': '选择一个术语库插入'
+			});
+			if (!name) {
+				return;
+			}
+		}
+
+		const type = DictSettings.getDictType(name);
+		if (type != 'remote') {
+			batchInsertLocal(name);
+			return;
+		}
+		vscode.window.showErrorMessage('not supported');
+	});
+
 
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
 		const dictNames = DictSettings.getAllDictNames();
@@ -547,6 +608,34 @@ function updateLocalDictKey(dictName: string, key: string, value: string | undef
 		return true;
 	}
 	return false;
+}
+
+function batchUpdateLocalDictKey(dictName: string, kvs: any[]): boolean {
+	let data = DictSettings.getLocalDictKeys(dictName);
+	for(const kv of kvs) {
+		let processed = false;
+		if (kv.hasOwnProperty('key')) {
+			const key = kv.key;
+			const value = kv.value;
+			for(let i = 0; i < data.length && !processed; i++) {
+				if (data[i]['raw'] == key) {
+					if (value === undefined) {
+						data.splice(i, 1);
+						processed = true;
+					} else {
+						data[i]['translate'] = value;
+						processed = true;
+					}
+				}
+			}
+			if (value && !processed) {
+				data.push({"raw": key, "translate": value});
+			}
+		}
+
+	}
+	writeLocalDictKey(dictName, data);
+	return true;
 }
 
 function writeLocalDictKey(dictName: string, values: any[]) {

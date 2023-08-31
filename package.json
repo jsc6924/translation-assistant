@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.5.5",
+	"version": "3.6.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -121,6 +121,11 @@
 			{
 				"command": "Extension.dltxt.context_menu_update",
 				"title": "更新术语库词条",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_insert_local",
+				"title": "批量添加术语库词条",
 				"category": "DLTXT"
 			},
 			{
@@ -1027,7 +1032,8 @@
 		"kuromoji": "^0.1.2",
 		"open": "^7.4.2",
 		"request": "^2.88.2",
-		"typed-rest-client": "^1.8.11"
+		"typed-rest-client": "^1.8.11",
+		"xlsx": "^0.18.5"
 	},
 	"repository": {
 		"type": "git",
