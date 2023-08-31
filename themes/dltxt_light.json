@@ -79,7 +79,7 @@
           "source.txt"
       ],
       "settings": {
-          "foreground": "#f13232"
+          "foreground": "#000000"
       }
     }
   ]
