@@ -42,7 +42,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
             let totalCount = 0;
             for(const file of files) {
                 const filePath = path.join(folderPath, file);
-                if (!fs.statSync(filePath).isFile() && !file.endsWith('.txt')) {
+                if (!fs.statSync(filePath).isFile() && !file.toLocaleLowerCase().endsWith('.txt')) {
                     continue;
                 }
                 totalCount++;

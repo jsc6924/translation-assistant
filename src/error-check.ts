@@ -10,7 +10,7 @@ export function updateErrorDecorations() {
         return;
     }
     const fileName = activeEditor.document.fileName;
-    if(!fileName.endsWith('.txt')) {
+    if(!fileName.toLocaleLowerCase().endsWith('.txt')) {
         return;
     }
     const diagnosticCollection = getOrCreateDiagnosticCollection(fileName);

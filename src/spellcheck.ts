@@ -80,7 +80,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
         return;
     }
     const fileName = activeEditor.document.fileName;
-    if(!fileName.endsWith('.txt')) {
+    if(!fileName.toLocaleLowerCase().endsWith('.txt')) {
         return;
     }
     const diagnosticCollection = utils.getOrCreateDiagnosticCollection(fileName + '.spellcheck');
@@ -208,7 +208,7 @@ export function clearSpellCheck() {
         return;
     }
     const fileName = activeEditor.document.fileName;
-    if(!fileName.endsWith('.txt')) {
+    if(!fileName.toLocaleLowerCase().endsWith('.txt')) {
         return;
     }
     const diagnosticCollection = utils.getOrCreateDiagnosticCollection(fileName + '.spellcheck');
