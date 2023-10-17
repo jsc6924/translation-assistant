@@ -366,7 +366,7 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/[あぁ]+/g, (s)=>repeatStr('啊',s.length, true)],
     [/[おぉ]+/g, (s)=>repeatStr('哦',s.length, false)],
     [/ず+/g, (s)=>repeatStr('滋',s.length, false)],
-    [/ふ+/g, (s)=>repeatStr('哼',s.length, false)],
+    [/ふ+/g, (s)=>repeatStr('呼',s.length, false)],
     [/ふう?/g, '呼'],
     [/う(?=あ)/g, '哇'],
     [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, false)],
