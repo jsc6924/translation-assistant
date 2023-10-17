@@ -354,6 +354,7 @@ function repeatStr(s: string, k: number, addSuffix: boolean): string {
 
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/っ/g, ''],
+    [/だめ/g, '不行'],
     [/[れぺ][ろる]/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
     [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
     [/[ちじぢ]ゅ[うぅ]?/g, '啾'],

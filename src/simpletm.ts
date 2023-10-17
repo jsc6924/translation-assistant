@@ -556,7 +556,7 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 		}
 		const regStr = testArray.join('|')
 		if (!regStr)
-			return
+			continue
 		const regEx = new RegExp(regStr, "g");
 		let dict = new Map<String, string>();
 		keywords.forEach(v => {
