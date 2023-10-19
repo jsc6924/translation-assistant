@@ -573,7 +573,7 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
 			const word = dict.get(match[0])?.replace(/"/g, '');
 	
-			const linkCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${word}"})`;
+			const linkCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word as string)}"})`;
 			const hoverMarkdown = new vscode.MarkdownString(`${word} ${linkCommand}`);
 			hoverMarkdown.isTrusted = true;
 			const decoration = {
