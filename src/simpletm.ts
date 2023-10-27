@@ -555,9 +555,9 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 			if(vr)
 				testArray.push(vr);
 		}
-		const regStr = testArray.join('|')
-		if (!regStr)
-			continue
+		if (testArray.length === 0) {
+			continue;
+		}
 		let dict = new Map<String, string>();
 		keywords.forEach(v => {
 			dict.set(v['raw'], v['translate']);
