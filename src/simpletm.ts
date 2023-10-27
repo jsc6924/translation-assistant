@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder } from './utils';
 import { channel } from './dlbuild';
+const AhoCorasick = require('ahocorasick');
 
 const keywordDecorationType = vscode.window.createTextEditorDecorationType({
     borderWidth: '1px',
@@ -557,32 +558,34 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 		const regStr = testArray.join('|')
 		if (!regStr)
 			continue
-		const regEx = new RegExp(regStr, "g");
 		let dict = new Map<String, string>();
 		keywords.forEach(v => {
 			dict.set(v['raw'], v['translate']);
 		});
 		const text = activeEditor.document.getText();
-		
-		let match;
-		while (keywordsDecos.length < 10000 && (match = regEx.exec(text))) {
-			if (match[0].length === 0) {
-				regEx.lastIndex++;
+
+		const ac = new AhoCorasick(testArray);
+		const results = ac.search(text) as any[];
+		for(let res of results) {
+			const endIndex = res[0];
+			const keywords = res[1];
+			for(let keyword of keywords) {
+				const index = endIndex + 1 - keyword.length;
+				const startPos = activeEditor.document.positionAt(index);
+				const endPos = activeEditor.document.positionAt(index + keyword.length);
+				const word = dict.get(keyword)?.replace(/"/g, '');
+				const linkCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word as string)}"})`;
+				const hoverMarkdown = new vscode.MarkdownString(`${word} ${linkCommand}`);
+				hoverMarkdown.isTrusted = true;
+				const decoration = {
+					range: new vscode.Range(startPos, endPos),
+					hoverMessage: hoverMarkdown,
+					renderOptions: {}
+				};
+				keywordsDecos.push(decoration);
 			}
-			const startPos = activeEditor.document.positionAt(match.index);
-			const endPos = activeEditor.document.positionAt(match.index + match[0].length);
-			const word = dict.get(match[0])?.replace(/"/g, '');
-	
-			const linkCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word as string)}"})`;
-			const hoverMarkdown = new vscode.MarkdownString(`${word} ${linkCommand}`);
-			hoverMarkdown.isTrusted = true;
-			const decoration = {
-				range: new vscode.Range(startPos, endPos),
-				hoverMessage: hoverMarkdown,
-				renderOptions: {}
-			};
-			keywordsDecos.push(decoration);
 		}
+
 	}
     activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
 }
