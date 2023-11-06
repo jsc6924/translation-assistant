@@ -3,25 +3,8 @@ import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder } from './utils';
-import { channel } from './dlbuild';
 const AhoCorasick = require('ahocorasick');
 
-const keywordDecorationType = vscode.window.createTextEditorDecorationType({
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    overviewRulerColor: 'blue',
-    overviewRulerLane: vscode.OverviewRulerLane.Right,
-    light: {
-        // this color will be used in light color themes
-        borderColor: 'darkblue',
-        backgroundColor: 'lightblue'
-    },
-    dark: {
-        // this color will be used in dark color themes
-        borderColor: 'lightblue',
-        backgroundColor: 'darkblue'
-    }
-});
 
 export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com/";
 
@@ -128,10 +111,16 @@ export function activate(context: vscode.ExtensionContext) {
 		if (args.usePathPicker) {
 			newValue = await pickPath();
 		} else {
-			newValue = await vscode.window.showInputBox({
-				value: oldValue,
-				prompt: `输入${config}的值`
-			});
+			if (args.selections) {
+				newValue = await vscode.window.showQuickPick(args.selections, {
+					placeHolder: `选择${config}的值`
+				})
+			} else {
+				newValue = await vscode.window.showInputBox({
+					value: oldValue,
+					prompt: `输入${config}的值`
+				});
+			}
 		}
 		if (newValue === undefined) {
 			if (callback) callback();
@@ -149,10 +138,16 @@ export function activate(context: vscode.ExtensionContext) {
 		if (args.usePathPicker) {
 			newValue = await pickPath();
 		} else {
-			newValue = await vscode.window.showInputBox({
-				value: oldValue,
-				prompt: `输入${config}的值`
-			});
+			if (args.selections) {
+				newValue = await vscode.window.showQuickPick(args.selections, {
+					placeHolder: `选择${config}的值`
+				})
+			} else {
+				newValue = await vscode.window.showInputBox({
+					value: oldValue,
+					prompt: `输入${config}的值`
+				});
+			}
 		}
 		if (newValue === undefined) {
 			if (callback) callback();
@@ -218,7 +213,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	registerCommand(context, 'Extension.dltxt.sync_database', async function (name: string) {
 		await syncDatabase(name);
-		updateKeywordDecorations(context);
+		updateKeywordDecorations();
 	});
 
 	registerCommand(context, 'Extension.dltxt.sync_all_database', async function () {
@@ -226,7 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
 		for (const name of dictNames) {
 			await syncDatabase(name);
 		}
-		updateKeywordDecorations(context);
+		updateKeywordDecorations();
 	});
 	
 	async function insertRemote(dictName: string) {
@@ -520,7 +515,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 
-export function updateKeywordDecorations(context: vscode.ExtensionContext) {
+export function updateKeywordDecorations() {
 
     let activeEditor = vscode.window.activeTextEditor;
     const config = vscode.workspace.getConfiguration("dltxt");
@@ -528,16 +523,28 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
         return;
     }
 
-    if (!config.get<boolean>('appearance.showKeywordHighlight')) {
-        activeEditor.setDecorations(keywordDecorationType, []);
-        return;
-    }
-	const keywordsDecos: vscode.DecorationOptions[] = [];
+
+	
 
 	const dictNames = DictSettings.getAllDictNames();
 	for (const dictName of dictNames) {
-		
+		const {deco, oldDeco, changed} = DictSettings.getDictDecoration(dictName);
+		const keywordsDecos: vscode.DecorationOptions[] = [];
 		const type = DictSettings.getDictType(dictName);
+		const showHighLight = DictSettings.getStyleShow(dictName);
+		if (!showHighLight) {
+			if (oldDeco) {
+				activeEditor.setDecorations(oldDeco, []);
+			}
+			if (deco) {
+				activeEditor.setDecorations(deco, []);
+			}
+			continue;
+		}
+		if (changed && oldDeco) {
+			activeEditor.setDecorations(oldDeco, []);
+		}
+
 		let keywords = [];
 		if (type === 'local') {
 			keywords = DictSettings.getLocalDictKeys(dictName);
@@ -585,9 +592,9 @@ export function updateKeywordDecorations(context: vscode.ExtensionContext) {
 				keywordsDecos.push(decoration);
 			}
 		}
-
+		activeEditor.setDecorations(deco, keywordsDecos);
 	}
-    activeEditor.setDecorations(keywordDecorationType, keywordsDecos);
+    
 }
 
 function updateLocalDictKey(dictName: string, key: string, value: string | undefined): boolean {

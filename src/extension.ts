@@ -67,7 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
 			timeout = undefined;
 		}
 		timeout = setTimeout(() => {
-			simpletm.updateKeywordDecorations(context);
+			simpletm.updateKeywordDecorations();
 			updateErrorDecorations();
 		}, 200);
 	}
@@ -213,7 +213,6 @@ async function migration(context: vscode.ExtensionContext) {
 	
 	if (true && oldVersion[0] == '2' && curVersion[0] == '3') {
 		simpletm.migration(context);
-
 	}
 
 	ContextHolder.setGlobalState('dltxt.version', curVersion);

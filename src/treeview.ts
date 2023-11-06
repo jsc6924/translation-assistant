@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText, DictSettings, ContextHolder } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
-import { SimpleTMDefaultURL } from './simpletm';
+import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 
 // lets put all in a cwt namespace
 export namespace dict_view
@@ -22,6 +22,7 @@ export namespace dict_view
         dictName: string;
         contextValue = 'dict-root-item';
         children: DictItem[] = [];
+        contentNode: DictEntrySetItem | undefined;
         constructor(treeview: DictTreeView, dictName: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, dictName, state);
             this.dictName = dictName;
@@ -49,12 +50,28 @@ export namespace dict_view
             await vscode.commands.executeCommand('Extension.dltxt.sync_database', this.dictName);
         }
     }
+    class DictConfigStyleRootItem extends DictItem {
+        contextValue = 'dict-config-style-root-item';
+        children: DictConfigEntryItem[] = [];
+        iconPath = new vscode.ThemeIcon('settings-gear');
+        dictName: string;
+        constructor(treeview: DictTreeView, label: string, dictName: string, state: vscode.TreeItemCollapsibleState) {
+            super(treeview, label, state);
+            this.dictName = dictName;
+        }
+
+        async configUpdated() {
+            updateKeywordDecorations();
+        }
+    }
+
     class DictConfigEntryItem extends DictItem {
         contextValue = 'dict-config-entry-item';
         config: string;
         showFullValue: boolean;
         global: boolean;
         initLabel: string;
+        callback: (()=>Promise<void>) | undefined;
         constructor(treeview: DictTreeView, configRoot: DictConfigRootItem,
              label: string, config: string, global: boolean, showFullValue: boolean) {
             super(treeview, label, vscode.TreeItemCollapsibleState.None);
@@ -63,7 +80,7 @@ export namespace dict_view
             this.showFullValue = showFullValue;
             this.global = global;
             this.updateLabel();
-            const cb = async () => { 
+            this.callback = async () => { 
                 this.updateLabel(); 
                 await configRoot.configUpdated();
                 treeview.dataChanged();
@@ -72,19 +89,23 @@ export namespace dict_view
             if (config.includes('.localPath')) {
                 usePathPicker = true;
             }
+            this.setCommand(global, {config, usePathPicker, callback: this.callback});
+        }
+
+        setCommand(global: boolean, args: any) {
             if (global) {
                 this.iconPath = new vscode.ThemeIcon('symbol-property');
                 this.command = {
                     command: 'Extension.dltxt.setGlobalState',
-                    title: `更改全局变量${config}`,
-                    arguments: [{config: config, usePathPicker, callback: cb}]
+                    title: `更改全局变量${this.config}`,
+                    arguments: [args]
                 }
             } else {
                 this.iconPath = new vscode.ThemeIcon('settings');
                 this.command = {
                     command: 'Extension.dltxt.setWorkspaceState',
-                    title: `更改当前工作区变量${config}`,
-                    arguments: [{config: config, usePathPicker, callback: cb}]
+                    title: `更改当前工作区变量${this.config}`,
+                    arguments: [args]
                 }
             }
         }
@@ -109,6 +130,26 @@ export namespace dict_view
                 }
                 this.label = `${this.initLabel}: ${v}`
             }
+        }
+    }
+    class DictConfigSelectionEntryItem extends DictConfigEntryItem {
+        contextValue = 'dict-config-selection-entry-item';
+        selections: string[] = [];
+        constructor(treeview: DictTreeView, configRoot: DictConfigRootItem,
+            label: string, config: string, global: boolean, selections: string[], defaultValue: string) {
+            super(treeview, configRoot, label, config, global, true);
+            this.selections = selections;
+            this.setCommand(global, {config, callback: this.callback, selections: this.selections});
+            if (global) {
+                if (ContextHolder.getGlobalState(this.config) === undefined) {
+                    ContextHolder.setGlobalState(this.config, defaultValue);
+                }
+            } else {
+                if (ContextHolder.getWorkspaceState(this.config) === undefined) {
+                    ContextHolder.setWorkspaceState(this.config, defaultValue);
+                }
+            }
+            this.updateLabel();
         }
     }
     class DictEntrySetItem extends DictItem {
@@ -171,14 +212,19 @@ export namespace dict_view
                 DictSettings.setSimpleTMUrl(name, SimpleTMDefaultURL);
             }
             const simpleTMNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
-            const simpleTMConfigNode = new DictConfigRootItem(this, '设置', name, vscode.TreeItemCollapsibleState.Collapsed);
+            const simpleTMConfigNode = new DictConfigRootItem(this, '连接', name, vscode.TreeItemCollapsibleState.Collapsed);
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode,  `服务器网址`, `dltxt.dict.${name}.url`, true, true));
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `用户名`, `dltxt.dict.${name}.username`, true, true));
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `APIToken`, `dltxt.dict.${name}.api`, true, false));
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `项目名`, `dltxt.dict.${name}.gameTitle`, false, true));
             simpleTMNode.children.push(simpleTMConfigNode);
 
-            simpleTMNode.children.push(new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded));
+            const styleNode = this.constructStyleNode(name);
+            simpleTMNode.children.push(styleNode);
+
+            simpleTMNode.contentNode = new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            simpleTMNode.children.push(simpleTMNode.contentNode);
+            
             this.roots.push(simpleTMNode);
             this.refresh(simpleTMNode);
             return true;
@@ -187,14 +233,34 @@ export namespace dict_view
         addLocalDict(name: string): boolean {
             DictSettings.setDictType(name, 'local');
             const rootNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
-            const simpleTMConfigNode = new DictConfigRootItem(this, '设置', name, vscode.TreeItemCollapsibleState.Collapsed);
+            const simpleTMConfigNode = new DictConfigRootItem(this, '连接', name, vscode.TreeItemCollapsibleState.Collapsed);
             simpleTMConfigNode.children.push(
                 new DictConfigEntryItem(this, simpleTMConfigNode, `本地路径`, `dltxt.dict.${name}.localPath`, false, true));
             rootNode.children.push(simpleTMConfigNode);
-            rootNode.children.push(new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded));
+
+            const styleNode = this.constructStyleNode(name);
+            rootNode.children.push(styleNode);
+
+            rootNode.contentNode = new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            rootNode.children.push(rootNode.contentNode);
             this.roots.push(rootNode);
             this.refresh(rootNode);
             return true;
+        }
+
+        constructStyleNode(name: string) {
+            const styleNode = new DictConfigStyleRootItem(this, '外观', name, vscode.TreeItemCollapsibleState.Collapsed);
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `显示高亮`, `dltxt.dict.${name}.style.show`, true, ['true', 'false'], 'true'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条颜色`, `dltxt.dict.${name}.style.overviewColor`, true, CSSNamedColors, 'blue'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条位置`, `dltxt.dict.${name}.style.overviewPosition`, true, ['none', 'left', 'right', 'center', 'full'], 'right'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框宽度`, `dltxt.dict.${name}.style.BorderWidth`, true, ['1px', '0 0 1px 0', '0'], '1px'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框样式`, `dltxt.dict.${name}.style.BorderStyle`, true, ['solid', 'dotted', 'dashed', 'double', 'none'], 'solid'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题高亮颜色`, `dltxt.dict.${name}.style.light.backgroundColor`, true, CSSNamedColors, 'lightblue'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题边框颜色`, `dltxt.dict.${name}.style.light.borderColor`, true, CSSNamedColors, 'darkblue'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `深色主题高亮颜色`, `dltxt.dict.${name}.style.dark.backgroundColor`, true, CSSNamedColors, 'darkblue'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `深色主题边框颜色`, `dltxt.dict.${name}.style.dark.borderColor`, true, CSSNamedColors, 'lightblue'));
+
+            return styleNode;
         }
 
         removeDict(item: dict_view.DictRootItem) {
@@ -221,6 +287,9 @@ export namespace dict_view
             }
             if (element.contextValue == 'dict-config-root-item') {
                 return Promise.resolve((element as DictConfigRootItem).children);
+            }
+            if (element.contextValue == 'dict-config-style-root-item') {
+                return Promise.resolve((element as DictConfigStyleRootItem).children);
             }
             return Promise.resolve([]);
         }
@@ -288,7 +357,7 @@ export namespace dict_view
                 dictEntryItems.sort((a, b) => {
                     return a.key.localeCompare(b.key);
                 });
-                (node.children[1] as DictEntrySetItem).children = dictEntryItems;
+                (node.contentNode as DictEntrySetItem).children = dictEntryItems;
                 for (const item of (node.children[0] as DictConfigRootItem).children) {
                     item.updateLabel();
                 }

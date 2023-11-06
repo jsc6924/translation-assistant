@@ -337,6 +337,127 @@ export class DictSettings {
   static setDictType(name: string, value: string | undefined) {
     return ContextHolder.setGlobalState(`dltxt.dict.${name}.type`, value);
   }
+
+  //----------------style settings-------------------//
+  static getStyleShow(name: string): boolean {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.show`) as string === 'true';
+  }
+  static setStyleShow(name: string, value: 'true' | 'false') {
+    return  ContextHolder.setGlobalState(`dltxt.dict.${name}.style.show`, value);
+  }
+
+  static getStyleOverviewColor(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.overviewColor`);
+  }
+  static setStyleOverviewColor(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.overviewColor`, value);
+  }
+
+  static getStyleOverviewPosition(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.overviewPosition`);
+  }
+  static setStyleOverviewPosition(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.overviewPosition`, value);
+  }
+
+  static getStyleBorderWidth(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.BorderWidth`);
+  }
+  static setStyleBorderWidth(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.BorderWidth`, value);
+  }
+
+  static getStyleBorderStyle(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.BorderStyle`);
+  }
+  static setStyleBorderStyle(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.BorderStyle`, value);
+  }
+
+  static getStyleLightBackgroundColor(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.light.backgroundColor`);
+  }
+  static setStyleLightBackgroundColor(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.light.backgroundColor`, value);
+  }
+  static getStyleDarkBackgroundColor(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.dark.backgroundColor`);
+  }
+  static setStyleDarkBackgroundColor(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.dark.backgroundColor`, value);
+  }
+
+  static getStyleLightBorderColor(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.light.borderColor`);
+  }  
+  static setStyleLightBorderColor(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.light.borderColor`, value);
+  }
+  static getStyleDarkBorderColor(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.dark.borderColor`);
+  }  
+  static setStyleDarkBorderColor(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.dark.borderColor`, value);
+  }
+
+  static decoRepo = new Map<string, {version: string, deco: vscode.TextEditorDecorationType}>();
+
+  static getDictDecoration(dictName: string): {deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined, changed: boolean} {
+    const overviewPosition = DictSettings.getStyleOverviewPosition(dictName);
+    const overviewColor = DictSettings.getStyleOverviewColor(dictName);
+    const borderWidth = DictSettings.getStyleBorderWidth(dictName);
+    const borderStyle = DictSettings.getStyleBorderStyle(dictName);
+    const lightBorderColor = DictSettings.getStyleLightBorderColor(dictName);
+    const lightBackgroundColor = DictSettings.getStyleLightBackgroundColor(dictName);
+    const darkBorderColor = DictSettings.getStyleDarkBorderColor(dictName);
+    const darkBackgroundColor = DictSettings.getStyleDarkBackgroundColor(dictName);
+
+    const decoVersion = `${overviewPosition}|${overviewColor}|${borderWidth}|${borderStyle}|${lightBorderColor}|${lightBackgroundColor}|${darkBorderColor}|${darkBackgroundColor}`;
+
+    let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
+    if (DictSettings.decoRepo.has(dictName)) {
+      const {version, deco} = DictSettings.decoRepo.get(dictName) as any;
+      if (decoVersion === version) {
+        return {deco, oldDeco, changed: false};
+      }
+      oldDeco = deco;
+    }
+  
+    const overviewPositionMapping : any = {
+      'none': 0,
+      'left': vscode.OverviewRulerLane.Left,
+      'center': vscode.OverviewRulerLane.Center,
+      'right': vscode.OverviewRulerLane.Right,
+      'full': vscode.OverviewRulerLane.Full
+    }
+    let overviewPositionEnum = overviewPositionMapping[overviewPosition];
+    if (overviewPositionEnum === undefined) {
+      overviewPositionEnum = 0;
+    }
+  
+    let obj = {
+      borderWidth: borderWidth,
+      borderStyle: borderStyle,
+      overviewRulerColor: overviewColor,
+      overviewRulerLane: overviewPositionEnum,
+      light: {
+          // this color will be used in light color themes
+          borderColor: lightBorderColor,
+          backgroundColor: lightBackgroundColor
+      },
+      dark: {
+          // this color will be used in dark color themes
+          borderColor: darkBorderColor,
+          backgroundColor: darkBackgroundColor
+      }
+    };
+    
+    const newDeco = vscode.window.createTextEditorDecorationType(obj);
+    DictSettings.decoRepo.set(dictName, {version: decoVersion, deco: newDeco});
+    return {deco: newDeco, oldDeco, changed: true}
+  }
+
+  //--------------connection settings------------------//
   static getGameTitle(name: string)  : string | undefined {
       return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.gameTitle`) as string;
   }
@@ -405,3 +526,147 @@ export class DictSettings {
   }
   
 }
+
+export const CSSNamedColors = [
+  "transparent",
+  "aliceblue",
+  "antiquewhite",
+  "aqua",
+  "aquamarine",
+  "azure",
+  "beige",
+  "bisque",
+  "black",
+  "blanchedalmond",
+  "blue",
+  "blueviolet",
+  "brown",
+  "burlywood",
+  "cadetblue",
+  "chartreuse",
+  "chocolate",
+  "coral",
+  "cornflowerblue",
+  "cornsilk",
+  "crimson",
+  "cyan",
+  "darkblue",
+  "darkcyan",
+  "darkgoldenrod",
+  "darkgray",
+  "darkgreen",
+  "darkkhaki",
+  "darkmagenta",
+  "darkolivegreen",
+  "darkorange",
+  "darkorchid",
+  "darkred",
+  "darksalmon",
+  "darkseagreen",
+  "darkslateblue",
+  "darkslategray",
+  "darkturquoise",
+  "darkviolet",
+  "deeppink",
+  "deepskyblue",
+  "dimgray",
+  "dodgerblue",
+  "firebrick",
+  "floralwhite",
+  "forestgreen",
+  "fuchsia",
+  "gainsboro",
+  "ghostwhite",
+  "gold",
+  "goldenrod",
+  "gray",
+  "green",
+  "greenyellow",
+  "honeydew",
+  "hotpink",
+  "indianred",
+  "indigo",
+  "ivory",
+  "khaki",
+  "lavender",
+  "lavenderblush",
+  "lawngreen",
+  "lemonchiffon",
+  "lightblue",
+  "lightcoral",
+  "lightcyan",
+  "lightgoldenrodyellow",
+  "lightgray",
+  "lightgreen",
+  "lightpink",
+  "lightsalmon",
+  "lightseagreen",
+  "lightskyblue",
+  "lightslategray",
+  "lightsteelblue",
+  "lightyellow",
+  "lime",
+  "limegreen",
+  "linen",
+  "magenta",
+  "maroon",
+  "mediumaquamarine",
+  "mediumblue",
+  "mediumorchid",
+  "mediumpurple",
+  "mediumseagreen",
+  "mediumslateblue",
+  "mediumspringgreen",
+  "mediumturquoise",
+  "mediumvioletred",
+  "midnightblue",
+  "mintcream",
+  "mistyrose",
+  "moccasin",
+  "navajowhite",
+  "navy",
+  "oldlace",
+  "olive",
+  "olivedrab",
+  "orange",
+  "orangered",
+  "orchid",
+  "palegoldenrod",
+  "palegreen",
+  "paleturquoise",
+  "palevioletred",
+  "papayawhip",
+  "peachpuff",
+  "peru",
+  "pink",
+  "plum",
+  "powderblue",
+  "purple",
+  "red",
+  "rosybrown",
+  "royalblue",
+  "saddlebrown",
+  "salmon",
+  "sandybrown",
+  "seagreen",
+  "seashell",
+  "sienna",
+  "silver",
+  "skyblue",
+  "slateblue",
+  "slategray",
+  "snow",
+  "springgreen",
+  "steelblue",
+  "tan",
+  "teal",
+  "thistle",
+  "tomato",
+  "turquoise",
+  "violet",
+  "wheat",
+  "white",
+  "whitesmoke",
+  "yellow",
+  "yellowgreen"
+];
