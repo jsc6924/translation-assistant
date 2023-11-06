@@ -19,6 +19,7 @@ import * as trdb from './translation-db';
 import * as simpletm from './simpletm';
 import * as singleline from './singleline';
 import * as auto_format from './auto-format';
+import * as fs from 'fs';
 import { deflateRawSync } from 'zlib';
 
 
@@ -31,6 +32,10 @@ import { deflateRawSync } from 'zlib';
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 	ContextHolder.set(context);
+
+	if (!fs.existsSync(context.globalStoragePath)) {
+		fs.mkdirSync(context.globalStoragePath, { recursive: true });
+	}
 
 	let timeout: NodeJS.Timer | undefined = undefined;
 
