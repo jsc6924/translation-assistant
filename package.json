@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.7.2",
+	"version": "3.7.3",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -208,8 +208,16 @@
 				}
 			},
 			{
+				"command": "Extension.dltxt.treeview.addItem",
+				"title": "添加术语词条",
+				"icon": {
+					"light": "icons/light/add.svg",
+					"dark": "icons/dark/add.svg"
+				}
+			},
+			{
 				"command": "Extension.dltxt.treeview.editItem",
-				"title": "编辑术语",
+				"title": "编辑术语词条",
 				"icon": {
 					"light": "icons/light/edit.svg",
 					"dark": "icons/dark/edit.svg"
@@ -217,7 +225,7 @@
 			},
 			{
 				"command": "Extension.dltxt.treeview.deleteItem",
-				"title": "删除术语",
+				"title": "删除术语词条",
 				"icon": {
 					"light": "icons/light/trash.svg",
 					"dark": "icons/dark/trash.svg"
@@ -783,6 +791,11 @@
 				{
 					"command": "Extension.dltxt.treeview.dict.removeDict",
 					"when": "view == dltxt-dict && viewItem == dict-root-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.addItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-set-item",
 					"group": "inline@1"
 				},
 				{

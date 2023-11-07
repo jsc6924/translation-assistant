@@ -166,6 +166,11 @@ export namespace dict_view
         contextValue = 'dict-entry-set-item';
         children: DictEntryItem[] = [];
         iconPath = new vscode.ThemeIcon('book');
+        name: string  = '';
+        constructor(name: string, treeview: DictTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
+            super(treeview, label, state);
+            this.name = name;
+        }
     }
     class DictEntryItem extends DictItem {
         name: string = '';
@@ -205,6 +210,7 @@ export namespace dict_view
 
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
         public constructor()  {
+            vscode.commands.registerCommand('Extension.dltxt.treeview.addItem', r => this.addItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.deleteItem', r => this.deleteItem(r));
             this.refresh();
@@ -232,7 +238,7 @@ export namespace dict_view
             const styleNode = this.constructStyleNode(name);
             simpleTMNode.children.push(styleNode);
 
-            simpleTMNode.contentNode = new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            simpleTMNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
             simpleTMNode.children.push(simpleTMNode.contentNode);
             
             this.roots.push(simpleTMNode);
@@ -251,7 +257,7 @@ export namespace dict_view
             const styleNode = this.constructStyleNode(name);
             rootNode.children.push(styleNode);
 
-            rootNode.contentNode = new DictEntrySetItem(this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            rootNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
             rootNode.children.push(rootNode.contentNode);
             this.roots.push(rootNode);
             this.refresh(rootNode);
@@ -302,6 +308,10 @@ export namespace dict_view
                 return Promise.resolve((element as DictConfigStyleRootItem).children);
             }
             return Promise.resolve([]);
+        }
+
+        public addItem(item: DictEntrySetItem) {
+            vscode.commands.executeCommand('Extension.dltxt.dict_insert', item.name)
         }
 
         // this is called when we click an item

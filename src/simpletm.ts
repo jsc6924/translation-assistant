@@ -224,7 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
 		updateKeywordDecorations();
 	});
 	
-	async function insertRemote(dictName: string) {
+	async function insertRemote(dictName: string, rawTextGetter: () => Promise<string|undefined>) {
 		const username = DictSettings.getSimpleTMUsername(dictName);
 		const apiToken = DictSettings.getSimpleTMApiToken(dictName);
 		if (!username || !apiToken) {
@@ -237,49 +237,60 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
 		}
-		const translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
-		let editor = vscode.window.activeTextEditor;
-		if (editor && !editor.selection.isEmpty) {
-			const raw_text = editor.document.getText(editor.selection);
-			var msg = raw_text + "->" + translate;
-			const API_Query: string = BASE_URL + "/api/insert";
-			let fullURL = API_Query + "/" + GameTitle + "/" + raw_text + "/" + translate;
-			fullURL = encodeURI(fullURL);
-			axios.get(fullURL, {
-				auth: {
-					username: username, password: apiToken
-				}
-			})
-			.then(response => {
-				if (response.data.Result === 'True') {
-					vscode.window.showInformationMessage("词条添加成功!\n" + msg);
-				}
-				else {
-					vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
-				}
-				vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
-			})
-			.catch(error => {
-				vscode.window.showInformationMessage("unexpected error:\n" + error);
-			});
+		const rawText = await rawTextGetter();
+		if (!rawText) {
+			return;
 		}
+		const translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
+		var msg = rawText + "->" + translate;
+		const API_Query: string = BASE_URL + "/api/insert";
+		let fullURL = API_Query + "/" + GameTitle + "/" + rawText + "/" + translate;
+		fullURL = encodeURI(fullURL);
+		axios.get(fullURL, {
+			auth: {
+				username: username, password: apiToken
+			}
+		})
+		.then(response => {
+			if (response.data.Result === 'True') {
+				vscode.window.showInformationMessage("词条添加成功!\n" + msg);
+			}
+			else {
+				vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+			}
+			vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+		})
+		.catch(error => {
+			vscode.window.showInformationMessage("unexpected error:\n" + error);
+		});
 
 	}
 
+	async function doInsertKVLocal(dictName: string, rawText: string, translate: string | undefined) {
+		let msg = rawText + "->" + translate;
+		try {
+			updateLocalDictKey(dictName, rawText, translate);
+			vscode.window.showInformationMessage("词条添加成功!\n" + msg);
+		} catch (err) {
+			vscode.window.showErrorMessage(`词条添加失败：${err}`);
+		}
+		vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+	}
 	async function insertLocal(dictName: string) {
-		const translate = await vscode.window.showInputBox({ placeHolder: '输入译文' })
+		const translate = await vscode.window.showInputBox({ placeHolder: '输入译文' });
 		let editor = vscode.window.activeTextEditor;
 		if (editor && !editor.selection.isEmpty) {
-			const raw_text = editor.document.getText(editor.selection);
-			let msg = raw_text + "->" + translate;
-			try {
-				updateLocalDictKey(dictName, raw_text, translate);
-				vscode.window.showInformationMessage("词条添加成功!\n" + msg);
-			} catch (err) {
-				vscode.window.showErrorMessage(`词条添加失败：${err}`);
-			}
-			vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+			const rawText = editor.document.getText(editor.selection);
+			doInsertKVLocal(dictName, rawText, translate);
 		}
+	}
+	async function insertLocalWithoutKey(dictName: string) {
+		const rawText = await await vscode.window.showInputBox({ placeHolder: '输入原文' });
+		if (!rawText) {
+			return;
+		}
+		const translate = await vscode.window.showInputBox({ placeHolder: '输入译文' });
+		doInsertKVLocal(dictName, rawText, translate);
 	}
 
 	async function batchInsertLocal(dictName: string) {
@@ -343,6 +354,18 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showErrorMessage('not supported');
 	});
 
+	
+
+	registerCommand(context, 'Extension.dltxt.dict_insert', async function(name: string) {
+		const type = DictSettings.getDictType(name);
+		if (type != 'remote') {
+			insertLocalWithoutKey(name);
+			return;
+		}
+		await insertRemote(name, async () => { return vscode.window.showInputBox({
+			placeHolder: `输入原文`
+		})});
+	});
 
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
 		const dictNames = DictSettings.getAllDictNames();
@@ -369,7 +392,14 @@ export function activate(context: vscode.ExtensionContext) {
 			insertLocal(name);
 			return;
 		}
-		await insertRemote(name);
+		await insertRemote(name, async () => {
+			let editor = vscode.window.activeTextEditor;
+			if (editor && !editor.selection.isEmpty) {
+				const rawText = editor.document.getText(editor.selection);
+				return rawText;
+			}
+			return '';
+		});
 	});
 
 	async function updateDictRemote(name: string, rawText: string, wantDelete: boolean) {
