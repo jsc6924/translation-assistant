@@ -385,9 +385,11 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
 		}
+		const dictNode = dictTree?.getDictByName(name);
+		const oldValue = dictNode?.findEntryValue(rawText);
 		let translate: string | undefined = '';
 		if (!wantDelete) {
-			translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，点击空白处取消` })	
+			translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，按Esc取消`, value: oldValue, ignoreFocusOut: true })	
 			if (translate === undefined) {
 				return; //cancelled
 			}
@@ -434,8 +436,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	async function updateDictLocal(name: string, rawText: string, wantDelete: boolean) {
 		let translate: string | undefined = '';
+		const dictNode = dictTree?.getDictByName(name);
+		const oldValue = dictNode?.findEntryValue(rawText);
 		if (!wantDelete) {
-			translate = await vscode.window.showInputBox({ placeHolder: `输入"${rawText}"的译文，输入空字符串删除译文，点击空白处取消` })	
+			translate = await vscode.window.showInputBox({ placeHolder: `输入"${rawText}"的译文，输入空字符串删除译文，按Esc取消`, value: oldValue, ignoreFocusOut: true  })	
 			if (translate === undefined) {
 				return; //cancelled
 			}

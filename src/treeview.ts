@@ -28,6 +28,16 @@ export namespace dict_view
             this.dictName = dictName;
             this.iconPath = new vscode.ThemeIcon('database');
         }
+        findEntryValue(key: string) {
+            if (this.contentNode) {
+                for(const child of this.contentNode.children) {
+                    if (child.key === key) {
+                        return child.value;
+                    }
+                }
+            }
+            return undefined;
+        }
     }
 
     class DictConfigRootItem extends DictItem {
