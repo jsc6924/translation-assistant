@@ -262,7 +262,7 @@ export namespace dict_view
             const styleNode = new DictConfigStyleRootItem(this, '外观', name, vscode.TreeItemCollapsibleState.Collapsed);
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `显示高亮`, `dltxt.dict.${name}.style.show`, true, ['true', 'false'], 'true'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条颜色`, `dltxt.dict.${name}.style.overviewColor`, true, CSSNamedColors, 'blue'));
-            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条位置`, `dltxt.dict.${name}.style.overviewPosition`, true, ['none', 'left', 'right', 'center', 'full'], 'right'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条位置`, `dltxt.dict.${name}.style.overviewPosition`, true, ['left', 'right', 'center', 'full'], 'right'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框宽度`, `dltxt.dict.${name}.style.BorderWidth`, true, ['1px', '0 0 1px 0', '0'], '1px'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框样式`, `dltxt.dict.${name}.style.BorderStyle`, true, ['solid', 'dotted', 'dashed', 'double', 'none'], 'solid'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题高亮颜色`, `dltxt.dict.${name}.style.light.backgroundColor`, true, CSSNamedColors, 'lightblue'));
