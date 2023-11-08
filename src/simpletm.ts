@@ -170,6 +170,7 @@ export function activate(context: vscode.ExtensionContext) {
 			try {
 				const fsPath = DictSettings.getLocalDictPath(name);
 				if (!fsPath) {
+					dictTree?.getDictByName(name)?.setConnectionStatus(false);
 					return;
 				}
 				const content = fs.readFileSync(fsPath, { encoding: 'utf8'});
@@ -177,6 +178,7 @@ export function activate(context: vscode.ExtensionContext) {
 				const values: any[] = contentObj['values'];
 				DictSettings.setLocalDictKeys(name, values);
 				const dictNode = dictTree?.getDictByName(name);
+				dictNode?.setConnectionStatus(true);
 				dictTree?.refresh(dictNode);
 			} catch (error) {
 				console.error(error);
@@ -185,7 +187,10 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
 		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
+		const dictNode = dictTree?.getDictByName(name);
 		if (!username || !apiToken) {
+			dictNode?.setConnectionStatus(false);
+			dictTree?.refresh(dictNode);
 			return;
 		}
 		if (gameTitle) {
@@ -201,13 +206,14 @@ export function activate(context: vscode.ExtensionContext) {
 				console.log(result);
 				if (result && gameTitle) {
                     DictSettings.setSimpleTMDictKeys(name, gameTitle, result.data);
-					const dictNode = dictTree?.getDictByName(name);
+					dictNode?.setConnectionStatus(true);
 					dictTree?.refresh(dictNode);
 				}
 			}).catch((err) => {
+				const dictNode = dictTree?.getDictByName(name);
+				dictNode?.setConnectionStatus(false);
 				if (gameTitle) {
 					DictSettings.setSimpleTMDictKeys(name, gameTitle, undefined);
-					const dictNode = dictTree?.getDictByName(name);
 					dictTree?.refresh(dictNode);
 				}
 				console.error(err);

@@ -23,10 +23,12 @@ export namespace dict_view
         contextValue = 'dict-root-item';
         children: DictItem[] = [];
         contentNode: DictEntrySetItem | undefined;
+        connected: boolean = false;
         constructor(treeview: DictTreeView, dictName: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, dictName, state);
             this.dictName = dictName;
             this.iconPath = new vscode.ThemeIcon('database');
+            this.setConnectionStatus(false);
         }
         findEntryValue(key: string) {
             if (this.contentNode) {
@@ -37,6 +39,14 @@ export namespace dict_view
                 }
             }
             return undefined;
+        }
+        setConnectionStatus(connected: boolean) {
+            this.connected = connected;
+            if (connected) {
+                this.label = `${this.dictName}[=]`;
+            } else {
+                this.label = `${this.dictName}[x]`;
+            }
         }
     }
 
@@ -54,6 +64,9 @@ export namespace dict_view
         async configUpdated() {
             for(const child of this.children) {
                 if (!child.getValue()) {
+                    const root = this.treeview.getDictByName(this.dictName);
+                    root?.setConnectionStatus(false);
+                    root?.contentNode?.clear();
                     return;
                 }
             }
@@ -170,6 +183,10 @@ export namespace dict_view
         constructor(name: string, treeview: DictTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, label, state);
             this.name = name;
+        }
+        clear() {
+            this.children = [];
+            this.treeview.dataChanged();
         }
     }
     class DictEntryItem extends DictItem {
@@ -381,7 +398,8 @@ export namespace dict_view
                 let keywords: any[] = [];
                 if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
                     const game : string | undefined = DictSettings.getGameTitle(node.dictName);
-                    if (!game) {
+                    if (!game || !node.connected) {
+                        node.contentNode?.clear();
                         return;
                     }
                     keywords = DictSettings.getSimpleTMDictKeys(node.dictName, game);
