@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType } from './utils';
 const AhoCorasick = require('ahocorasick');
 
 
@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.window.registerTreeDataProvider('dltxt-dict', dictTree);
 
 	registerCommand(context, 'Extension.dltxt.treeview.dict.addDict', async () => {
-		const type = await vscode.window.showQuickPick(['本地术语库', '远程术语库'], {
+		const type = await vscode.window.showQuickPick(['本地术语库', '远程术语库（SimpleTM User）','远程术语库（SimpleTM URL）'], {
 			canPickMany: false,
 			placeHolder: "请选择术语库类型"
 		});
@@ -50,9 +50,12 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		allDicts.push(name);
 		DictSettings.setAllDictNames(allDicts);
-		if (type == '远程术语库') {
-			dictTree?.addRemoteDict(name);
-		} else if (type == '本地术语库') {
+		if (type == '远程术语库（SimpleTM User）') {
+			dictTree?.addRemoteUserDict(name);
+		} else if (type == '远程术语库（SimpleTM URL）') {
+			dictTree?.addRemoteURLDict(name);
+		}
+		else if (type == '本地术语库') {
 			dictTree?.addLocalDict(name);
 		}
 		dictTree?.refresh();
@@ -163,7 +166,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		const type = DictSettings.getDictType(name);
-		if (type != 'remote') {
+		if (type === DictType.Local) {
 			try {
 				const fsPath = DictSettings.getLocalDictPath(name);
 				if (!fsPath) {
@@ -180,29 +183,30 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			return;
 		}
-		const username = DictSettings.getSimpleTMUsername(name);
-		const apiToken = DictSettings.getSimpleTMApiToken(name);
+		const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
 		if (!username || !apiToken) {
 			return;
 		}
-		const BASE_URL = DictSettings.getSimpleTMUrl(name);
-		let GameTitle = DictSettings.getGameTitle(name);
-		if (GameTitle) {
-			let fullURL = BASE_URL + "/api/querybygame/" + GameTitle;
+		if (gameTitle) {
+			if (type === DictType.RemoteURL) {
+				DictSettings.setGameTitle(name, gameTitle);
+			}
+			let fullURL = BASE_URL + "/api/querybygame/" + gameTitle;
 			return axios.get(fullURL, {
 				auth: {
 					username: username, password: apiToken
 				}
 			}).then(result => {
 				console.log(result);
-				if (result && GameTitle) {
-                    DictSettings.setSimpleTMDictKeys(name, GameTitle, result.data);
+				if (result && gameTitle) {
+                    DictSettings.setSimpleTMDictKeys(name, gameTitle, result.data);
 					const dictNode = dictTree?.getDictByName(name);
 					dictTree?.refresh(dictNode);
 				}
 			}).catch((err) => {
-				if (GameTitle) {
-					DictSettings.setSimpleTMDictKeys(name, GameTitle, undefined);
+				if (gameTitle) {
+					DictSettings.setSimpleTMDictKeys(name, gameTitle, undefined);
 					const dictNode = dictTree?.getDictByName(name);
 					dictTree?.refresh(dictNode);
 				}
@@ -223,17 +227,40 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		updateKeywordDecorations();
 	});
-	
-	async function insertRemote(dictName: string, rawTextGetter: () => Promise<string|undefined>) {
+
+	async function remoteUserConnectionGetter(dictName: string): Promise<any> {
 		const username = DictSettings.getSimpleTMUsername(dictName);
 		const apiToken = DictSettings.getSimpleTMApiToken(dictName);
+		const BASE_URL = DictSettings.getSimpleTMUrl(dictName);
+		let gameTitle = DictSettings.getGameTitle(dictName);
+		return {username, apiToken, BASE_URL, gameTitle};
+	}
+
+	async function remoteURLConnectionGetter(dictName: string): Promise<any> {
+		let url = DictSettings.getSimpleTMSharedURL(dictName);
+		if (!url ||!url.startsWith("simpletm://")) {
+			return {};
+		}
+		url = url.substring("simpletm://".length);
+		const items = url.split('/');
+		if (items.length != 5) {
+			throw new Error("URL错误");
+		}
+		const protocal = items[0];
+		const BASE_URL = `${protocal}://${items[1]}`;
+		const username = items[2];
+		const apiToken = items[3];
+		let gameTitle = items[4];
+		return {username, apiToken, BASE_URL, gameTitle};
+	}
+	
+	async function insertRemote(dictName: string, connectionGetter: (dictName: string) => Promise<any>, rawTextGetter: () => Promise<string|undefined>) {
+		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(dictName);
 		if (!username || !apiToken) {
 			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
 			return;
 		}
-		const BASE_URL = DictSettings.getSimpleTMUrl(dictName);
-		let GameTitle = DictSettings.getGameTitle(dictName);
-		if (!GameTitle) {
+		if (!gameTitle) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
 		}
@@ -241,10 +268,10 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!rawText) {
 			return;
 		}
-		const translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + ')输入译文' })
+		const translate = await vscode.window.showInputBox({ placeHolder: '(' + gameTitle + ')输入译文' })
 		var msg = rawText + "->" + translate;
 		const API_Query: string = BASE_URL + "/api/insert";
-		let fullURL = API_Query + "/" + GameTitle + "/" + rawText + "/" + translate;
+		let fullURL = API_Query + "/" + gameTitle + "/" + rawText + "/" + translate;
 		fullURL = encodeURI(fullURL);
 		axios.get(fullURL, {
 			auth: {
@@ -347,7 +374,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		const type = DictSettings.getDictType(name);
-		if (type != 'remote') {
+		if (type == DictType.Local) {
 			batchInsertLocal(name);
 			return;
 		}
@@ -358,13 +385,27 @@ export function activate(context: vscode.ExtensionContext) {
 
 	registerCommand(context, 'Extension.dltxt.dict_insert', async function(name: string) {
 		const type = DictSettings.getDictType(name);
-		if (type != 'remote') {
+		if (type == DictType.Local) {
 			insertLocalWithoutKey(name);
-			return;
+		} else if (type == DictType.RemoteURL) {
+			await insertRemote(name, 
+				remoteURLConnectionGetter,
+				async () => { 
+					return vscode.window.showInputBox({
+						placeHolder: `输入原文`
+					})
+				}
+			);
+		} else {
+			await insertRemote(name, 
+				remoteUserConnectionGetter,
+				async () => { 
+					return vscode.window.showInputBox({
+						placeHolder: `输入原文`
+					})
+				}
+			);
 		}
-		await insertRemote(name, async () => { return vscode.window.showInputBox({
-			placeHolder: `输入原文`
-		})});
 	});
 
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
@@ -388,30 +429,33 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		const type = DictSettings.getDictType(name);
-		if (type != 'remote') {
+		if (type == DictType.Local) {
 			insertLocal(name);
 			return;
-		}
-		await insertRemote(name, async () => {
-			let editor = vscode.window.activeTextEditor;
-			if (editor && !editor.selection.isEmpty) {
-				const rawText = editor.document.getText(editor.selection);
-				return rawText;
+		} else {
+			const rawTextGetter = async () => {
+				let editor = vscode.window.activeTextEditor;
+				if (editor && !editor.selection.isEmpty) {
+					const rawText = editor.document.getText(editor.selection);
+					return rawText;
+				}
+				return '';
+			};
+			if (type == DictType.RemoteURL) {
+				await insertRemote(name, remoteURLConnectionGetter, rawTextGetter);
+			} else {
+				await insertRemote(name, remoteUserConnectionGetter, rawTextGetter);
 			}
-			return '';
-		});
+		} 
 	});
 
-	async function updateDictRemote(name: string, rawText: string, wantDelete: boolean) {
-		const username = DictSettings.getSimpleTMUsername(name);
-		const apiToken = DictSettings.getSimpleTMApiToken(name);
+	async function updateDictRemote(name: string, rawText: string, wantDelete: boolean, connectionGetter: (dictName: string) => Promise<any>) {
+		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
 		if (!username || !apiToken) {
 			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
 			return;
 		}
-		const BASE_URL = DictSettings.getSimpleTMUrl(name);
-		let GameTitle = DictSettings.getGameTitle(name);
-		if (!GameTitle) {
+		if (!gameTitle) {
 			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
 			return;
 		}
@@ -419,7 +463,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const oldValue = dictNode?.findEntryValue(rawText);
 		let translate: string | undefined = '';
 		if (!wantDelete) {
-			translate = await vscode.window.showInputBox({ placeHolder: '(' + GameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，按Esc取消`, value: oldValue, ignoreFocusOut: true })	
+			translate = await vscode.window.showInputBox({ placeHolder: '(' + gameTitle + `)输入"${rawText}"的译文，输入空字符串删除译文，按Esc取消`, value: oldValue, ignoreFocusOut: true })	
 			if (translate === undefined) {
 				return; //cancelled
 			}
@@ -447,12 +491,12 @@ export function activate(context: vscode.ExtensionContext) {
 		var msg = "";
 		if (translate) {
 			msg = rawText + "->" + translate;
-			fullURL = BASE_URL + "/api/update/" + GameTitle + "/" + rawText + "/" + translate;
+			fullURL = BASE_URL + "/api/update/" + gameTitle + "/" + rawText + "/" + translate;
 			fullURL = encodeURI(fullURL);
 			makeRequest(fullURL);
 		} else {
 			msg = "deleted: " + rawText;
-			fullURL = BASE_URL + "/api/delete/" + GameTitle + "/" + rawText
+			fullURL = BASE_URL + "/api/delete/" + gameTitle + "/" + rawText
 			fullURL = encodeURI(fullURL);
 			vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否')
 			.then(result => {
@@ -508,12 +552,13 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		const type = DictSettings.getDictType(name);
-		if (type != 'remote') {
+		if (type == DictType.Local) {
 			await updateDictLocal(name, rawText, wantDelete);
-			return;
+		} else if (type == DictType.RemoteURL) {
+			await updateDictRemote(name, rawText, wantDelete, remoteURLConnectionGetter);
+		} else {
+			await updateDictRemote(name, rawText, wantDelete, remoteUserConnectionGetter);
 		}
-
-		await updateDictRemote(name, rawText, wantDelete);
 	});
 	registerCommand(context, 'Extension.dltxt.context_menu_update', async　function () {
 		let editor = vscode.window.activeTextEditor;
@@ -580,9 +625,9 @@ export function updateKeywordDecorations() {
 		}
 
 		let keywords = [];
-		if (type === 'local') {
+		if (type === DictType.Local) {
 			keywords = DictSettings.getLocalDictKeys(dictName);
-		} else {
+		} else if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
 			let game : string | undefined = DictSettings.getGameTitle(dictName);
 			if (!game) {
 				continue;
@@ -706,7 +751,7 @@ export async function migration(context: vscode.ExtensionContext) {
 		}
 		allDicts.push(name);
 		await DictSettings.setAllDictNames(allDicts);
-		dictTree?.addRemoteDict(name, {url: url, user: user, api: api, game: game});
+		dictTree?.addRemoteUserDict(name, {url: url, user: user, api: api, game: game});
 		vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
 	}
 }

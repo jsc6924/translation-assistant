@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
@@ -216,8 +216,8 @@ export namespace dict_view
             this.refresh();
         }
 
-        addRemoteDict(name: string, values? : any): boolean {
-            DictSettings.setDictType(name, 'remote');
+        addRemoteUserDict(name: string, values? : any): boolean {
+            DictSettings.setDictType(name, DictType.RemoteUser);
             if (values) {
                 DictSettings.setSimpleTMUrl(name, values.url);
                 DictSettings.setSimpleTMApiToken(name, values.api);
@@ -246,8 +246,26 @@ export namespace dict_view
             return true;
         }
 
+        addRemoteURLDict(name: string): boolean {
+            DictSettings.setDictType(name, DictType.RemoteURL);
+            const simpleTMNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
+            const simpleTMConfigNode = new DictConfigRootItem(this, '连接', name, vscode.TreeItemCollapsibleState.Collapsed);
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode,  `共享URL`, `dltxt.dict.${name}.shared_url`, false, true));
+            simpleTMNode.children.push(simpleTMConfigNode);
+
+            const styleNode = this.constructStyleNode(name);
+            simpleTMNode.children.push(styleNode);
+
+            simpleTMNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            simpleTMNode.children.push(simpleTMNode.contentNode);
+            
+            this.roots.push(simpleTMNode);
+            this.refresh(simpleTMNode);
+            return true;
+        }
+
         addLocalDict(name: string): boolean {
-            DictSettings.setDictType(name, 'local');
+            DictSettings.setDictType(name, DictType.Local);
             const rootNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
             const simpleTMConfigNode = new DictConfigRootItem(this, '连接', name, vscode.TreeItemCollapsibleState.Collapsed);
             simpleTMConfigNode.children.push(
@@ -344,9 +362,13 @@ export namespace dict_view
                 
                 for(const name of dictNames) {
                     const type = DictSettings.getDictType(name);
-                    if (type == 'remote') {
-                        this.addRemoteDict(name);
-                    } else if (type == 'local') {
+                    if (type == DictType.RemoteUser) {
+                        this.addRemoteUserDict(name);
+                    }
+                    else if (type == DictType.RemoteURL) {
+                        this.addRemoteURLDict(name);
+                    }
+                    else if (type == DictType.Local) {
                         this.addLocalDict(name);
                     }
                 }
@@ -357,13 +379,13 @@ export namespace dict_view
                 const type = DictSettings.getDictType(node.dictName);
 
                 let keywords: any[] = [];
-                if (type == 'remote') {
+                if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
                     const game : string | undefined = DictSettings.getGameTitle(node.dictName);
                     if (!game) {
                         return;
                     }
                     keywords = DictSettings.getSimpleTMDictKeys(node.dictName, game);
-                } else if (type == 'local') {
+                } else if (type == DictType.Local) {
                     keywords = DictSettings.getLocalDictKeys(node.dictName);
                 }
 

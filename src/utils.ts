@@ -320,6 +320,12 @@ interface IterableMomento extends vscode.Memento {
   keys(): string[];
 }
 
+export class DictType {
+  static RemoteUser = 'remote';
+  static RemoteURL = 'remote-url';
+  static Local = 'local';
+}
+
 export class DictSettings {
   static getAllDictNames() {
     let v = ContextHolder.getGlobalState(`dltxt.dict.list`) as Array<string>;
@@ -481,6 +487,12 @@ export class DictSettings {
   }
   static setSimpleTMUsername(name: string, value: string | undefined) {
       return ContextHolder.setGlobalState(`dltxt.dict.${name}.username`, value);
+  }
+  static getSimpleTMSharedURL(name: string) : string | undefined {
+      return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.shared_url`) as string;
+  }
+  static setSimpleTMSharedURL(name: string, value: string | undefined) {
+      ContextHolder.setWorkspaceState(`dltxt.dict.${name}.shared_url`, value);
   }
   static getSimpleTMDictKeys(name: string, game: string) {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`) as Array<any>;
