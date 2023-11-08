@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
 		else if (type == '本地术语库') {
 			dictTree?.addLocalDict(name);
 		}
-		dictTree?.refresh();
+		dictTree?.dataChanged();
 	});
 
 	registerCommand(context, 'Extension.dltxt.treeview.dict.removeDict', async (item: dict_view.DictRootItem) => {
