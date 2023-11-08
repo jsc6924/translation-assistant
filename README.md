@@ -263,7 +263,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 #### 远程术语库（SimpleTM）
 支持两种模式访问
-A. 使用用户名+APIToken访问 (SimpleTM User)
+- 使用用户名+APIToken访问 (SimpleTM User)
   1. 访问SimpleTM服务器[simpletm.jscrosoft.com](https://simpletm.jscrosoft.com)并注册账号
   2. 在你的主页下方创建一个项目，项目名称不能和别人已经创建的项目重复，请尽量使用英文和数字
       - 如果你的组里还有其他组员需要加入当前项目，请在主页中点击项目名称，输入该组员的用户id，并给予其相应权限，点击`设置权限`即可。设置成功后，组员的主页中会显示该项目。（权限的具体解释见下一节）
@@ -274,7 +274,7 @@ A. 使用用户名+APIToken访问 (SimpleTM User)
       - 用户名：SimpleTM的账号名
       - APIToken：在你的SimpleTM主页中可以找到，复制黏贴即可
       - 项目名：第2步创建的项目名
-B. 使用别人分享的URL访问 (SimpleTM URL)
+- 使用别人分享的URL访问 (SimpleTM URL)
   1. 添加术语库，选择“远程术语库 (SimpleTM URL)”
   2. 在连接设置中填写URL即可
 
