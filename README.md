@@ -448,6 +448,8 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.9
+- 现在可以直接点击"replace"把术语替换为对应的翻译
 #### 3.8
 - 可以使用SimpleTM共享URL(`simpletm://`)访问在线术语库
 #### 3.7
