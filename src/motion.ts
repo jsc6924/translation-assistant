@@ -333,6 +333,13 @@ export function moveToPrevLine() {
     });
   }
 }
+export function replaceAllInCurLine(old_text: string, new_text: string) {
+  const lookupTable = new Map<string, string | ((arg: string)=>string) >([
+    [old_text, new_text],
+  ]);
+  translateCurrentLine(lookupTable);
+}
+
 function repeatN(s: string, k: number): string {
   let res = '';
   while(k > 0) {
@@ -355,7 +362,7 @@ function repeatStr(s: string, k: number, addSuffix: boolean): string {
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/っ/g, ''],
     [/だめ/g, '不行'],
-    [/[れぺ][ろる]/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
+    [/[れぺ][ろる]+/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
     [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
     [/[ちじぢ]ゅ[うぅ]?/g, '啾'],
     [/りゅ/g, '噜'],
@@ -374,7 +381,7 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/[ひき][ゃ]?/g, '呀'],
     [/く/g, '咕'],
     [/ぐ/g, '咕'],
-    [/ぬ/g, '努'],
+    [/ぬ/g, '呶'],
     [/ぱ[ん]?/g, '啪'],
     [/は[ん]?/g, '哈'],
     [/ぷ[ん]?/g, '噗'],
@@ -383,7 +390,8 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
 ]);
 
-export function translateCurrentLine() {
+export function translateCurrentLine(
+  lookupTable:  Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
@@ -401,7 +409,7 @@ export function translateCurrentLine() {
     return;
   }
   let replacedLine = curLine;
-  for (const [k,v] of lineTranslateTable) {
+  for (const [k,v] of lookupTable) {
     if (typeof v == "string") {
       replacedLine = replacedLine.replace(k, v);
     } else {

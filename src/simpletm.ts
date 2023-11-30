@@ -608,9 +608,6 @@ export function updateKeywordDecorations() {
         return;
     }
 
-
-	
-
 	const dictNames = DictSettings.getAllDictNames();
 	for (const dictName of dictNames) {
 		const {deco, oldDeco, changed} = DictSettings.getDictDecoration(dictName);
@@ -665,9 +662,11 @@ export function updateKeywordDecorations() {
 				const index = endIndex + 1 - keyword.length;
 				const startPos = activeEditor.document.positionAt(index);
 				const endPos = activeEditor.document.positionAt(index + keyword.length);
-				const word = dict.get(keyword)?.replace(/"/g, '');
-				const linkCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word as string)}"})`;
-				const hoverMarkdown = new vscode.MarkdownString(`${word} ${linkCommand}`);
+				const word = dict.get(keyword)?.replace(/"/g, '') as string;
+				const originalWord = keyword.replace(/"/g, '') as string;
+				const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word)}"})`;
+				const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInCurLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}"})`;
+				const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}`);
 				hoverMarkdown.isTrusted = true;
 				const decoration = {
 					range: new vscode.Range(startPos, endPos),

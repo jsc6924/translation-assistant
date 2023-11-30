@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.8.1",
+	"version": "3.9.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -101,6 +101,22 @@
 						"name": "text",
 						"type": "string",
 						"description": "Text to copy"
+					}
+				]
+			},
+			{
+				"command": "Extension.dltxt.replaceAllInCurLine",
+				"title": "当前行内全部替换",
+				"args": [
+					{
+						"name": "old_text",
+						"type": "string",
+						"description": "original text"
+					},
+					{
+						"name": "new_text",
+						"type": "string",
+						"description": "new text"
 					}
 				]
 			},

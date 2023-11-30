@@ -145,6 +145,10 @@ export function activate(context: vscode.ExtensionContext) {
 		motion.deleteUntil(true, true);
 	});
 
+	registerCommand(context, 'Extension.dltxt.replaceAllInCurLine', (arg) => {
+		motion.replaceAllInCurLine(arg.old_text, arg.new_text);
+	})
+
 	const repeatFirstFunc = () => {
 		let editor = vscode.window.activeTextEditor;
 		let document = editor?.document;
