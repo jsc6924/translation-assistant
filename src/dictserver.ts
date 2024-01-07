@@ -10,15 +10,17 @@ export async function activate(context: vscode.ExtensionContext) {
 		if (!editor || !editor.selection)
 			return;
 		let word = editor.document.getText(editor.selection);
-		dictServerSearch(word);
+		dictServerSearch(context, word);
 	});
 }
 
-function getWebviewContent(jsonString: string): string {
+function getWebviewContent(scritpUri: vscode.Uri, jsonString: string): string {
     return `
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
                 body {
                     white-space: pre-wrap;
@@ -26,12 +28,14 @@ function getWebviewContent(jsonString: string): string {
             </style>
         </head>
         <body>
-            <pre>${jsonString}</pre>
+            <script src="${scritpUri}"></script>
+            <div id="view-root"></div>
+            <pre id='raw-data' hidden>${jsonString}</pre> 
         </body>
         </html>`;
 }
 
-async function dictServerSearch(word: string) {
+async function dictServerSearch(context: vscode.ExtensionContext, word: string) {
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
     const baseURL = config.get('baseURL') as string;
     const maxLen = config.get('displayCount') as number;
@@ -63,10 +67,15 @@ async function dictServerSearch(word: string) {
         'jsonViewer',
         `"${word}"的搜索结果`,
         vscode.ViewColumn.One,
-        {}
+        {
+            // Enable scripts in the webview
+            enableScripts: true
+        }
     );
 
+    const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'dictserver.js'));
+
     // Set the HTML content
-    panel.webview.html = getWebviewContent(jsonData);
+    panel.webview.html = getWebviewContent(scriptUri, jsonData);
     panel.reveal();
 }
