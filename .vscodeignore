@@ -1,6 +1,5 @@
 .vscode/**
 .vscode-test/**
-src/**
 imgs/
 data/
 node_modules

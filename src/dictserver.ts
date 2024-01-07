@@ -62,12 +62,17 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
             }
         }
     
-        response = await axios.post(resolve(baseURL, 'details'), {
-            'objectIds': objectIds
-        });
+        if (objectIds.length > 0) {
+            response = await axios.post(resolve(baseURL, 'details'), {
+                'objectIds': objectIds
+            });
+        } else {
+            response = { data: { words: [] } }
+        }
+        
     } catch(err) {
         channel.appendLine(`查询时发生错误${err}`);
-        return;
+        response = { data: { words: [] } };
     }
 
     let jsonData = JSON.stringify(response.data, null, 2);

@@ -254,7 +254,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 ![dict-server-1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-1.png?raw=true)
 
-初次使用时会下载默认的辞典服务器（MOJi辞书），约15M，并自动启动。等待一会过后会显示搜索结果。
+初次使用时会下载默认的辞典服务器（MOJi辞书），约15M，并自动启动。如果系统询问是否同意网络连接，请点击同意。等待一会过后会显示搜索结果。
 
 ![dict-server-2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-2.png?raw=true)
 
