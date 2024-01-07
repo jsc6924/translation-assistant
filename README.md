@@ -249,6 +249,7 @@ DLTXT默认支持以下格式（用横线隔开）
 ### 使用默认辞典服务器（MOJi辞书）
 
 #### 快速使用
+
 在文本中选中一个单词，右键后点击`使用辞典服务器搜索`即可
 
 ![dict-server-1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-1.png?raw=true)
@@ -262,29 +263,39 @@ DLTXT默认支持以下格式（用横线隔开）
 使用以上的方式打开的服务器，在当前vscode窗口关闭时也会一起被关闭。
 
 #### 登录MOJi
+
 由于MOJi部分词汇语法需要登录后才能显示，默认辞典服务器可以使用以下方式登录。（不登录应该也不影响使用）
 
 在设置中搜索`dltxt dict`，填写以下信息
+
 ![dict-server-4](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-4.png?raw=true)
+
 ```
 --username <MOJi辞书用户名> --password <密码> 
 ```
+
 然后重启vsocde即可（如果服务器还没启动，不重启也可以）。
 注意用户名和密码里都不能有空格，如果密码有空格请更改密码。
 如果登录成功的话，可以在服务器显示的log中找到一行类似这样的
+
 ```
 dict-server: 2024/01/07 11:42:00 Get session token = r:a2143f4302ef987895bad01cabcdc91b
 ```
 
 #### 更新辞典服务器版本
+
 由于MOJi官方没有公开API，如果目前API被更改会随时导致辞典服务器不可用，当这种情况发生时辞典服务器需要更新。请到[这里](https://github.com/jsc723/moji-proxy-server/releases/tag/latest)下载默认辞典服务器的最新版本（虽然最新版本如果没人更新，也可能用不了，不过MOJi好像也没有频繁更新API），下载后把文件路径填写到以下（用户）设置中
+
 ![dict-server-3](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-3.png?raw=true)
+
 然后重启vsocde即可（如果服务器还没启动，不重启也可以）。
 
 ### 使用自定义的服务器
+
 你也可以使用任何喜欢的编程语言，自己实现辞典服务器，只要实现[默认辞典服务器](https://github.com/jsc723/moji-proxy-server)中定义的API即可。理论上可以使用任何查词网站，甚至使用本地辞典查词。
 
 dltxt默认辞典服务器的端口号为9285，如果需要更改端口号，或者你的辞典服务器不在本地，可以更改以下设置
+
 ![dict-server-5](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-5.png?raw=true)
 
 在查询单词前运行你的辞典服务器即可。
