@@ -244,24 +244,24 @@ DLTXT默认支持以下格式（用横线隔开）
 
 
 ## 联网查词（辞典服务器）
-本功能实现了联网查词的功能，默认使用Moji辞书。dltxt不直接访问Moji等网站，而是通过“辞典服务器”实现的接口，让辞典服务器去查询。这样做是为了减小本插件与可靠性低的爬虫代码之间的耦合。由于对网站的直接查询全部由辞典服务器实现，用户也可以自己编写服务器，使用自己喜欢的网站查词。
+本功能实现了联网查词的功能，默认使用MOJi辞书。dltxt不直接访问MOJi等网站，而是通过“辞典服务器”实现的接口，让辞典服务器去查询。这样做是为了减小本插件与可靠性低的爬虫代码之间的耦合。由于对网站的直接查询全部由辞典服务器实现，用户也可以自己编写服务器，使用自己喜欢的网站查词。
 
-### 使用默认辞典服务器（Moji辞书）
+### 使用默认辞典服务器（MOJi辞书）
 
 #### 快速使用
 在文本中选中一个单词，右键后点击`使用辞典服务器搜索`即可
 ![dict-server-1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-1.png?raw=true)
-初次使用时会下载默认的辞典服务器（Moji辞书），约15M，并自动启动。等待一会过后会显示搜索结果。
+初次使用时会下载默认的辞典服务器（MOJi辞书），约15M，并自动启动。等待一会过后会显示搜索结果。
 ![dict-server-2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-2.png?raw=true)
 使用以上的方式打开的服务器，在当前vscode窗口关闭时也会一起被关闭。
 
-#### 登录Moji
-由于Moji部分词汇语法需要登录后才能显示，默认辞典服务器可以使用以下方式登录。（不登录应该也不影响使用）
+#### 登录MOJi
+由于MOJi部分词汇语法需要登录后才能显示，默认辞典服务器可以使用以下方式登录。（不登录应该也不影响使用）
 
 在设置中搜索`dltxt dict`，填写以下信息
 ![dict-server-4](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-4.png?raw=true)
 ```
---username <Moji辞书用户名> --password <密码> 
+--username <MOJi辞书用户名> --password <密码> 
 ```
 然后重启vsocde即可（如果服务器还没启动，不重启也可以）。
 注意用户名和密码里都不能有空格，如果密码有空格请更改密码。
@@ -271,7 +271,7 @@ dict-server: 2024/01/07 11:42:00 Get session token = r:a2143f4302ef987895bad01ca
 ```
 
 #### 更新辞典服务器版本
-由于Moji官方没有公开API，如果目前API被更改会随时导致辞典服务器不可用，当这种情况发生时辞典服务器需要更新。请到[这里](https://github.com/jsc723/moji-proxy-server/releases/tag/latest)下载默认辞典服务器的最新版本（虽然最新版本如果没人更新，也可能用不了，不过Moji好像也没有频繁更新API），下载后把文件路径填写到以下（用户）设置中
+由于MOJi官方没有公开API，如果目前API被更改会随时导致辞典服务器不可用，当这种情况发生时辞典服务器需要更新。请到[这里](https://github.com/jsc723/moji-proxy-server/releases/tag/latest)下载默认辞典服务器的最新版本（虽然最新版本如果没人更新，也可能用不了，不过MOJi好像也没有频繁更新API），下载后把文件路径填写到以下（用户）设置中
 ![dict-server-3](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-3.png?raw=true)
 然后重启vsocde即可（如果服务器还没启动，不重启也可以）。
 
@@ -492,6 +492,7 @@ vsce publish
 ## Release Notes
 #### 3.10
 - 增加辞典服务器查词功能
+  - 默认使用MOJi查词
 #### 3.9
 - 现在可以直接点击"replace"把术语替换为对应的翻译
 #### 3.8
@@ -607,20 +608,20 @@ vsce publish
 #### 2.10
 - 自定义省略号，破折号，波浪号
 #### 2.9
-- 删除moji查词
+- 删除MOJi查词
 - 优化部分算法
 #### 2.8
 - 添加快捷键
-- 修复moji
+- 修复MOJi
 
 #### 2.7
 - 增加调整格式的快捷键
 
 #### 2.6
-- Moji辞書支持登录账号
+- MOJi辞書支持登录账号
 
 #### 2.5
-- Moji辞書
+- MOJi辞書
 
 #### 2.4
 - 大幅提高文本格式化算法可靠性，解决了添括号时对『双层直角括号』处理不正确的问题
