@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
-import { registerCommand, showOutputText } from './utils';
+import { downloadFile, registerCommand, showOutputText, sleep } from './utils';
 import { resolve } from 'url';
+import { channel } from './dlbuild';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+import path = require('path');
 const axios = require('axios');
 
 
@@ -36,6 +40,9 @@ function getWebviewContent(scritpUri: vscode.Uri, jsonString: string): string {
 }
 
 async function dictServerSearch(context: vscode.ExtensionContext, word: string) {
+    if (!await ensureDictServerRunning(context)) {
+        return;
+    }
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
     const baseURL = config.get('baseURL') as string;
     const maxLen = config.get('displayCount') as number;
@@ -47,19 +54,21 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
     //console.log(response.data)
 
     let objectIds = [];
-    for (let item of response.data['result']['word']['searchResult']) {
-        if (objectIds.length < maxLen) {
-            objectIds.push(item['targetId'])
+
+    try {
+        for (let item of response.data['result']['word']['searchResult']) {
+            if (objectIds.length < maxLen) {
+                objectIds.push(item['targetId'])
+            }
         }
+    
+        response = await axios.post(resolve(baseURL, 'details'), {
+            'objectIds': objectIds
+        });
+    } catch(err) {
+        channel.appendLine(`查询时发生错误${err}`);
+        return;
     }
-
-    console.log(objectIds)
-
-    response = await axios.post(resolve(baseURL, 'details'), {
-        'objectIds': objectIds
-    });
-
-    //console.log(response.data)
 
     let jsonData = JSON.stringify(response.data, null, 2);
     // Create or reveal the Webview panel
@@ -78,4 +87,76 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
     // Set the HTML content
     panel.webview.html = getWebviewContent(scriptUri, jsonData);
     panel.reveal();
+}
+
+
+async function ensureDictServerRunning(context: vscode.ExtensionContext): Promise<boolean> {
+    const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
+    const baseURL = config.get('baseURL') as string;
+    try {
+        const health = await axios.get(resolve(baseURL, 'healthcheck'));
+        channel.appendLine(`"${resolve(baseURL, 'healthcheck')}" healthcheck 成功`);
+        return true;
+    } catch(err) {
+        channel.appendLine(`"${resolve(baseURL, 'healthcheck')}" healthcheck 失败`);
+    }
+
+    channel.show();
+    try {
+        let executablePath = config.get('executable.path') as string;
+        let executableArgs = config.get('executable.arguments') as string;
+        if (!fs.existsSync(executablePath)) {
+            const executableDir = path.join(context.globalStoragePath, "dict-server");
+            fs.mkdirSync(executableDir, {recursive: true});
+            executablePath = path.join(executableDir, 'dict-server.exe');
+            const downloadURL = 'https://github.com/jsc723/moji-proxy-server/releases/download/v1.0/dict-server.exe';
+            channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
+            await downloadFile(downloadURL, executablePath);
+            channel.appendLine(`下载完成，文件保存在${executablePath}`);
+            config.update('executable.path', executablePath, vscode.ConfigurationTarget.Global);
+            channel.appendLine(`已将服务器文件路径加入vscode全局设置中`);
+        }
+    
+        if (fs.existsSync(executablePath)) {
+            channel.appendLine(`启动${executablePath}`);
+            const argsList = executableArgs.split(/\s+/).filter(arg => arg.trim() !== '');
+            const childProcess = spawn(executablePath, argsList);
+
+            childProcess.stdout.on('data', (data) => {
+                channel.appendLine(`dict-server: ${data}`);
+            });
+        
+            childProcess.stderr.on('data', (data) => {
+                channel.appendLine(`dict-server: ${data}`);
+            });
+        
+            childProcess.on('close', (code) => {
+                throw Error(`服务器退出 ${code}`);
+            });
+        
+            childProcess.on('error', (err) => {
+                throw Error(`无法启动服务器 ${err}`);
+            });
+
+            const maxAttempts = 5;
+    
+            for(let attempt = 0, sleepTime = 2000; attempt < maxAttempts; attempt++, sleepTime *= 1.5) {
+                try {
+                    await sleep(Math.min(8000, sleepTime));
+                    const health = await axios.get(resolve(baseURL, 'healthcheck'));
+                    channel.appendLine(`"${resolve(baseURL, 'healthcheck')}" healthcheck 成功`);
+                    return true;
+                } catch(err) {
+                    channel.appendLine(`"${resolve(baseURL, 'healthcheck')}" healthcheck 失败`);
+                }
+            }
+            throw Error(`healthcheck${maxAttempts}次尝试失败，放弃尝试`);
+        }
+    } catch(err) {
+        channel.appendLine(`${err}`)
+    }
+    
+    channel.appendLine(`无法启动辞典服务器，请检查配置，或手动启动`);
+
+    return false;
 }

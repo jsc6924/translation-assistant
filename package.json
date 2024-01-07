@@ -1030,6 +1030,16 @@
 					"default": "http://localhost:9285/",
 					"description": "辞典服务器的网址（包括端口号）"
 				},
+				"dltxt.y.searchWord.dictserver.executable.path": {
+					"type": "string",
+					"default": "",
+					"description": "辞典服务器的路径（在网址连不上时使用）"
+				},
+				"dltxt.y.searchWord.dictserver.executable.arguments": {
+					"type": "string",
+					"default": "",
+					"description": "辞典服务器的命令行参数（在网址连不上时使用）"
+				},
 				"dltxt.z.api.baidu.AccessKey": {
 					"type": "string",
 					"description": "百度智能云API AccessKey"

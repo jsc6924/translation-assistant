@@ -13,11 +13,6 @@ function createWordElement(wordObject) {
     wordDiv.appendChild(accentElement);
     wordDiv.appendChild(excerptElement);
 
-    wordObject.details.forEach(detail => {
-        const detailDiv = createDetailDiv(detail.title);
-        wordDiv.appendChild(detailDiv);
-    });
-
     wordObject.subDetails.forEach(subDetail => {
         const subDetailDiv = createSubDetailDiv(subDetail.title);
         wordDiv.appendChild(subDetailDiv);
@@ -44,19 +39,13 @@ function createParagraph(text) {
     return paragraph;
 }
 
-function createDetailDiv(title) {
-    const detailDiv = document.createElement('div');
-    detailDiv.classList.add('detail'); // Add a class for styling
-    detailDiv.appendChild(createParagraph(`${title}`));
-    return detailDiv;
-}
 
 function createSubDetailDiv(title) {
     const subDetailDiv = document.createElement('div');
     subDetailDiv.classList.add('sub-detail'); // Add a class for styling
     subDetailDiv.style.border = '1px solid #ddd'; // Example border styling
     subDetailDiv.style.padding = '8px'; // Example padding styling
-    subDetailDiv.appendChild(createParagraph(`${title}`));
+    subDetailDiv.appendChild(createParagraph(`释义：${title}`));
     return subDetailDiv;
 }
 

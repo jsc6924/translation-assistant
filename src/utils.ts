@@ -197,6 +197,9 @@ export function showOutputText(title:string, output: string) {
   return panel;
 }
 
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export async function downloadFile(url: string, filePath: string): Promise<string> {
   const client = new HttpClient("clientTest");
