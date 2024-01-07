@@ -13,6 +13,8 @@ function createWordElement(wordObject) {
     wordDiv.appendChild(accentElement);
     wordDiv.appendChild(excerptElement);
 
+    
+    wordObject.subDetails.sort((a, b) => a.id - b.id);
     wordObject.subDetails.forEach(subDetail => {
         const subDetailDiv = createSubDetailDiv(subDetail.title);
         wordDiv.appendChild(subDetailDiv);

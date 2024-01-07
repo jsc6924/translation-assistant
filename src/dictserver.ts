@@ -109,7 +109,7 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext): Promis
             const executableDir = path.join(context.globalStoragePath, "dict-server");
             fs.mkdirSync(executableDir, {recursive: true});
             executablePath = path.join(executableDir, 'dict-server.exe');
-            const downloadURL = 'https://github.com/jsc723/moji-proxy-server/releases/download/v1.0/dict-server.exe';
+            const downloadURL = 'https://github.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe';
             channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
             await downloadFile(downloadURL, executablePath);
             channel.appendLine(`下载完成，文件保存在${executablePath}`);
@@ -123,19 +123,21 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext): Promis
             const childProcess = spawn(executablePath, argsList);
 
             childProcess.stdout.on('data', (data) => {
-                channel.appendLine(`dict-server: ${data}`);
+                channel.append(`dict-server: ${data}`);
             });
         
             childProcess.stderr.on('data', (data) => {
-                channel.appendLine(`dict-server: ${data}`);
+                channel.append(`dict-server: ${data}`);
             });
         
             childProcess.on('close', (code) => {
-                throw Error(`服务器退出 ${code}`);
+                channel.show();
+                throw Error(`辞典服务器退出 ${code}`);
             });
         
             childProcess.on('error', (err) => {
-                throw Error(`无法启动服务器 ${err}`);
+                channel.show();
+                throw Error(`无法启动辞典服务器 ${err}`);
             });
 
             const maxAttempts = 5;

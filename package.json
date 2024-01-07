@@ -1023,7 +1023,7 @@
 				"dltxt.y.searchWord.dictserver.displayCount": {
 					"type": "number",
 					"default": 5,
-					"description": "辞典服务显示的词条数（最大9）"
+					"description": "辞典服务显示的词条数（最大5）"
 				},
 				"dltxt.y.searchWord.dictserver.baseURL": {
 					"type": "string",
