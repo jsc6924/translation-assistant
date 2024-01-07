@@ -250,10 +250,15 @@ DLTXT默认支持以下格式（用横线隔开）
 
 #### 快速使用
 在文本中选中一个单词，右键后点击`使用辞典服务器搜索`即可
+
 ![dict-server-1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-1.png?raw=true)
+
 初次使用时会下载默认的辞典服务器（MOJi辞书），约15M，并自动启动。等待一会过后会显示搜索结果。
+
 ![dict-server-2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-2.png?raw=true)
+
 下方弹出的窗口可以关闭。
+
 使用以上的方式打开的服务器，在当前vscode窗口关闭时也会一起被关闭。
 
 #### 登录MOJi
