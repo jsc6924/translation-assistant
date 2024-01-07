@@ -32,7 +32,7 @@
 - [侧边栏](#侧边栏)
 - [键盘快捷键](#键盘快捷键)
 - [批量编辑](#批量编辑)
-- [辞典服务器查词](#辞典服务器查词)
+- [联网查词（辞典服务器）](#联网查词（辞典服务器）)
 - [术语库](#术语库)
 - [多文本批量操作](#多文本批量操作)
 - [翻译数据库](#翻译数据库)
@@ -243,23 +243,23 @@ DLTXT默认支持以下格式（用横线隔开）
 例：'あぁぁ' => '啊啊啊～'
 
 
-## 辞典服务器查词
-本功能实现了联网查词的功能，默认使用Moji辞书。用户也可以自己编写服务器，使用自己喜欢的网站查词。
+## 联网查词（辞典服务器）
+本功能实现了联网查词的功能，默认使用Moji辞书。dltxt不直接访问Moji等网站，而是通过“辞典服务器”实现的接口，让辞典服务器去查询。这样做是为了减小本插件与可靠性低的爬虫代码之间的耦合。由于对网站的直接查询全部由辞典服务器实现，用户也可以自己编写服务器，使用自己喜欢的网站查词。
 
 ### 使用默认辞典服务器（Moji辞书）
 
 #### 快速使用
 在文本中选中一个单词，右键后点击`使用辞典服务器搜索`即可
-![dict-server-1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-1?raw=true)
-初次使用时会下载默认的辞典服务器（Moji辞书），并自动启动。等待一会过后会显示搜索结果。
-![dict-server-2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-2?raw=true)
+![dict-server-1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-1.png?raw=true)
+初次使用时会下载默认的辞典服务器（Moji辞书），约15M，并自动启动。等待一会过后会显示搜索结果。
+![dict-server-2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-2.png?raw=true)
 使用以上的方式打开的服务器，在当前vscode窗口关闭时也会一起被关闭。
 
 #### 登录Moji
 由于Moji部分词汇语法需要登录后才能显示，默认辞典服务器可以使用以下方式登录。（不登录应该也不影响使用）
 
 在设置中搜索`dltxt dict`，填写以下信息
-![dict-server-4](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-4?raw=true)
+![dict-server-4](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-4.png?raw=true)
 ```
 --username <Moji辞书用户名> --password <密码> 
 ```
@@ -272,14 +272,14 @@ dict-server: 2024/01/07 11:42:00 Get session token = r:a2143f4302ef987895bad01ca
 
 #### 更新辞典服务器版本
 由于Moji官方没有公开API，如果目前API被更改会随时导致辞典服务器不可用，当这种情况发生时辞典服务器需要更新。请到[这里](https://github.com/jsc723/moji-proxy-server/releases/tag/latest)下载默认辞典服务器的最新版本（虽然最新版本如果没人更新，也可能用不了，不过Moji好像也没有频繁更新API），下载后把文件路径填写到以下（用户）设置中
-![dict-server-3](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-3?raw=true)
+![dict-server-3](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-3.png?raw=true)
 然后重启vsocde即可（如果服务器还没启动，不重启也可以）。
 
 ### 使用自定义的服务器
 你也可以使用任何喜欢的编程语言，自己实现辞典服务器，只要实现[默认辞典服务器](https://github.com/jsc723/moji-proxy-server)中定义的API即可。理论上可以使用任何查词网站，甚至使用本地辞典查词。
 
 dltxt默认辞典服务器的端口号为9285，如果需要更改端口号，或者你的辞典服务器不在本地，可以更改以下设置
-![dict-server-5](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-5?raw=true)
+![dict-server-5](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-5.png?raw=true)
 
 在查询单词前运行你的辞典服务器即可。
 
