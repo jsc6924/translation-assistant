@@ -25,7 +25,7 @@ function createWordElement(wordObject) {
         });
 
         if (subDetailDiv.children.length > 1) {
-            subDetailDiv.children[0].style.paddingBottom = '10px'
+            subDetailDiv.children[0].style.paddingBottom = '15px'
             subDetailDiv.children[0].style.borderBottom = '1px solid #ddd';
         }
     });
