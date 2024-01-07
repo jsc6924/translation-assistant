@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.9.0",
+	"version": "3.10.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -162,6 +162,11 @@
 			{
 				"command": "Extension.dltxt.copy_original",
 				"title": "复制原文到未翻译的译文行",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dictserver.editor.searchWord",
+				"title": "使用辞典服务器搜索",
 				"category": "DLTXT"
 			},
 			{
@@ -725,6 +730,11 @@
 				},
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.dictserver.editor.searchWord",
+					"group": "dltxt.dictserver"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
 					"command": "Extension.dltxt.context_menu_insert",
 					"group": "dltxt.simpleTM.a"
 				},
@@ -1009,6 +1019,16 @@
 					"type": "boolean",
 					"default": true,
 					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
+				},
+				"dltxt.y.searchWord.dictserver.displayCount": {
+					"type": "number",
+					"default": 5,
+					"description": "辞典服务显示的词条数（最大9）"
+				},
+				"dltxt.y.searchWord.dictserver.baseURL": {
+					"type": "string",
+					"default": "http://localhost:9285/",
+					"description": "辞典服务器的网址（包括端口号）"
 				},
 				"dltxt.z.api.baidu.AccessKey": {
 					"type": "string",

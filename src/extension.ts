@@ -20,6 +20,7 @@ import * as simpletm from './simpletm';
 import * as singleline from './singleline';
 import * as auto_format from './auto-format';
 import * as fs from 'fs';
+import * as dictserver from './dictserver';
 import { deflateRawSync } from 'zlib';
 
 
@@ -191,6 +192,7 @@ export function activate(context: vscode.ExtensionContext) {
 	trdb.activate(context, trdb_tree);
 	vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
 	auto_format.activate(context);
+	dictserver.activate(context);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
