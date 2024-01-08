@@ -322,8 +322,6 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
         query: query,
         results: []
     };
-    //const outputLines = [];
-    //outputLines.push(`<p>--------------------"${query}"的搜索结果----------------------`);
     for(const i of res) {
         if (lineNumberSeen.has(i)) {
             continue;
@@ -344,23 +342,16 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
             jpLines: [],
             trLines: []
         }
-        //outputLines.push(`-----------------------[${k++}]${virtualFileName}-----------------------`);
-        //outputLines.push('');
         for(let j = i-1; j <= i+1; j++) {
             if (j > 0 && j < totalTrLines.length) {
                 let docLine = fileLineStart + j - offset;
                 const tag = `${docLine.toString().padStart(6, '0')}`;
-                //outputLines.push(`[${tag}]` + totalRawLines[j].replace(/\s+/g, ''));
-                //outputLines.push(`;[${tag}]` + totalTrLines[j]);
-                //outputLines.push('');
                 singleResult.jpLines.push(`[${tag}]` + totalRawLines[j].replace(/\s+/g, ''));
                 singleResult.trLines.push(`;[${tag}]` + totalTrLines[j]);
             }
         }
         result.results.push(singleResult)
     }
-    //outputLines.push(`----------------------共${k-1}个结果-----------------------`);
-    //outputLines.push('</p>')
     showSearchResultWebView(context, `"${query}"的搜索结果`, result);
 }
 
