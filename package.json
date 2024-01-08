@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.10.6",
+	"version": "3.11.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -96,6 +96,7 @@
 			{
 				"command": "Extension.dltxt.copyToClipboard",
 				"title": "复制到剪贴板",
+				"category": "DLTXT",
 				"args": [
 					{
 						"name": "text",
@@ -107,6 +108,7 @@
 			{
 				"command": "Extension.dltxt.replaceAllInCurLine",
 				"title": "当前行内全部替换",
+				"category": "DLTXT",
 				"args": [
 					{
 						"name": "old_text",
@@ -206,15 +208,18 @@
 			},
 			{
 				"command": "Extension.dltxt.setGlobalState",
-				"title": "更改全局设置"
+				"title": "更改全局设置",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.setWorkspaceState",
-				"title": "更改当前工作区设置"
+				"title": "更改当前工作区设置",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.treeview.dict.addDict",
 				"title": "添加术语库",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/add.svg",
 					"dark": "icons/dark/add.svg"
@@ -223,14 +228,25 @@
 			{
 				"command": "Extension.dltxt.treeview.dict.removeDict",
 				"title": "移除术语库",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/remove.svg",
 					"dark": "icons/dark/remove.svg"
 				}
 			},
 			{
+				"command": "Extension.dltxt.treeview.filter",
+				"title": "过滤术语词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/list-filter.svg",
+					"dark": "icons/dark/list-filter.svg"
+				}
+			},
+			{
 				"command": "Extension.dltxt.treeview.addItem",
 				"title": "添加术语词条",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/add.svg",
 					"dark": "icons/dark/add.svg"
@@ -239,6 +255,7 @@
 			{
 				"command": "Extension.dltxt.treeview.editItem",
 				"title": "编辑术语词条",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/edit.svg",
 					"dark": "icons/dark/edit.svg"
@@ -247,6 +264,7 @@
 			{
 				"command": "Extension.dltxt.treeview.deleteItem",
 				"title": "删除术语词条",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/trash.svg",
 					"dark": "icons/dark/trash.svg"
@@ -255,6 +273,7 @@
 			{
 				"command": "Extension.dltxt.treeview.setClipboardString",
 				"title": "编辑剪贴板",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/edit.svg",
 					"dark": "icons/dark/edit.svg"
@@ -263,6 +282,7 @@
 			{
 				"command": "Extension.dltxt.treeview.writeClipboardString",
 				"title": "插入剪贴板内容",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/debug-step-over.svg",
 					"dark": "icons/dark/debug-step-over.svg"
@@ -271,6 +291,7 @@
 			{
 				"command": "Extension.dltxt.trdb.treeview.deleteDoc",
 				"title": "从翻译数据库中移除",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/trash.svg",
 					"dark": "icons/dark/trash.svg"
@@ -279,6 +300,7 @@
 			{
 				"command": "Extension.dltxt.trdb.treeview.deleteFolder",
 				"title": "从翻译数据库中移除",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/trash.svg",
 					"dark": "icons/dark/trash.svg"
@@ -287,6 +309,7 @@
 			{
 				"command": "Extension.dltxt.trdb.treeview.loadDB",
 				"title": "重新加载翻译数据库",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/sync.svg",
 					"dark": "icons/dark/sync.svg"
@@ -295,6 +318,7 @@
 			{
 				"command": "Extension.dltxt.trdb.treeview.unlock",
 				"title": "手动清除翻译数据库同步锁",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/unlock.svg",
 					"dark": "icons/dark/unlock.svg"
@@ -303,6 +327,7 @@
 			{
 				"command": "Extension.dltxt.trdb.treeview.import",
 				"title": "导入翻译数据库",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/build.svg",
 					"dark": "icons/dark/build.svg"
@@ -311,6 +336,7 @@
 			{
 				"command": "Extension.dltxt.trdb.treeview.export",
 				"title": "导出翻译数据库",
+				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/export.svg",
 					"dark": "icons/dark/export.svg"
@@ -318,19 +344,23 @@
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addDoc",
-				"title": "DLTXT: 添加到翻译数据库"
+				"title": "添加到翻译数据库",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.trdb.context.addFolder",
-				"title": "DLTXT: 添加文件夹到翻译数据库"
+				"category": "DLTXT",
+				"title": "添加文件夹到翻译数据库"
 			},
 			{
 				"command": "Extension.dltxt.trdb.editor.searchWord",
-				"title": "DLTXT: 在翻译数据库搜索单词"
+				"category": "DLTXT",
+				"title": "在翻译数据库搜索单词"
 			},
 			{
 				"command": "Extension.dltxt.trdb.editor.searchText",
-				"title": "DLTXT: 在翻译数据库搜索句子"
+				"category": "DLTXT",
+				"title": "在翻译数据库搜索句子"
 			},
 			{
 				"command": "Extension.dltxt.trdb.debug.showDB",
@@ -737,16 +767,6 @@
 					"when": "editorHasSelection && resourceLangId == dltxt",
 					"command": "Extension.dltxt.dictserver.editor.searchWord",
 					"group": "dltxt.dictserver"
-				},
-				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.context_menu_insert",
-					"group": "dltxt.simpleTM.a"
-				},
-				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.context_menu_update",
-					"group": "dltxt.simpleTM.a"
 				}
 			],
 			"dltxt-editor-submenu": [
@@ -784,6 +804,16 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.core.context.autoDetectFormat",
 					"group": "dltxt.other"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_insert",
+					"group": "dltxt.simpleTM.a"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_update",
+					"group": "dltxt.simpleTM.a"
 				}
 			],
 			"view/title": [
@@ -825,9 +855,14 @@
 					"group": "inline@1"
 				},
 				{
-					"command": "Extension.dltxt.treeview.addItem",
+					"command": "Extension.dltxt.treeview.filter",
 					"when": "view == dltxt-dict && viewItem == dict-entry-set-item",
 					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.addItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-set-item",
+					"group": "inline@2"
 				},
 				{
 					"command": "Extension.dltxt.treeview.editItem",

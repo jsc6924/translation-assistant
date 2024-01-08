@@ -180,6 +180,8 @@ export namespace dict_view
         children: DictEntryItem[] = [];
         iconPath = new vscode.ThemeIcon('book');
         name: string  = '';
+        filter: string = '';
+        filterEnabled: boolean = false;
         constructor(name: string, treeview: DictTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, label, state);
             this.name = name;
@@ -187,6 +189,27 @@ export namespace dict_view
         clear() {
             this.children = [];
             this.treeview.dataChanged();
+        }
+        toggleFilter(filter: string) {
+            if (this.filterEnabled) {
+                this.filter = '';
+                this.label = '内容';
+            } else {
+                this.filter = filter;
+                this.label = `内容（查找：${filter}）`;
+            }
+            this.filterEnabled = !this.filterEnabled;
+        }
+        filterIsEnabled() {
+            return this.filterEnabled;
+        }
+        getChildren() {
+            if (!this.filterEnabled) {
+                return this.children;
+            }
+            return this.children.filter((d => {
+                return d.key.includes(this.filter) || d.value.includes(this.filter);
+            }))
         }
     }
     class DictEntryItem extends DictItem {
@@ -227,6 +250,7 @@ export namespace dict_view
 
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
         public constructor()  {
+            vscode.commands.registerCommand('Extension.dltxt.treeview.filter', r => this.filterDict(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.addItem', r => this.addItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.deleteItem', r => this.deleteItem(r));
@@ -334,7 +358,7 @@ export namespace dict_view
                 return Promise.resolve((element as DictRootItem).children);
             }
             if (element.contextValue == 'dict-entry-set-item') {
-                return Promise.resolve((element as DictEntrySetItem).children);
+                return Promise.resolve((element as DictEntrySetItem).getChildren());
             }
             if (element.contextValue == 'dict-config-root-item') {
                 return Promise.resolve((element as DictConfigRootItem).children);
@@ -347,6 +371,21 @@ export namespace dict_view
 
         public addItem(item: DictEntrySetItem) {
             vscode.commands.executeCommand('Extension.dltxt.dict_insert', item.name)
+        }
+
+        public async filterDict(item: DictEntrySetItem) {
+            if (item.filterIsEnabled()) {
+                item.toggleFilter('');
+            } else {
+                const r = await vscode.window.showInputBox({
+                    prompt: `输入想要查找的内容`
+                });
+                if (!r) {
+                    return;
+                }
+                item.toggleFilter(r);
+            }
+            this.dataChanged();
         }
 
         // this is called when we click an item
