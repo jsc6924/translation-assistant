@@ -14,6 +14,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		if (!editor || !editor.selection)
 			return;
 		let word = editor.document.getText(editor.selection);
+        if (word.length == 0) {
+            vscode.window.showInformationMessage('请选中一段内容后再查询');
+            return;
+        }
 		dictServerSearch(context, word);
 	});
 }

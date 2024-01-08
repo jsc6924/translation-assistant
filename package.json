@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.10.5",
+	"version": "3.10.6",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -477,6 +477,11 @@
 			{
 				"command": "Extension.dltxt.translateCurrentLine",
 				"key": "ctrl+alt+.",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.dictserver.editor.searchWord",
+				"key": "ctrl+alt+m",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
