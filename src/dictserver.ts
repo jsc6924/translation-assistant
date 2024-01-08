@@ -5,6 +5,7 @@ import { channel } from './dlbuild';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import path = require('path');
+import FlexSearch from 'flexsearch';
 const axios = require('axios');
 
 
@@ -20,11 +21,16 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 		dictServerSearch(context, word);
 	});
+
+    const hoverProvider = new DictServerHoverProvider(context);
+    const disposable = vscode.languages.registerHoverProvider({ scheme: 'file', language: 'dltxt' }, hoverProvider);
+
+    context.subscriptions.push(disposable);
 }
 
 
 async function dictServerSearch(context: vscode.ExtensionContext, word: string) {
-    if (!await ensureDictServerRunning(context)) {
+    if (!await ensureDictServerRunning(context, false)) {
         return;
     }
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
@@ -80,7 +86,7 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
 }
 
 
-async function ensureDictServerRunning(context: vscode.ExtensionContext): Promise<boolean> {
+async function ensureDictServerRunning(context: vscode.ExtensionContext, autoStart: boolean): Promise<boolean> {
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
     const baseURL = config.get('baseURL') as string;
     try {
@@ -88,6 +94,9 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext): Promis
         channel.appendLine(`"${resolve(baseURL, 'healthcheck')}" healthcheck 成功`);
         return true;
     } catch(err) {
+        if (!autoStart) {
+            return false;
+        }
         channel.appendLine(`"${resolve(baseURL, 'healthcheck')}" healthcheck 失败`);
     }
 
@@ -151,4 +160,103 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext): Promis
     channel.appendLine(`无法启动辞典服务器，请检查配置，或手动启动`);
 
     return false;
+}
+
+
+async function dictServerSearchLite(context: vscode.ExtensionContext, word: string): Promise<any> {
+    if (!await ensureDictServerRunning(context, true)) {
+        return undefined;
+    }
+    const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
+    const baseURL = config.get('baseURL') as string;
+    const maxLen = 1;
+    console.log(baseURL)
+    let response = await axios.post(resolve(baseURL, 'search'), {
+        query: word
+    });
+
+    //console.log(response.data)
+
+    let objectIds = [];
+
+    try {
+        for (let item of response.data['result']['word']['searchResult']) {
+            if (objectIds.length < maxLen) {
+                objectIds.push(item['targetId'])
+            }
+        }
+    
+        if (objectIds.length > 0) {
+            response = await axios.post(resolve(baseURL, 'details'), {
+                'objectIds': objectIds
+            });
+        } else {
+            response = { data: { words: [] } }
+        }
+        
+    } catch(err) {
+        channel.appendLine(`查询时发生错误${err}`);
+        response = { data: { words: [] } };
+    }
+
+    return response.data;
+}
+
+
+export class DictServerHoverProvider implements vscode.HoverProvider {
+
+    context: vscode.ExtensionContext;
+    constructor(context: vscode.ExtensionContext) {
+        this.context = context;
+    }
+
+    provideHover(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        token: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.Hover> {
+        // Check if there is an active selection
+        const activeSelection = vscode.window.activeTextEditor?.selection;
+
+        if (!activeSelection || activeSelection.isEmpty) {
+            // No selection, return undefined to indicate no hover information
+            return undefined;
+        }
+
+        // Get the selected text
+        const selectedText = document.getText(activeSelection);
+
+        const hover = new vscode.Hover(new vscode.MarkdownString(selectedText));
+
+        // const p = new Promise<vscode.Hover>((resolve, reject) => {
+        //     resolve(hover);
+        // })
+        // return p;
+
+        const resultPromise = dictServerSearchLite(this.context, selectedText);
+
+        return resultPromise.then((result) => {
+            if (!result || !result.words || result.words.length < 1) {
+                return undefined;
+            }
+            const hoverText = getWordMarkdown(result.words[0]);
+            const hover = new vscode.Hover(new vscode.MarkdownString(hoverText));
+            return hover;
+        }).catch((err) => {
+            return undefined;
+        })
+
+    }
+}
+
+function getWordMarkdown(word: any) {
+    let res = `### ${word.spell}\n\n${word.excerpt}\n\n`;
+
+    if (word.subDetails) {
+        let idx = 1;
+        for (let sub of word.subDetails) {
+            res += `**(${idx++})** ${sub.title}\n\n`;
+        }
+    }
+    return res;
 }

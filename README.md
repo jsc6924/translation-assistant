@@ -263,6 +263,10 @@ DLTXT默认支持以下格式（用横线隔开）
 
 使用以上的方式打开的服务器，在当前vscode窗口关闭时也会一起被关闭。
 
+在服务器已经启动的情况下，选中一个单词，把鼠标移动到选中的内容上，会自动使用辞典服务器进行查询，并显示结果摘要。
+
+![dict-server-6](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-6.png?raw=true)
+
 #### 登录MOJi
 
 由于MOJi部分词汇语法需要登录后才能显示，默认辞典服务器可以使用以下方式登录。（不登录应该也不影响使用）
@@ -290,6 +294,8 @@ dict-server: 2024/01/07 11:42:00 Get session token = r:a2143f4302ef987895bad01ca
 ![dict-server-3](https://github.com/jsc6924/translation-assistant/blob/master/imgs/dict-server-3.png?raw=true)
 
 然后重启vsocde即可（如果服务器还没启动，不重启也可以）。
+
+如果想让vscode自动下载最新版本，可以把上面那个设置的路径删掉，下一次查词时vscode会自动下载最新版本。
 
 ### 使用自定义的服务器
 
@@ -508,6 +514,8 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.12
+- 把选中一个词，把鼠标移动到上面会自动使用辞典服务器查词
 #### 3.11
 - 给术语库TreeView添加筛选（查找）功能
 - 更新TRDB翻译数据库搜索结果的WebView
