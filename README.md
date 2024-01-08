@@ -514,6 +514,7 @@ vsce publish
 ## Release Notes
 #### 3.12
 - 把选中一个词，把鼠标移动到上面会自动使用辞典服务器查词
+- 添加默认辞典服务器Gitee下载源
 #### 3.11
 - 给术语库TreeView添加筛选（查找）功能
 - 更新TRDB翻译数据库搜索结果的WebView

@@ -30,7 +30,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
 async function dictServerSearch(context: vscode.ExtensionContext, word: string) {
-    if (!await ensureDictServerRunning(context, false)) {
+    if (!await ensureDictServerRunning(context, true)) {
         return;
     }
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
@@ -108,9 +108,17 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
             const executableDir = path.join(context.globalStoragePath, "dict-server");
             fs.mkdirSync(executableDir, {recursive: true});
             executablePath = path.join(executableDir, 'dict-server.exe');
-            const downloadURL = 'https://github.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe';
-            channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
-            await downloadFile(downloadURL, executablePath);
+            const downloadURLs = [
+                'https://github.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe', 
+                'https://gitee.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe'];
+            for(const downloadURL of downloadURLs) {
+                try {
+                    channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
+                    await downloadFile(downloadURL, executablePath);
+                } catch (err) {
+                    channel.appendLine(`下载失败`);
+                }
+            }
             channel.appendLine(`下载完成，文件保存在${executablePath}`);
             config.update('executable.path', executablePath, vscode.ConfigurationTarget.Global);
             channel.appendLine(`已将服务器文件路径加入vscode全局设置中`);
@@ -164,7 +172,7 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
 
 
 async function dictServerSearchLite(context: vscode.ExtensionContext, word: string): Promise<any> {
-    if (!await ensureDictServerRunning(context, true)) {
+    if (!await ensureDictServerRunning(context, false)) {
         return undefined;
     }
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
