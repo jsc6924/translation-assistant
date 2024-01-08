@@ -18,18 +18,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 }
 
-function getWebviewContent(scritpUri: vscode.Uri, jsonString: string): string {
+function getWebviewContent(scritpUri: vscode.Uri, cssUri: vscode.Uri, jsonString: string): string {
     return `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {
-                    white-space: pre-wrap;
-                }
-            </style>
+            <link rel="stylesheet" type="text/css" href="${cssUri}">
         </head>
         <body>
             <script src="${scritpUri}"></script>
@@ -88,9 +84,10 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
     );
 
     const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'dictserver.js'));
+    const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'dictserver.css'));
 
     // Set the HTML content
-    panel.webview.html = getWebviewContent(scriptUri, jsonData);
+    panel.webview.html = getWebviewContent(scriptUri, cssUri, jsonData);
     panel.reveal();
 }
 

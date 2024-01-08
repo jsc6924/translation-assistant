@@ -1,7 +1,8 @@
 
 function createWordElement(wordObject) {
     const wordDiv = document.createElement('div');
-    wordDiv.classList.add('dict-word'); // Add a class for styling
+    wordDiv.classList.add('dict-word');
+    wordDiv.classList.add('dict-widget');
 
     const spellElement = createParagraph(`${wordObject.spell}`);
     const pronElement = createParagraph(`${wordObject.pron}`);
@@ -26,15 +27,9 @@ function createWordElement(wordObject) {
 
         if (subDetailDiv.children.length > 1) {
             subDetailDiv.children[0].style.paddingBottom = '15px'
-            subDetailDiv.children[0].style.borderBottom = '1px solid #ddd';
+            subDetailDiv.children[0].style.borderBottom = '1px solid';
         }
     });
-
-    // Add some basic styling
-    wordDiv.style.border = '1px solid #ccc';
-    wordDiv.style.padding = '10px';
-    wordDiv.style.marginBottom = '20px';
-    wordDiv.style.borderRadius = "10px"
 
     // Append the main div to the body (you may need to adjust this based on your DOM structure)
     document.body.appendChild(wordDiv);
@@ -43,6 +38,7 @@ function createWordElement(wordObject) {
 
 function createParagraph(text) {
     const paragraph = document.createElement('p');
+    paragraph.classList.add('dict-widget');
     paragraph.textContent = text;
     return paragraph;
 }
@@ -50,11 +46,8 @@ function createParagraph(text) {
 
 function createSubDetailDiv(title) {
     const subDetailDiv = document.createElement('div');
-    subDetailDiv.classList.add('sub-detail'); // Add a class for styling
-    subDetailDiv.style.border = '1px solid #ddd'; // Example border styling
-    subDetailDiv.style.borderRadius = '5px'; // Example border styling
-    subDetailDiv.style.padding = '8px'; // Example padding styling
-    subDetailDiv.style.marginBottom = '8px';
+    subDetailDiv.classList.add('sub-detail');
+    subDetailDiv.classList.add('dict-widget');
     const ex = createParagraph(`释义：${title}`)
     subDetailDiv.appendChild(ex);
     return subDetailDiv;
@@ -62,9 +55,8 @@ function createSubDetailDiv(title) {
 
 function createExampleDiv(title, trans) {
     const exampleDiv = document.createElement('div');
-    exampleDiv.classList.add('example'); // Add a class for styling
-    exampleDiv.style.border = '0'
-    exampleDiv.style.padding = '8px'; // Example padding styling
+    exampleDiv.classList.add('example'); 
+    exampleDiv.classList.add('dict-widget'); 
 
     const titleParagraph = document.createElement('p');
     titleParagraph.textContent = `例句: ${title}`;

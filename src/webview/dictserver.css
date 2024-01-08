@@ -1,0 +1,33 @@
+#view-root {
+    padding-top: 20px;
+}
+.dict-word {
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+.sub-detail {
+    border: 1px solid;
+    border-radius: 5px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+.example {
+    padding: 8px;
+}
+.vscode-light .dict-widget{
+    border-color: rgba(0, 0, 0, 0.653)
+}
+
+.vscode-dark .dict-widget{
+    border-color: #ddd
+}
+
+.vscode-high-contrast .dict-widget {
+    border-color: white; 
+  }
+  
+.vscode-high-contrast-light .dict-widget {
+    border-color: black; 
+}
