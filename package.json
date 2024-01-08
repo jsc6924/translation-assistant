@@ -1080,6 +1080,11 @@
 					"default": "",
 					"description": "辞典服务器的命令行参数（在网址连不上时使用）"
 				},
+				"dltxt.y.searchWord.dictserver.hover.show": {
+					"type": "boolean",
+					"default": true,
+					"description": "是否在鼠标停留在选中的单词上时使用辞典服务器查询"
+				},
 				"dltxt.z.api.baidu.AccessKey": {
 					"type": "string",
 					"description": "百度智能云API AccessKey"

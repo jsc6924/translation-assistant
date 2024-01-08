@@ -215,6 +215,12 @@ export class DictServerHoverProvider implements vscode.HoverProvider {
         position: vscode.Position,
         token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.Hover> {
+        const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver.hover");
+        const show = config.get('show') as boolean;
+        if (!show) {
+            return undefined;
+        }
+
         // Check if there is an active selection
         const activeSelection = vscode.window.activeTextEditor?.selection;
 
