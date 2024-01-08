@@ -508,6 +508,9 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.11
+- 给术语库TreeView添加筛选（查找）功能
+- 更新TRDB翻译数据库搜索结果的WebView
 #### 3.10
 - 增加辞典服务器查词功能
   - 默认使用MOJi查词
