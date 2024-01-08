@@ -115,6 +115,7 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
                 try {
                     channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
                     await downloadFile(downloadURL, executablePath);
+                    break;
                 } catch (err) {
                     channel.appendLine(`下载失败`);
                 }
