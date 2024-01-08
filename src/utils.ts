@@ -197,6 +197,24 @@ export function showOutputText(title:string, output: string) {
   return panel;
 }
 
+export function getWebviewContent(scritpUri: vscode.Uri, cssUri: vscode.Uri, jsonString: string): string {
+  return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link rel="stylesheet" type="text/css" href="${cssUri}">
+      </head>
+      <body>
+          <script src="${scritpUri}"></script>
+          <div id="view-root"></div>
+          <pre id='raw-data' hidden>${jsonString}</pre> 
+      </body>
+      </html>`;
+}
+
+
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }

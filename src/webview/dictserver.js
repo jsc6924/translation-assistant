@@ -31,8 +31,6 @@ function createWordElement(wordObject) {
         }
     });
 
-    // Append the main div to the body (you may need to adjust this based on your DOM structure)
-    document.body.appendChild(wordDiv);
     return wordDiv
 }
 

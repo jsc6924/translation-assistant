@@ -1,6 +1,6 @@
 import * as kuromoji from 'kuromoji';
 import * as vscode from 'vscode';
-import { compressFoldersToZip, mapToObject, writeAtomic } from "./utils";
+import { compressFoldersToZip, getWebviewContent, mapToObject, writeAtomic } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
@@ -253,6 +253,18 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
 
 }
 
+interface SearchResult {
+    query: string;
+    results: SingleResult[];
+}
+
+interface SingleResult {
+    id: number;
+    fileName: string;
+    jpLines: string[];
+    trLines: string[];
+}
+
 function showSearchResults(context: vscode.ExtensionContext, query: string, matchedFiles: string[]) {
     const memoryIndex = createFlexSearchIndex();
     const databasePath = path.join(context.globalStoragePath, 'trdb');
@@ -306,8 +318,12 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
 
     const lineNumberSeen = new Set<Number>();
     let k = 1;
-    const outputLines = [];
-    outputLines.push(`<p>--------------------"${query}"的搜索结果----------------------`);
+    const result : SearchResult =  { 
+        query: query,
+        results: []
+    };
+    //const outputLines = [];
+    //outputLines.push(`<p>--------------------"${query}"的搜索结果----------------------`);
     for(const i of res) {
         if (lineNumberSeen.has(i)) {
             continue;
@@ -322,22 +338,52 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
             fileLineStart = Number(m[3]) - 1;
             virtualFileName = m[1] + '/' + m[2];
         }
-        outputLines.push(`-----------------------[${k++}]${virtualFileName}-----------------------`);
-        outputLines.push('');
+        const singleResult: SingleResult = { 
+            id: k++,
+            fileName: virtualFileName,
+            jpLines: [],
+            trLines: []
+        }
+        //outputLines.push(`-----------------------[${k++}]${virtualFileName}-----------------------`);
+        //outputLines.push('');
         for(let j = i-1; j <= i+1; j++) {
             if (j > 0 && j < totalTrLines.length) {
                 let docLine = fileLineStart + j - offset;
                 const tag = `${docLine.toString().padStart(6, '0')}`;
-                outputLines.push(`[${tag}]` + totalRawLines[j].replace(/\s+/g, ''));
-                outputLines.push(`;[${tag}]` + totalTrLines[j]);
-                outputLines.push('');
+                //outputLines.push(`[${tag}]` + totalRawLines[j].replace(/\s+/g, ''));
+                //outputLines.push(`;[${tag}]` + totalTrLines[j]);
+                //outputLines.push('');
+                singleResult.jpLines.push(`[${tag}]` + totalRawLines[j].replace(/\s+/g, ''));
+                singleResult.trLines.push(`;[${tag}]` + totalTrLines[j]);
             }
         }
+        result.results.push(singleResult)
     }
-    outputLines.push(`----------------------共${k-1}个结果-----------------------`);
-    outputLines.push('</p>')
-    showOutputText(`"${query}"的搜索结果`, outputLines.join('<br>'));
+    //outputLines.push(`----------------------共${k-1}个结果-----------------------`);
+    //outputLines.push('</p>')
+    showSearchResultWebView(context, `"${query}"的搜索结果`, result);
 }
+
+function showSearchResultWebView(context: vscode.ExtensionContext, title:string, result: SearchResult) {
+    let jsonData = JSON.stringify(result);
+    // Create or reveal the Webview panel
+    const panel = vscode.window.createWebviewPanel(
+        'trdb-search-result-viewer',
+        title,
+        vscode.ViewColumn.One,
+        {
+            // Enable scripts in the webview
+            enableScripts: true
+        }
+    );
+
+    const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.js'));
+    const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.css'));
+
+    // Set the HTML content
+    panel.webview.html = getWebviewContent(scriptUri, cssUri, jsonData);
+    panel.reveal();
+  }
 
 async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string) {
     const fBuf = fs.readFileSync(fsPath);
