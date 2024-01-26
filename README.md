@@ -465,6 +465,96 @@ wordcount:
     path: './input-folder'
 ```
 
+#### 自定义文本操作（dltransform.transform）
+可以实现文字的批量替换、删除等。（不能改变文件数量、文件行数）
+有两种方法：第一种是在yaml配置文件中编写简单脚本，完成简单操作；第二种是编写JavsScript脚本，在yaml中制定脚本名和函数名
+##### yaml中嵌入脚本
+```yaml
+transform:
+  input: 
+    path: './test'
+  output:
+    path: './transform-output'
+    encoding: 'utf8'
+  operations:
+    - select: '@translation'
+    - filter: $.text.length >= 8 || @contains($.text, "[。！—…「」『』]")
+    - exec:   $.text = @clearExcept($.text, "[「」『』。？！～\x00-\x7F]")
+    - commit: ''
+    - end-select: ''
+    - commit: ''
+```
+##### `select`
+
+选择一个正则表达式，之后的每一行只有匹配了这个select的正则表达式才会被执行，直到下一个`select`或`end-select`为止。支持三个选项`@translation`,`@original`,`@other`，分别对应设置中的“译文开头标签的正则表达式”，“原文开头标签的正则表达式”，“其他合法开头的正则表达式”。如果不以`@`开头，可以在这里另外一个正则表达式。
+如果选择了三个选项之一，那这些正则表达式执行的结果的groups属性里会有以下四个named group: `prefix`,`white`,`text`,`suffix`
+
+具体定义如下
+
+```javascript
+new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
+```
+
+如果这里选择另外定义正则表达式，需要仿照上面定义那四个named group
+
+##### `filter`
+填写一个Javascript表达式，只有返回true才会执行后续，直到下一个`select`或`end-select`。表达式中可以使用特殊的`$`变量（=select的正则表达式执行后的match对象的groups），并且可以使用一些@开头的由插件提供的工具函数，具体列表见后面。
+
+#### `exec`
+同上，执行Javascript表达式
+
+#### `commit`
+执行current line = $.prefix + $.white + $.text + $.suffix;
+没有这一条，不会更新文本。
+
+##### 使用JavaScript脚本
+像这样写，其中select和commit不是必须的
+```yaml
+transform:
+  input: 
+    path: './test'
+  output:
+    path: './transform-output'
+    encoding: 'utf8'
+  script:
+    path: './my-script.js'
+  operations:
+    - select: '@translation'
+    - script: 'clearChars'
+    - commit: ''
+```
+
+举例
+```javascript
+function hello({line, lines, index}) {
+    const [jreg, creg] = api.getRegex(); //提供的工具函数通过api对象调用
+    if (creg.test(line)) {
+        return line + api.getFileName();
+    }
+    return line + api.getFilePath();
+}
+
+function clearChars() {
+    const g = api.getMatchedGroups(); //如果前面有select，则返回select执行的结果（等于前面的$）
+    if (api.contains(g.text, "[。！—…「」『』]")) {
+        g.text = api.clearExcept(g.text, "[「」『』。？！～\x00-\x7F]");
+    }
+    //如果有返回值相当于commit，如果没有则需要之后手动commit
+    //return `${g.prefix}${g.white}${g.text}${g.suffix}`; 
+}
+```
+
+##### 提供的工具函数列表
+```javascript
+getRegex(): [originalRegex : RegExp, translationRegex : RegExp, othersRegex : RegExp]
+contains(line: string, what: string): boolean 
+clear(target: string, what: string): string
+clearExcept(target: string, except: string): string
+getFileName(): string
+getFilePath(): string
+```
+
+
 ## 翻译数据库
 可以把翻译好的文本添加到翻译数据库。以后遇到类似的句子或者表达可以搜索数据库查找自己以前的翻译。
 #### 使用场景
@@ -512,6 +602,8 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.13
+- 支持自定义多文本处理，可以在yaml中编写简单脚本，也可以使用Javascript脚本
 #### 3.12
 - 把选中一个词，把鼠标移动到上面会自动使用辞典服务器查词
 - 添加默认辞典服务器Gitee下载源

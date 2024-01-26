@@ -23,11 +23,15 @@ transform:
     path: './my-script.js'
   operations:
     - select: '@translation'
-    - filter: $.text.length >= 8 || @contains($.text, ["[。！—…「」『』]"])
-    - exec:   $.text = @clear($.text, "[「」『』。？！～\x00-\x7F]")
+    - script: 'clearChars'
     - commit: ''
-    # - end-select: ''
-    # - script: 'hello'
+  # operations:
+  #   - select: '@translation'
+  #   - filter: $.text.length >= 8 || @contains($.text, "[。！—…「」『』]")
+  #   - exec:   $.text = @clearExcept($.text, "[「」『』。？！～\x00-\x7F]")
+  #   - commit: ''
+  #   - end-select: ''
+  #   - script: 'hello'
     
 
 

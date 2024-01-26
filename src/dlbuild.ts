@@ -589,8 +589,9 @@ class Executor {
         this.varMap.set('$', 'ex.lastMatch.groups');
         scriptContext.api.getMatchedGroups = () => this.lastMatch?.groups;
         
-        this.varMap.set('@contains', 'api.execConditionContain')
-        this.varMap.set('@clear', 'api.execClear')
+        this.varMap.set('@contains', 'api.contains')
+        this.varMap.set('@clear', 'api.clear')
+        this.varMap.set('@clearExcept', 'api.clearExcept')
 
         scriptContext.api.getFileName = () => file;
         scriptContext.api.getFilePath = () => inputFilePath;

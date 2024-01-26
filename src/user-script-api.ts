@@ -1,6 +1,6 @@
 import { getRegex } from './formatter';
 
-export function execConditionContain(line: string, what: string): boolean {
+export function contains(line: string, what: string): boolean {
     if (what === undefined) {
         return false;
     }
@@ -11,10 +11,20 @@ export function execConditionContain(line: string, what: string): boolean {
     return false;
 }
 
-export function execClear(target: string, except: string): string {
+export function clear(target: string, what: string): string {
     let res = '';
     for (const c of target) {
-        if (execConditionContain(c, except)) {
+        if (!contains(c, what)) {
+            res += c;
+        }
+    }
+    return res;
+}
+
+export function clearExcept(target: string, except: string): string {
+    let res = '';
+    for (const c of target) {
+        if (contains(c, except)) {
             res += c;
         }
     }
