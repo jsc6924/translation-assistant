@@ -478,8 +478,8 @@ transform:
     encoding: 'utf8'
   operations:
     - select: '@translation'
-    - filter: $.text.length >= 8 || @contains($.text, "[。！—…「」『』]")
-    - exec:   $.text = @clearExcept($.text, "[「」『』。？！～\x00-\x7F]")
+    - filter: $.text.length >= 8 || api.contains($.text, "[。！—…「」『』]")
+    - exec:   $.text = api.clearExcept($.text, "[「」『』。？！～\x00-\x7F]")
     - commit: ''
     - end-select: ''
 ```
@@ -497,7 +497,7 @@ new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」
 如果这里选择另外定义正则表达式，需要仿照上面定义那四个named group
 
 ##### `filter`
-填写一个Javascript表达式，只有返回true才会执行后续，直到下一个`select`或`end-select`。表达式中可以使用特殊的`$`变量（=select的正则表达式执行后的match对象的groups），并且可以使用一些@开头的由插件提供的工具函数，具体列表见后面。
+填写一个Javascript表达式，只有返回true才会执行后续，直到下一个`select`或`end-select`。表达式中可以使用特殊的`$`变量（=select的正则表达式执行后的match对象的groups），并且可以通过`api`对象使用插件提供的工具函数，具体列表见后面。
 
 #### `exec`
 同上，执行Javascript表达式
