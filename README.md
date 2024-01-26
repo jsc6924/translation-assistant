@@ -503,7 +503,7 @@ new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」
 同上，执行Javascript表达式
 
 #### `commit`
-执行current line = $.prefix + $.white + $.text + $.suffix;
+执行`current line = $.prefix + $.white + $.text + $.suffix;`
 没有这一条，不会更新文本。
 
 ##### 使用JavaScript脚本
