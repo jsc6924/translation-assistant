@@ -21,7 +21,7 @@ import * as singleline from './singleline';
 import * as auto_format from './auto-format';
 import * as fs from 'fs';
 import * as dictserver from './dictserver';
-import { deflateRawSync } from 'zlib';
+
 
 
 /*

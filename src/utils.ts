@@ -98,6 +98,10 @@ export function contains(str: string, search: string) {
   return str.indexOf(search) >= 0;
 }
 
+export function isAscii(char: string) {
+  const charCode = char.charCodeAt(0);
+  return charCode <= 127;
+}
 
 let diagnosticCollection: Map<string, vscode.DiagnosticCollection> = new Map<string, vscode.DiagnosticCollection>();
 
@@ -265,6 +269,10 @@ export function compressFoldersToZip(sourceFolderPaths: string[], targetZipPath:
     archive.finalize();
   });
 }
+
+export function regEscape(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 export function writeAtomic(filePath: string, data: string): void {
   const tempFilePath = `${filePath}.tmp`;

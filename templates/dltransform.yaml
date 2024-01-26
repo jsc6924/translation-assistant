@@ -13,6 +13,23 @@ wordcount:
   input: 
     path: './input-folder'
 
+transform:
+  input: 
+    path: './test'
+  output:
+    path: './transform-output'
+    encoding: 'utf8'
+  script:
+    path: './my-script.js'
+  operations:
+    - select: '@translation'
+    - filter: $.text.length >= 8 || @contains($.text, ["[。！—…「」『』]"])
+    - exec:   $.text = @clear($.text, "[「」『』。？！～\x00-\x7F]")
+    - commit: ''
+    # - end-select: ''
+    # - script: 'hello'
+    
+
 
 # split:
 #   input: 

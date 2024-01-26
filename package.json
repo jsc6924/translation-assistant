@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.12.3",
+	"version": "3.13.1",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -194,6 +194,11 @@
 			{
 				"command": "Extension.dltxt.dltransform.wordcount",
 				"title": "字数统计 (dltransform.wordcount)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dltransform.transform",
+				"title": "执行自定义批量文本操作 (dltransform.transform)",
 				"category": "DLTXT"
 			},
 			{
@@ -746,6 +751,10 @@
 				{
 					"command": "Extension.dltxt.dltransform.wordcount",
 					"group": "dltxt.dltransform@2"
+				},
+				{
+					"command": "Extension.dltxt.dltransform.transform",
+					"group": "dltxt.dltransform@3"
 				}
 			],
 			"editor/context": [

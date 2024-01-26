@@ -1,7 +1,5 @@
-import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 import * as utils from './utils';
-import { getRegex } from './formatter';
 
 function getTranslatedPrefixRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");

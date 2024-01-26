@@ -3,10 +3,14 @@ import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
+import * as vm from 'vm';
 import * as iconv from "iconv-lite";
 import { encodeWithBom, detectEncoding, detectFileEncoding } from './encoding';
-import { registerCommand } from './utils';
+import { isAscii, regEscape, registerCommand } from './utils';
 import { MatchedGroups, getRegex, formatter } from './formatter';
+
+import * as userScriptAPI from './user-script-api';
+
 
 export const channel = vscode.window.createOutputChannel("DLTXT");
 
@@ -41,6 +45,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     registerCommand(context, 'Extension.dltxt.dltransform.wordcount', () => {
 		wordcount(context);
+	});
+
+    registerCommand(context, 'Extension.dltxt.dltransform.transform', () => {
+		transform(context);
 	});
 
 }
@@ -450,7 +458,7 @@ async function wordcount(context: vscode.ExtensionContext) {
     }
     const yamlData = readYamlFile(yamlPath);
     
-    const inputPath = path.join(rootDir, yamlData.concat.input.path);
+    const inputPath = path.join(rootDir, yamlData.wordcount.input.path);
     const [jreg, creg, oreg] = getRegex();
     if (!jreg || !creg) {
         throw new Error('jreg or creg undefined');
@@ -484,5 +492,177 @@ async function wordcount(context: vscode.ExtensionContext) {
     }, undefined);
 
     vscode.window.showInformationMessage(`字数统计：共${total}个文件, 原文${jcount}字，译文${ccount}字`);
+}
+
+async function transform(context: vscode.ExtensionContext) {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
+
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    const funcNode = yamlData.transform;
+    
+    const inputPath = path.join(rootDir, funcNode.input.path);
+    const outputPath = path.join(rootDir, funcNode.output.path);
+    const dstEncoding = funcNode.output.encoding;
+    const operations = funcNode.operations as any[];
+    if (!operations) {
+        throw new Error("operations为空");
+    }
+
+    const [jreg, creg, oreg] = getRegex();
+    if (!jreg || !creg) {
+        throw new Error('jreg or creg undefined');
+    }
+
+
+    let scriptContext: vm.Context = vm.createContext();
+    scriptContext.api = userScriptAPI;
+    let script = new vm.Script('');
+    if (funcNode.script?.path) {
+        const scriptPath = path.join(rootDir, funcNode.script.path);
+        const content = fs.readFileSync(scriptPath, 'utf8');
+        script = new vm.Script(content);
+    }
+    
+    let total = 0;
+    let success = 0;
+
+    try {
+        await readFolderRecursively(inputPath, [], async (file, relativeDir) => {
+            total++;
+            const inputFilePath = path.join(inputPath, relativeDir, file);
+            const contentBuf = fs.readFileSync(inputFilePath);
+            const srcEncoding = await getInputEncoding(funcNode.input.encoding, contentBuf);
+            const content = iconv.decode(contentBuf, srcEncoding);
+            const lines = content.split('\n');
+    
+            
+            let resultString = '';
+            const e = new Executor(script, scriptContext, file, inputFilePath);
+    
+            for (let i = 0; i < lines.length; i++) {
+                lines[i] = lines[i].trim();
+                lines[i] = e.execOperations(operations, {line: lines[i], lines, index: i});
+                resultString += addNewLine(lines[i]);
+            }
+    
+            const outputFilePath = path.join(outputPath, relativeDir, file)
+            fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
+            const encodedLabelledBuffer = encodeWithBom(resultString, dstEncoding);
+            fs.writeFileSync(outputFilePath, encodedLabelledBuffer);
+        }, undefined);
+    } catch (error) {
+        channel.appendLine(`${error}`);
+        channel.show();
+        throw error;
+    }
+    
+}
+
+class Executor {
+    jreg: RegExp | undefined;
+    creg: RegExp | undefined;
+    oreg: RegExp | undefined;
+    lastMatch: any | undefined;
+    shouldExec: boolean = true;
+
+    varMap: Map<string, any> = new Map();
+    scriptContext: vm.Context;
+    constructor(script: vm.Script, scriptContext: vm.Context, file: string, inputFilePath: string) {
+        this.scriptContext = scriptContext;
+        const [jreg, creg, oreg] = getRegex();
+        this.jreg = jreg;
+        this.creg = creg;
+        this.oreg = oreg;
+        this.varMap.set('@original', jreg);
+        this.varMap.set('@translation', creg);
+        this.varMap.set('@other', oreg);
+        this.varMap.set('$', 'ex.lastMatch.groups');
+        scriptContext.api.getMatchedGroups = () => this.lastMatch?.groups;
+        
+        this.varMap.set('@contains', 'api.execConditionContain')
+        this.varMap.set('@clear', 'api.execClear')
+
+        scriptContext.api.getFileName = () => file;
+        scriptContext.api.getFilePath = () => inputFilePath;
+        script.runInContext(scriptContext);
+    }
+    public execOperations(op: any, context: any): string {
+        return this.execBlock(op, context);
+    }
+    execBlock(block: any[], context: any): string {
+        for(const statement of block) {
+            const res = this.execStatement(statement, context);
+            if (res !== undefined) {
+                context.line = res;
+            }
+        }
+        return context.line;
+    }
+    execStatement(op: any, context: any): string | undefined {
+        const [k, v] = this.getObjectKV(op);
+        switch(k) {
+        case 'script':
+            return  this.shouldExec ? this.scriptContext[v](context) : undefined;
+        case 'select': {
+            this.shouldExec = true;
+            const reg = v.startsWith('@') ? this.varMap.get(v) : new RegExp(v);
+            this.lastMatch = reg.exec(context.line);
+            if (!this.lastMatch) {
+                this.shouldExec = false;
+            }
+            return;
+        }
+        case 'end-select': {
+            this.shouldExec = true;
+            return;
+        }
+        case 'exec':
+            if (this.shouldExec) {
+                this.eval(v);
+                return;
+            }
+            return;
+        case 'commit':
+            if (!this.shouldExec) {
+                return;
+            }
+            const g = this.lastMatch.groups;
+            return `${g.prefix}${g.white}${g.text}${g.suffix}`;
+        case 'filter':
+            if (this.shouldExec) {
+                this.shouldExec = this.eval(v);
+            }
+            return;
+        default:
+            throw new Error(`unknown operation: ${k}`)
+        }
+    }
+
+    eval(exp: string) {
+        for(const [k, v] of this.varMap) {
+            exp = exp.replace(new RegExp(regEscape(k), 'g'), v);
+        }
+        const f = new Function('ex', 'api', `return ${exp}`);
+        return f(this, userScriptAPI);
+    }
+    
+
+    getObjectKV(x: any): [string, any] {
+        for(const [k, v] of Object.entries(x)) {
+            return [k as string, v];
+        }
+        throw new Error(`malformed ${x}`);
+    }
+
 }
 

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { toDBC, contains } from './utils';
 import { getTextDelimiter } from './motion';
 import { findLastMatchIndex } from './utils';
-import { dirxml } from 'console';
+
 
 export function getRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
