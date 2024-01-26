@@ -482,7 +482,6 @@ transform:
     - exec:   $.text = @clearExcept($.text, "[「」『』。？！～\x00-\x7F]")
     - commit: ''
     - end-select: ''
-    - commit: ''
 ```
 ##### `select`
 
