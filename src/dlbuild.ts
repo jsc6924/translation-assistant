@@ -565,6 +565,8 @@ async function transform(context: vscode.ExtensionContext) {
         channel.show();
         throw error;
     }
+
+    vscode.window.showInformationMessage(`批量处理：共${total}个文件`);
     
 }
 

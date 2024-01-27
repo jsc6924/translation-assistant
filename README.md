@@ -507,7 +507,7 @@ new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」
 没有这一条，不会更新文本。
 
 ##### 使用JavaScript脚本
-像这样写，其中select和commit不是必须的
+像这样写，其中select和commit不是必须的。注意脚本在读取每本文本时会被重新加载，所以脚本中的全局变量只在当前文本有效。
 ```yaml
 transform:
   input: 
