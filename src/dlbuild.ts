@@ -7,9 +7,10 @@ import * as vm from 'vm';
 import * as iconv from "iconv-lite";
 import { encodeWithBom, detectEncoding, detectFileEncoding } from './encoding';
 import { isAscii, regEscape, registerCommand } from './utils';
-import { MatchedGroups, getRegex, formatter } from './formatter';
+
 
 import * as userScriptAPI from './user-script-api';
+import { DocumentParser, getRegex } from './parser';
 
 
 export const channel = vscode.window.createOutputChannel("DLTXT");
@@ -459,10 +460,6 @@ async function wordcount(context: vscode.ExtensionContext) {
     const yamlData = readYamlFile(yamlPath);
     
     const inputPath = path.join(rootDir, yamlData.wordcount.input.path);
-    const [jreg, creg, oreg] = getRegex();
-    if (!jreg || !creg) {
-        throw new Error('jreg or creg undefined');
-    }
     let total = 0;
     let success = 0;
     let jcount = 0, ccount = 0;
@@ -473,22 +470,10 @@ async function wordcount(context: vscode.ExtensionContext) {
         const contentBuf = fs.readFileSync(inputFilePath);
         const srcEncoding = await getInputEncoding(yamlData.wordcount.input.encoding, contentBuf);
         const content = iconv.decode(contentBuf, srcEncoding);
-        const lines = content.split('\n');
-        for (let line of lines) {
-            line = line.trim();
-            const m = jreg.exec(line);
-            if (m && m.groups) {
-                const g = m.groups as any as MatchedGroups;
-                jcount += g.text.length;
-            } else {
-                const m = creg.exec(line);
-                if (m && m.groups) {
-                    const g = m.groups as any as MatchedGroups;
-                    ccount += g.text.length;
-                }
-            }
-
-        }
+        DocumentParser.processPairedLines(content, (jgrps, cgrps) => {
+            jcount += jgrps.text.length;
+            ccount += cgrps.text.length;
+        })
     }, undefined);
 
     vscode.window.showInformationMessage(`字数统计：共${total}个文件, 原文${jcount}字，译文${ccount}字`);
@@ -517,12 +502,6 @@ async function transform(context: vscode.ExtensionContext) {
     if (!operations) {
         throw new Error("operations为空");
     }
-
-    const [jreg, creg, oreg] = getRegex();
-    if (!jreg || !creg) {
-        throw new Error('jreg or creg undefined');
-    }
-
 
     let scriptContext: vm.Context = vm.createContext();
     scriptContext.api = userScriptAPI;

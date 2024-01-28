@@ -2,11 +2,10 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as motion from './motion';
-import { setCursorAndScroll, getOrCreateDiagnosticCollection, VSCodeContext, registerCommand,
-	ContextHolder } from './utils';
+import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder } from './utils';
 import {
 	formatter, copyOriginalToTranslation,
-	repeatFirstChar, getRegex
+	repeatFirstChar
 } from "./formatter";
 import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
 import * as dlbuild from './dlbuild';
@@ -196,7 +195,12 @@ export function activate(context: vscode.ExtensionContext) {
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
-			return formatter(context, document);
+			try {
+				return formatter(context, document);
+			} catch (e) {
+				vscode.window.showErrorMessage(`${e}`);
+				return [];
+			}
 		}
 	});
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as utils from './utils';
+import { DocumentParser } from './parser';
 
 function getTranslatedPrefixRegex() {
   const config = vscode.workspace.getConfiguration("dltxt");
@@ -393,20 +394,11 @@ export function translateCurrentLine(
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  const position = editor.selection.active;
-  const curLine = editor.document.getText(
-    new vscode.Range(
-      position.with(position.line, 0),
-      position.with(position.line, INT_MAX)
-    )
-  );
-  const translatedPrefixRegex = getTranslatedPrefixRegex();
-  const pattern = new RegExp(`(${translatedPrefixRegex}).*`, 'm');
-  const transMatch = pattern.exec(curLine);
-  if (!transMatch) {
+  let [ok, curLine] = DocumentParser.getCurrentTranslationLine();
+  if (!ok || !curLine) {
     return;
   }
-  let replacedLine = curLine;
+  let replacedLine = curLine.text;
   for (const [k,v] of lookupTable) {
     if (typeof v == "string") {
       replacedLine = replacedLine.replace(k, v);
@@ -415,11 +407,9 @@ export function translateCurrentLine(
     }
   }
   editor.edit((editbuilder) => {
-    const range = new vscode.Range(
-      position.with(position.line, 0),
-      position.with(position.line, INT_MAX)
-    );
-    editbuilder.replace(range, replacedLine);
+    if (curLine) {
+      editbuilder.replace(curLine.range, replacedLine);
+    }
   });
 }
 

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode'
 import * as utils from './utils'
-import { getRegex, MatchedGroups } from './formatter';
 import { getTextDelimiter } from './motion';
 import axios from 'axios'; 
+import { DocumentParser } from './parser';
 const BAIDU_MAX_QUERY_LEN = 548;
 const delayInterval = 600; //ms
 /**
@@ -89,10 +89,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
     }
     diagnosticCollection.clear();
     const diagnostics: vscode.Diagnostic[] = [];
-    const [jreg, creg, oreg] = getRegex();
-    if (!creg) {
-        return;
-    }
+    
 
     const AK = config.get<string>('z.api.baidu.AccessKey');
     const SK = config.get<string>('z.api.baidu.SecretKey');
@@ -118,38 +115,31 @@ export function spellCheck(context: vscode.ExtensionContext) {
         let curMap: [number, number, number][] = []; //offset -> line_num
         let queryPromises: Promise<any>[] = [];
 
-        for (let lineNumber = 0; lineNumber < activeEditor.document.lineCount; lineNumber++) {
-            const lineText = activeEditor.document.lineAt(lineNumber).text;
-            if (!lineText) {
-                continue;
+        DocumentParser.processPairedLines(activeEditor.document, (_, matchedGroups, j_index, c_index) => {
+            if (shouldSkipChecking(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
+                return;
             }
-            const match = creg.exec(lineText);
-            if (match) {
-                const matchedGroups = match.groups as any as MatchedGroups;
-                if (shouldSkipChecking(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
-                    continue;
-                }
-                if (queryString.length + matchedGroups.text.length + 1 >= BAIDU_MAX_QUERY_LEN) {
-                    ((queryStringCopy: string) => {
-                        let p = delay(curDelay).then(() => {
-                            return make_query(queryStringCopy, accessToken);
-                        });
-                        curDelay += delayInterval;
-                        queryPromises.push(p);
-                    })(queryString);
-                    offsetMaps.push(curMap);
-                    curMap = [];
-                    queryString = '';
-                }
-                const prefixOffset = matchedGroups.prefix.length + matchedGroups.white.length;
-                curMap.push([lineNumber, queryString.length, prefixOffset]);
-                queryString += matchedGroups.text;
-                if (endingBracket.test(matchedGroups.suffix) 
-                    && !delims.test(matchedGroups.text[matchedGroups.text.length - 1])) {
-                    queryString += '。';
-                }
+            if (queryString.length + matchedGroups.text.length + 1 >= BAIDU_MAX_QUERY_LEN) {
+                ((queryStringCopy: string) => {
+                    let p = delay(curDelay).then(() => {
+                        return make_query(queryStringCopy, accessToken);
+                    });
+                    curDelay += delayInterval;
+                    queryPromises.push(p);
+                })(queryString);
+                offsetMaps.push(curMap);
+                curMap = [];
+                queryString = '';
             }
-        }
+            const prefixOffset = matchedGroups.prefix.length + matchedGroups.white.length;
+            curMap.push([c_index, queryString.length, prefixOffset]);
+            queryString += matchedGroups.text;
+            if (endingBracket.test(matchedGroups.suffix) 
+                && !delims.test(matchedGroups.text[matchedGroups.text.length - 1])) {
+                queryString += '。';
+            }
+        });
+
         if (queryString) {
             let p = delay(curDelay).then(() => {
                 return make_query(queryString, accessToken);

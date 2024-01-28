@@ -167,8 +167,11 @@ export function registerCommand(
 		if (requiresActiveEditor && !vscode.window.activeTextEditor) {
 			return;
 		}
-
-		callback(...args);
+    try {
+      callback(...args);
+    } catch(e) {
+      vscode.window.showErrorMessage(`${e}`);
+    }
 	});
 	context.subscriptions.push(disposable);
 }

@@ -1,4 +1,4 @@
-import { getRegex } from './formatter';
+import { getRegex } from './parser';
 
 export function contains(line: string, what: string): boolean {
     if (what === undefined) {

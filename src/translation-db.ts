@@ -6,10 +6,10 @@ import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
 import { StopWordsSet } from './stopwords-jp';
 import { registerCommand, showOutputText, downloadFile, unzipFile, getCurrentWorkspaceFolder } from './utils';
-import { getRegex, MatchedGroups } from './formatter';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
 import { trdb_view } from './treeview';
+import { DocumentParser } from './parser';
 const fsextra = require('fs-extra');
 
 
@@ -429,31 +429,17 @@ async function addDocumentLines(context: vscode.ExtensionContext, documentFilena
         vscode.window.showErrorMessage("请在设置中填写项目名后再使用此功能");
         return false;
     }
-    const [jreg, creg, oreg] = getRegex();
-    if (!jreg || !creg) {
-        return false;
-    }
-
     //padding 1
     let lines = [''];
     let clines = [''];
 
-    for (let i = 0; i < documentLines.length; i++) {
-        const line = documentLines[i].trim();
-        const m = jreg.exec(line);
-        if (m && m.groups) {
-            const g = m.groups as any as MatchedGroups;
-            lines.push(g.text);
-        } else {
-            const m = creg.exec(line);
-            if (m && m.groups) {
-                const g = m.groups as any as MatchedGroups;
-                clines.push(g.text);
-            }
-        }
-    }
-    if (lines.length != clines.length) {
-        vscode.window.showErrorMessage(`原文与译文行数不一致，无法加入数据库: ${documentFilename}`);
+    try {
+        DocumentParser.processPairedLines(documentLines, (jgrps, cgrps) => {
+            lines.push(jgrps.text);
+            clines.push(cgrps.text);
+        })
+    } catch (e) {
+        vscode.window.showErrorMessage(`无法加入数据库: ${documentFilename}, ${e}`);
         return false;
     }
 
