@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.13.4",
+	"version": "3.14.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -949,6 +949,11 @@
 					"default": "",
 					"description": "其他合法的开头的正则表达式"
 				},
+				"dltxt.core.y.commonSuffix": {
+					"type": "string",
+					"default": "",
+					"description": "每行共同的后缀（如果有）"
+				},
 				"dltxt.core.z.skipCharsPrefix": {
 					"type": "string",
 					"default": " \t　「『n\\",
@@ -1055,6 +1060,11 @@
 					"additionalProperties": {
 						"type": "string"
 					}
+				},
+				"dltxt.formatter.z.debugMode": {
+					"type": "boolean",
+					"default": false,
+					"description": "格式化文本：debug模式（请不要选）"
 				},
 				"dltxt.spellingCheck.skipSet": {
 					"type": "array",

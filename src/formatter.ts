@@ -9,12 +9,13 @@ export function getRegex() {
   const jPreStr = config.get('core.originalTextPrefixRegex') as string;
   const cPreStr = config.get('core.translatedTextPrefixRegex') as string;
   const oPreStr = config.get('core.otherPrefixRegex') as string;
+  const suffixStr = config.get('core.y.commonSuffix') as string;
   if (!jPreStr || !cPreStr) {
     return [undefined, undefined, undefined];
   }
   try {
-    const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
-    const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`);
+    const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?${suffixStr})$`);
+    const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?${suffixStr})$`);
     const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`) : undefined;
     return [jreg, creg, oreg];
   } catch (e) {
@@ -76,7 +77,7 @@ function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
     } else if (!prefix && suffix) {
       let cm = cgrps.text.match(/^(?<b>.*?)(?<c>[”』]?)$/)
       if (cm?.groups?.c) {
-        cgrps.suffix += cm.groups.c;
+        cgrps.suffix = cm.groups.c + cgrps.suffix;
         cgrps.text = cgrps.text.substring(0, cgrps.text.length - 1);
       }
     } else if (prefix && suffix) {
@@ -86,7 +87,7 @@ function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
         cgrps.text = cgrps.text.substring(1);
       }
       if (cm?.groups?.c) {
-        cgrps.suffix += cm.groups.c;
+        cgrps.suffix = cm.groups.c + cgrps.suffix;
         cgrps.text = cgrps.text.substring(0, cgrps.text.length - 1);
       }
     }
@@ -96,33 +97,50 @@ function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
 function editTranslation(
   context: vscode.ExtensionContext,
   document: vscode.TextDocument,
-  ops: Array<CallableFunction>,
-  lines?: Array<number>
+  ops: Array<CallableFunction>
 ) {
   const [jreg, creg, oreg] = getRegex();
   if (!jreg || !creg)
     return [];
   const result = [];
-  if (!lines) {
-    lines = [...Array(document.lineCount).keys()];
-  }
-  for (let i of lines) {
+  const config = vscode.workspace.getConfiguration("dltxt");
+  const debugMode = config.get("formatter.z.debugMode") as boolean;
+  for (let i = 0; i < document.lineCount; i++) {
     const line = document.lineAt(i);
     const jmatch = jreg.exec(line.text);
     if (jmatch && i + 1 < document.lineCount) {
       const jgrps = jmatch.groups as any as MatchedGroups;
-      const nextLine = document.lineAt(i + 1);
-      let nextLineText = nextLine.text;
-      const cmatch = creg.exec(nextLineText);
-      const cgrps = cmatch?.groups as any as MatchedGroups;
-      if (!jgrps || !cgrps)
+      if (!jgrps) {
         continue;
-      adjust(jgrps, cgrps);
-      for (let op of ops) {
-        op(jgrps, cgrps);
       }
-      nextLineText = `${cgrps?.prefix}${cgrps?.white}${cgrps?.text}${cgrps?.suffix}`
-      result.push(vscode.TextEdit.replace(nextLine.range, nextLineText));
+      let j = i + 1;
+      for(; j < Math.min(i + 5, document.lineCount); j++) {
+        const nextLine = document.lineAt(j);
+        let nextLineText = nextLine.text;
+        const cmatch = creg.exec(nextLineText);
+        const cgrps = cmatch?.groups as any as MatchedGroups;
+        if (!cgrps)
+          continue;
+        adjust(jgrps, cgrps);
+        for (let op of ops) {
+          op(jgrps, cgrps);
+        }
+
+        if (debugMode) {
+          const curLineText = `${jgrps?.prefix}{${jgrps?.white}}{${jgrps?.text}}{${jgrps?.suffix}}`
+          result.push(vscode.TextEdit.replace(line.range, curLineText));
+          nextLineText = `${cgrps?.prefix}{${cgrps?.white}}{${cgrps?.text}}{${cgrps?.suffix}}`
+          result.push(vscode.TextEdit.replace(nextLine.range, nextLineText));
+        } else {
+          nextLineText = `${cgrps?.prefix}${cgrps?.white}${cgrps?.text}${cgrps?.suffix}`
+          if (nextLineText !== nextLine.text) {
+            result.push(vscode.TextEdit.replace(nextLine.range, nextLineText));
+          }
+        }
+
+        i = j;
+        break;
+      }
     }
   }
   return result;
@@ -132,8 +150,6 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   const config = vscode.workspace.getConfiguration("dltxt");
   const ops: Array<CallableFunction> = [];
   const padding = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    if (contains(jgrps.text, '「') || contains(jgrps.text, '」'))
-      return;
     cgrps.white = jgrps.white;
     cgrps.suffix = jgrps.suffix;
   };
@@ -293,7 +309,8 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   const curLine = document.lineAt(editor.selection.start.line)
   let curChar = cur.character;
   const delimiterPattern = getTextDelimiter();
-  const rep = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+
+  const rep = (jgrps: MatchedGroups | undefined, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
     let textLeft = text.substring(0, curChar - cgrps.prefix.length - cgrps.white.length);
     let i = findLastMatchIndex(delimiterPattern, textLeft);
@@ -314,8 +331,18 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
     }
     cgrps.text = text;
   }
-  editTranslation(context, document, [rep], [curLine.lineNumber - 1])
-    .forEach(edit => { editBuilder.replace(edit.range, edit.newText) });
+
+  const [, creg] = getRegex();
+  if (!creg) {
+    return;
+  }
+  const cm = creg.exec(curLine.text);
+  if (cm && cm.groups) {
+    const cgrps = cm.groups as any as MatchedGroups;
+    rep(undefined, cgrps);
+    const newLine = `${cgrps?.prefix}${cgrps?.white}${cgrps?.text}${cgrps?.suffix}`
+    editBuilder.replace(curLine.range, newLine);
+  }
 }
 
 
