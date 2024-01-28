@@ -606,6 +606,8 @@ vsce publish
 - 添加formatter的debug模式
 - 修复formatter原文行和译文行必须相邻才能使用的bug（现在最多间隔4行）
 - 修复padding的bug
+- 重构文本剖析相关逻辑至parser
+- 优化错误处理
 #### 3.13
 - 支持自定义多文本处理，可以在yaml中编写简单脚本，也可以使用Javascript脚本
 #### 3.12
