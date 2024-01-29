@@ -39,7 +39,6 @@ function getTextBlockRegex() {
   const jreg = new RegExp(`^(?<prefix>)(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
   const creg = new RegExp(`^(?<prefix>)(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
   return [reg, jreg, creg];
-  
 }
 
 export interface MatchedGroups {
