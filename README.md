@@ -657,6 +657,7 @@ vsce publish
   - 这种模式下除了暂时不能自动识别格式，其他功能均支持
 - 重构AutoDetector
 - 重构DocumentParser
+- 修复了标准双行格式下自动识别格式不能处理原文和译文中的空行的bug
 #### 3.14
 - 添加对后缀的支持
 - 添加formatter的debug模式
