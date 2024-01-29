@@ -115,7 +115,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
         let curMap: [number, number, number][] = []; //offset -> line_num
         let queryPromises: Promise<any>[] = [];
 
-        DocumentParser.processPairedLines(activeEditor.document, (_, matchedGroups, j_index, c_index) => {
+        DocumentParser.processTranslatedLines(activeEditor.document, (matchedGroups, c_index) => {
             if (shouldSkipChecking(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
                 return;
             }

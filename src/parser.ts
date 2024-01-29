@@ -44,15 +44,7 @@ class StandardDocumentParser {
         if (!jreg || !creg) {
             throw new Error('jreg or creg undefined');
         }
-        let lines = [];
-        if (typeof text === 'string') {
-            lines = text.split('\n');
-        } else if (Array.isArray(text)) {
-            lines = text;
-        }
-         else {
-            lines = text.getText().split('\n');
-        }
+        let lines = getLines(text);
         let jgrps: MatchedGroups | undefined;
         let j_index = -1;
         for (let i = 0; i < lines.length; i++) {
@@ -78,6 +70,22 @@ class StandardDocumentParser {
 
         }
     }
+
+    processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void) {
+      const [, creg] = getRegex();
+      if (!creg) {
+          throw new Error('jreg or creg undefined');
+      }
+      let lines = getLines(text);
+      for (let i = 0; i < lines.length; i++) {
+          let line = lines[i];
+          line = line.trim();
+          const m = creg.exec(line);
+          if (m && m.groups) {
+            cb(m.groups as any as MatchedGroups, i);
+          }
+      }
+  }
 
     getCurrentTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
         if (!editor?.selection)
@@ -170,6 +178,19 @@ class StandardDocumentParser {
 }
 
 ////////////////////////End standard parser///////////////////////////////
+
+function getLines(text: string | string[] | vscode.TextDocument): string[] {
+  let lines = [];
+  if (typeof text === 'string') {
+    lines = text.split('\n');
+  } else if (Array.isArray(text)) {
+    lines = text;
+  }
+  else {
+    lines = text.getText().split('\n');
+  }
+  return lines;
+}
 
 
 function checkValid(text: string): boolean[] {

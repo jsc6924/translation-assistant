@@ -3,56 +3,34 @@ import { registerCommand } from './utils';
 import * as utils from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
+import { DocumentParser } from './parser';
 
 export function activate(context: vscode.ExtensionContext) {
     	
-	registerCommand(context, 'Extension.dltxt.extract_single_line', () => {
+	registerCommand(context, 'Extension.dltxt.extract_single_line', async () => {
 		const document = vscode.window.activeTextEditor?.document;
 		if (!document) return;
 		const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
 		if (!filePath) return;
-        
-        const configInit = vscode.workspace.getConfiguration("dltxt");
-        const translatedPrefixRegex = configInit.get('core.translatedTextPrefixRegex');
-		let prefixRegStr = translatedPrefixRegex;
-		vscode.window.showInputBox({ placeHolder: '输入译文行首的正则表达式，如不输入则默认使用设置文件中的值' })
-			.then(val => {
-				if (val) {
-					prefixRegStr = val;
-				}
-			})
-			.then(() => {
-				if (!prefixRegStr) {
-					vscode.window.showErrorMessage('请提供译文行首的正则表达式');
-					return;
-				}
-				const dirPath = path.dirname(filePath);
-				const fileName = path.basename(filePath);
-				const tempDirPath = dirPath + '\\.dltxt'
-				if (!fs.existsSync(tempDirPath)) {
-					fs.mkdirSync(tempDirPath);
-				}
-				const lines = [];
-				const prefixReg = new RegExp(`^${prefixRegStr}` as string);
-				for (let i = 0; i < document.lineCount; i++) {
-					const line = document.lineAt(i).text;
-					if (prefixReg.test(line))
-						lines.push(line);
-				}
-				const slFilePath = tempDirPath + '\\' + fileName + '.sl';
-				const refFilePath = tempDirPath + '\\' + fileName + '.ref';
-				const data = lines.join('\r\n');
-				fs.writeFileSync(slFilePath, data);
-				fs.writeFileSync(refFilePath, prefixRegStr);
-				let setting: vscode.Uri = vscode.Uri.file(slFilePath);
-				vscode.workspace.openTextDocument(setting)
-					.then((d: vscode.TextDocument) => {
-						vscode.window.showTextDocument(d, vscode.ViewColumn.Beside, false);
-					}, (err) => {
-						console.error(err);
-					});
-			});
+
+		const dirPath = path.dirname(filePath);
+		const fileName = path.basename(filePath);
+		const tempDirPath = dirPath + '\\.dltxt'
+		if (!fs.existsSync(tempDirPath)) {
+			fs.mkdirSync(tempDirPath);
+		}
+		const lines: string[] = [];
+		DocumentParser.processTranslatedLines(document, (groups, i) => {
+			lines.push(groups.prefix + groups.white + groups.text + groups.suffix);
+		})
+		const slFilePath = tempDirPath + '\\' + fileName + '.sl';
+		const data = lines.join('\r\n');
+		fs.writeFileSync(slFilePath, data);
+		let setting: vscode.Uri = vscode.Uri.file(slFilePath);
 		
+		const d = await vscode.workspace.openTextDocument(setting)
+		vscode.window.showTextDocument(d, vscode.ViewColumn.Beside, false);
+
 	});
 
 	async function merge_into_double_line(deleleTemp: boolean) {
@@ -63,7 +41,6 @@ export function activate(context: vscode.ExtensionContext) {
 		let curFilePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
 		let dlFilePath: string;
 		let slFilePath: string;
-		let refFilePath: string;
 		const m = curFilePath.match(/(.*)\.dltxt\\(.*)\.sl/);
 		if (!m) {
 			vscode.window.showErrorMessage('当前编辑器中打开的不是单行文本');
@@ -82,33 +59,20 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		await vscode.window.activeTextEditor.document.save();
-		refFilePath = `${m[1]}.dltxt\\${m[2]}.ref`;
-		let prefixRegStr: string;
-		try {
-		  prefixRegStr = fs.readFileSync(refFilePath, 'utf8') as string;
-			if (!prefixRegStr)
-				throw new Error();
-		} catch {
-			vscode.window.showErrorMessage('译文提取时的信息被删除，请重新提取');
-			return;
-		}
-		const prefixReg = new RegExp(`^(${prefixRegStr})`);
+		
 		const replacedLines = fs.readFileSync(slFilePath, 'utf8').split(/\r?\n/);
 		let dlDocument = dlEditor.document;
 		await dlEditor?.edit(editBuilder => {
 			let j = 0;
-			for (let i = 0; i < dlDocument.lineCount; i++) {
+			DocumentParser.processTranslatedLines(dlEditor.document, (groups, i) => {
 				const line = dlDocument.lineAt(i);
-				if (prefixReg.test(line.text)) {
-					editBuilder.replace(line.range, replacedLines[j++]);
-				}
-			}
+				editBuilder.replace(line.range, replacedLines[j++]);
+			})
 		});
 
 		if (deleleTemp) {
 			await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 			fs.unlinkSync(slFilePath);
-			fs.unlinkSync(refFilePath);
 		}
 		vscode.window.showInformationMessage(`应用成功`);
 	}
