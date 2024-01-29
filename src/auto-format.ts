@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import { contains, registerCommand } from './utils'
 import { DocumentParser } from './parser';
+import { relative } from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, "Extension.dltxt.core.context.autoDetectFormat", async () => {
@@ -53,36 +54,52 @@ export class StandardParserAutoDetector implements AutoDetector {
         }
 
         //find the next empty line as the startLine
+        let foundEmptyLine = false;
         for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount; lineNumber++) {
             if (activeEditor.document.lineAt(lineNumber).text.trim()) {
                 continue;
             }
             startLine = lineNumber;
+            foundEmptyLine = true;
             break;
         }
+        
         const maxCount = 30;
-        const rlines = [], tlines = [];
+        let rlines = [], tlines = [];
         for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount - 1
-            && rlines.length < maxCount;) {
+            && rlines.length < maxCount; lineNumber++) {
             const thisLine = activeEditor.document.lineAt(lineNumber).text.trim();
-            const nextLine = activeEditor.document.lineAt(lineNumber + 1).text.trim();
 
             if (oReg && oReg.test(thisLine)) {
-                lineNumber++;
                 continue;
             }
 
-            if (containsJapaneseCharacters(thisLine) && nextLine) {
-                rlines.push(thisLine);
-                tlines.push(nextLine);
-                lineNumber += 2;
-            } else {
-                lineNumber++;
+            if (containsJapaneseCharacters(thisLine)) {
+                if (rlines.length == tlines.length) {
+                    rlines.push(thisLine);
+                } else {
+                    tlines.push(thisLine);
+                }
             }
         }
-        if (rlines.length < 2 || tlines.length < 2) {
+        if (rlines.length > tlines.length) {
+            rlines.pop();
+        }
+        if (rlines.length < 2 || tlines.length < 2 || rlines.length !== tlines.length) {
             vscode.window.showInformationMessage(`识别失败`);
             return;
+        }
+        if (!foundEmptyLine) {
+            const options = ['原文','译文'];
+            const r = await vscode.window.showQuickPick(options, {placeHolder: `这是原文还是译文：${rlines[0]}`});
+            if(!r) {
+                return;
+            }
+            if (r == '译文') {
+                const temp = rlines;
+                rlines = tlines;
+                tlines = temp;
+            }
         }
         let rRegStr = generateRegex(rlines);
         let tRegStr = generateRegex(tlines);
