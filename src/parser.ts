@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { createErrorDiagnostic } from './error-check';
 import * as utils from './utils';
+import { AutoDetector, StandardParserAutoDetector } from './auto-format';
 
 export function getRegex() {
     const config = vscode.workspace.getConfiguration("dltxt.core");
@@ -33,6 +34,22 @@ export interface MatchedGroups {
 }
 
 ////////////////////////Start standard parser///////////////////////////////
+
+interface DocumentParser {
+  processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => void): void;
+
+  processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void): void;
+
+  getCurrentTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
+
+  getNextTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
+
+  getPrevTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
+
+  errorCheck(document: vscode.TextDocument): [boolean, vscode.Diagnostic[]];
+
+  getFormatDetector(): AutoDetector;
+}
 
 class StandardDocumentParser {
     constructor() {
@@ -175,6 +192,10 @@ class StandardDocumentParser {
         //在错误数小于正确数时才报告错误
         return [diagnostics.length < matched_count, diagnostics];
     }
+
+    getFormatDetector() {
+      return new StandardParserAutoDetector();
+    }
 }
 
 ////////////////////////End standard parser///////////////////////////////
@@ -194,68 +215,68 @@ function getLines(text: string | string[] | vscode.TextDocument): string[] {
 
 
 function checkValid(text: string): boolean[] {
-    let stack: number[] = [];
-  
-    for (let i = 0; i < text.length; i++) {
-      let c = text[i];
-      if (c === '『') {
-        stack.push(i);
-      }
-      else if (c === '』') {
-        if (stack.length > 0) {
-          let k = stack.pop();
-          if (k === 0) {
-            if (i === text.length - 1) {
-              return [true, true]
-            }
+  let stack: number[] = [];
+
+  for (let i = 0; i < text.length; i++) {
+    let c = text[i];
+    if (c === '『') {
+      stack.push(i);
+    }
+    else if (c === '』') {
+      if (stack.length > 0) {
+        let k = stack.pop();
+        if (k === 0) {
+          if (i === text.length - 1) {
+            return [true, true]
           }
-        } else if (i === text.length - 1) {
-          return [false, true]
         }
-      }
-    }
-    return [stack[0] === 0, false];
-  }
-  function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
-    if (utils.contains(jgrps.white, '「') || utils.contains(jgrps.suffix, '」') || !jgrps.text)
-      return;
-    if (jgrps.text[0] !== '『' && jgrps.text[jgrps.text.length - 1] !== '』')
-      return;
-    const [prefix, suffix] = checkValid(jgrps.text);
-    if (prefix || suffix) {
-      if (prefix) {
-        jgrps.white += '『';
-        jgrps.text = jgrps.text.substring(1);
-      }
-      if (suffix) {
-        jgrps.suffix = '』' + jgrps.suffix;
-        jgrps.text = jgrps.text.substring(0, jgrps.text.length - 1);
-      }
-      if (prefix && !suffix) {
-        let cm = cgrps.text.match(/^(?<a>[『“]?)(?<b>.*)$/)
-        if (cm?.groups?.a) {
-          cgrps.white += cm.groups.a;
-          cgrps.text = cgrps.text.substring(1);
-        }
-      } else if (!prefix && suffix) {
-        let cm = cgrps.text.match(/^(?<b>.*?)(?<c>[”』]?)$/)
-        if (cm?.groups?.c) {
-          cgrps.suffix = cm.groups.c + cgrps.suffix;
-          cgrps.text = cgrps.text.substring(0, cgrps.text.length - 1);
-        }
-      } else if (prefix && suffix) {
-        let cm = cgrps.text.match(/^(?<a>[『“]?)(?<b>.*?)(?<c>[”』]?)$/)
-        if (cm?.groups?.a) {
-          cgrps.white += cm.groups.a;
-          cgrps.text = cgrps.text.substring(1);
-        }
-        if (cm?.groups?.c) {
-          cgrps.suffix = cm.groups.c + cgrps.suffix;
-          cgrps.text = cgrps.text.substring(0, cgrps.text.length - 1);
-        }
+      } else if (i === text.length - 1) {
+        return [false, true]
       }
     }
   }
-  
+  return [stack[0] === 0, false];
+}
+function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
+  if (utils.contains(jgrps.white, '「') || utils.contains(jgrps.suffix, '」') || !jgrps.text)
+    return;
+  if (jgrps.text[0] !== '『' && jgrps.text[jgrps.text.length - 1] !== '』')
+    return;
+  const [prefix, suffix] = checkValid(jgrps.text);
+  if (prefix || suffix) {
+    if (prefix) {
+      jgrps.white += '『';
+      jgrps.text = jgrps.text.substring(1);
+    }
+    if (suffix) {
+      jgrps.suffix = '』' + jgrps.suffix;
+      jgrps.text = jgrps.text.substring(0, jgrps.text.length - 1);
+    }
+    if (prefix && !suffix) {
+      let cm = cgrps.text.match(/^(?<a>[『“]?)(?<b>.*)$/)
+      if (cm?.groups?.a) {
+        cgrps.white += cm.groups.a;
+        cgrps.text = cgrps.text.substring(1);
+      }
+    } else if (!prefix && suffix) {
+      let cm = cgrps.text.match(/^(?<b>.*?)(?<c>[”』]?)$/)
+      if (cm?.groups?.c) {
+        cgrps.suffix = cm.groups.c + cgrps.suffix;
+        cgrps.text = cgrps.text.substring(0, cgrps.text.length - 1);
+      }
+    } else if (prefix && suffix) {
+      let cm = cgrps.text.match(/^(?<a>[『“]?)(?<b>.*?)(?<c>[”』]?)$/)
+      if (cm?.groups?.a) {
+        cgrps.white += cm.groups.a;
+        cgrps.text = cgrps.text.substring(1);
+      }
+      if (cm?.groups?.c) {
+        cgrps.suffix = cm.groups.c + cgrps.suffix;
+        cgrps.text = cgrps.text.substring(0, cgrps.text.length - 1);
+      }
+    }
+  }
+}
+
 
 export let DocumentParser = new StandardDocumentParser();

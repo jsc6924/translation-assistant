@@ -1,67 +1,72 @@
 import * as vscode from 'vscode'
 import { contains, registerCommand } from './utils'
+import { DocumentParser } from './parser';
 
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, "Extension.dltxt.core.context.autoDetectFormat", async () => {
-        await autoDetectFormat(context);
+        const detector = DocumentParser.getFormatDetector();
+        await detector.autoDetectFormat(context);
     })
 }
-
-async function autoDetectFormat(context: vscode.ExtensionContext) {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-        vscode.window.showInformationMessage(`请打开一个文本再执行此命令`);
-        return;
-    }
-    let startLine = 0;
-    if (activeEditor.selection) {
-        startLine = activeEditor.selection.active.line;
-    }
-
-    const otherLines = [];
-    while(true) {
-        const r = await vscode.window.showInputBox({
-            "placeHolder": "例：@1",
-            "prompt": `输入几个既不是原文也不是译文的例子，输入空字符串表示结束`,
-            "ignoreFocusOut": true
-        });
-        if (r) {
-            otherLines.push(r);
-            continue;
+export interface AutoDetector {
+    autoDetectFormat(context: vscode.ExtensionContext): void;
+}
+export class StandardParserAutoDetector implements AutoDetector {
+    async autoDetectFormat(context: vscode.ExtensionContext) {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (!activeEditor) {
+            vscode.window.showInformationMessage(`请打开一个文本再执行此命令`);
+            return;
         }
-        break;
-    }
-
-    let oRegStr = '';
-    let oReg = null;
-    if (otherLines.length > 0) {
-        oRegStr = generateRegex(otherLines);
-        if (!oRegStr) {
-            oRegStr = forceGeneratePrefix(otherLines);
+        let startLine = 0;
+        if (activeEditor.selection) {
+            startLine = activeEditor.selection.active.line;
         }
-        oReg = new RegExp(`^(${oRegStr})(.*)`);
-    }
 
-    //find the next empty line as the startLine
-    for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount; lineNumber++) {
-        if (activeEditor.document.lineAt(lineNumber).text.trim()) {
-            continue;
+        const otherLines = [];
+        while (true) {
+            const r = await vscode.window.showInputBox({
+                "placeHolder": "例：@1",
+                "prompt": `输入几个既不是原文也不是译文的例子，输入空字符串表示结束`,
+                "ignoreFocusOut": true
+            });
+            if (r) {
+                otherLines.push(r);
+                continue;
+            }
+            break;
         }
-        startLine = lineNumber;
-        break;
-    }
-    const maxCount = 30;
-    const rlines = [], tlines = [];
-    for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount - 1 
-        && rlines.length < maxCount;) {
+
+        let oRegStr = '';
+        let oReg = null;
+        if (otherLines.length > 0) {
+            oRegStr = generateRegex(otherLines);
+            if (!oRegStr) {
+                oRegStr = forceGeneratePrefix(otherLines);
+            }
+            oReg = new RegExp(`^(${oRegStr})(.*)`);
+        }
+
+        //find the next empty line as the startLine
+        for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount; lineNumber++) {
+            if (activeEditor.document.lineAt(lineNumber).text.trim()) {
+                continue;
+            }
+            startLine = lineNumber;
+            break;
+        }
+        const maxCount = 30;
+        const rlines = [], tlines = [];
+        for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount - 1
+            && rlines.length < maxCount;) {
             const thisLine = activeEditor.document.lineAt(lineNumber).text.trim();
             const nextLine = activeEditor.document.lineAt(lineNumber + 1).text.trim();
 
-            if(oReg && oReg.test(thisLine)) {
+            if (oReg && oReg.test(thisLine)) {
                 lineNumber++;
                 continue;
             }
-            
+
             if (containsJapaneseCharacters(thisLine) && nextLine) {
                 rlines.push(thisLine);
                 tlines.push(nextLine);
@@ -69,41 +74,42 @@ async function autoDetectFormat(context: vscode.ExtensionContext) {
             } else {
                 lineNumber++;
             }
+        }
+        if (rlines.length < 2 || tlines.length < 2) {
+            vscode.window.showInformationMessage(`识别失败`);
+            return;
+        }
+        let rRegStr = generateRegex(rlines);
+        let tRegStr = generateRegex(tlines);
+
+        rRegStr = regexSubstract(rRegStr, [{ otherReg: tRegStr, otherLines: tlines }, { otherReg: oRegStr, otherLines: otherLines }]);
+        tRegStr = regexSubstract(tRegStr, [{ otherReg: rRegStr, otherLines: rlines }, { otherReg: oRegStr, otherLines: otherLines }]);
+        if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
+            vscode.window.showInformationMessage(`识别失败`);
+            return;
+        }
+
+        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}"，是否应用？`, '是', '否');
+        if (u !== '是') {
+            return;
+        }
+        const config = vscode.workspace.getConfiguration("dltxt");
+        await config.update('core.originalTextPrefixRegex', rRegStr, false);
+        await config.update('core.translatedTextPrefixRegex', tRegStr, false);
+        await config.update('core.otherPrefixRegex', oRegStr, false);
+        vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
+        vscode.window.showInformationMessage(`已应用设置`);
     }
-    if (rlines.length < 2 || tlines.length < 2) {
-        vscode.window.showInformationMessage(`识别失败`);
-        return;
-    }
-    let rRegStr = generateRegex(rlines);
-    let tRegStr = generateRegex(tlines);
-    
-    rRegStr = regexSubstract(rRegStr, [{otherReg: tRegStr, otherLines: tlines}, {otherReg: oRegStr, otherLines: otherLines}]);
-    tRegStr = regexSubstract(tRegStr,[{otherReg: rRegStr, otherLines: rlines}, {otherReg: oRegStr, otherLines: otherLines}]);
-    if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
-        vscode.window.showInformationMessage(`识别失败`);
-        return;
-    }
-    
-    const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}"，是否应用？`, '是', '否');
-    if (u !== '是') {
-        return;
-    }
-    const config = vscode.workspace.getConfiguration("dltxt");
-    await config.update('core.originalTextPrefixRegex', rRegStr, false);
-    await config.update('core.translatedTextPrefixRegex', tRegStr, false);
-    await config.update('core.otherPrefixRegex', oRegStr, false);
-    vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
-    vscode.window.showInformationMessage(`已应用设置`);
 }
 
-function regexSubstract(reg: string, 
+function regexSubstract(reg: string,
     notWanted: {
         otherReg: string, otherLines: string[]
     }[]) {
     const substractSet: string[] = [];
     const prefix = reg ? '' : '^';
     const suffix = reg ? '' : `(?=.)`;
-    for(const {otherReg, otherLines} of notWanted) {
+    for (const { otherReg, otherLines } of notWanted) {
         if (otherReg && matchAnyPrefix(reg, otherLines)) {
             substractSet.push(otherReg);
         }
@@ -128,8 +134,8 @@ function commonPrefix(lines: string[]): string {
     if (maxLen == 0) {
         return '';
     }
-    for(let i = 0; i < lines.length - 1; i++) {
-        if (lines[i][0] !== lines[i+1][0]) {
+    for (let i = 0; i < lines.length - 1; i++) {
+        if (lines[i][0] !== lines[i + 1][0]) {
             return '';
         }
     }
@@ -146,7 +152,7 @@ function hasAlphaNumPrefix(lines: string[]): boolean {
     if (maxLen == 0) {
         return false;
     }
-    for(let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
         if (!isAlphaNum(lines[i][0])) {
             return false;
         }
@@ -175,7 +181,7 @@ for (const [k, v] of paraMap) {
 function generateRegex(lines: string[]): string {
     let regStr = '';
     const openingPar = [];
-    while(true) {
+    while (true) {
         const reg = new RegExp(`^(${regStr})(.*)`);
         const reminders = [];
         for (const line of lines) {
@@ -220,7 +226,7 @@ function generateRegex(lines: string[]): string {
 
 function matchAnyPrefix(regStr: string, lines: string[]) {
     const reg = new RegExp(`^(${regStr})(.*)`);
-    for(const line of lines) {
+    for (const line of lines) {
         if (reg.test(line)) {
             return true;
         }
@@ -230,7 +236,7 @@ function matchAnyPrefix(regStr: string, lines: string[]) {
 
 function matchAllPrefix(regStr: string, lines: string[]) {
     const reg = new RegExp(`^(${regStr})(.*)`);
-    for(const line of lines) {
+    for (const line of lines) {
         if (!reg.test(line)) {
             return false;
         }
@@ -240,7 +246,7 @@ function matchAllPrefix(regStr: string, lines: string[]) {
 
 function forceGeneratePrefix(lines: string[]) {
     const prefixs = new Set<string>();
-    for(const line of lines) {
+    for (const line of lines) {
         const c = line[0];
         if (isAlphaNum(c)) {
             prefixs.add('[A-Za-z0-9]+');

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.14.2",
+	"version": "3.15.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -933,6 +933,15 @@
 				"dltxt.trdb.filteredLine": {
 					"type": "string",
 					"description": "添加至翻译数据库时需要过滤的行的正则表达式（建议在Workspace中填写）"
+				},
+				"dltxt.core.a.documentParser": {
+					"type": "string",
+					"default": "standard",
+					"enum": [
+						"standard",
+						"repeatedPattern"
+					],
+					"description": "文件格式解析器"
 				},
 				"dltxt.core.originalTextPrefixRegex": {
 					"type": "string",
