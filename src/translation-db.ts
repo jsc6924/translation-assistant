@@ -381,9 +381,8 @@ async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string)
     const config = vscode.workspace.getConfiguration("dltxt");
     const srcEncoding = config.get('trdb.fileEncoding') as string;
     const content = iconv.decode(fBuf, srcEncoding);
-    const lines = content.split('\n');
     const documentFilename = path.parse(fsPath).base;
-    return addDocumentLines(context, documentFilename, lines);
+    return addDocument(context, documentFilename, content);
 }
 export function findBlocksForVirtualDocument(context: vscode.ExtensionContext, 
     folder: string, documentFilename: string): string[] 
@@ -411,17 +410,9 @@ function deleteDocument(context: vscode.ExtensionContext, folder: string, docume
     }
     return true;
 }
-async function addDocument(context: vscode.ExtensionContext, document: vscode.TextDocument) {
-    let lines: string[] = [];
-    for (let i = 0; i < document.lineCount; i++) {
-        lines.push(document.lineAt(i).text);
-    }
-    const documentFilename = path.parse(document.fileName).base;
-    return addDocumentLines(context, documentFilename, lines);
-}
 
-async function addDocumentLines(context: vscode.ExtensionContext, documentFilename: string
-    , documentLines: string[]) {
+async function addDocument(context: vscode.ExtensionContext, documentFilename: string
+    , documentContent: string) {
     const config = vscode.workspace.getConfiguration('dltxt');
     let GameTitle: string = config.get("trdb.project") as string;
 
@@ -434,7 +425,7 @@ async function addDocumentLines(context: vscode.ExtensionContext, documentFilena
     let clines = [''];
 
     try {
-        DocumentParser.processPairedLines(documentLines, (jgrps, cgrps) => {
+        DocumentParser.processPairedLines(documentContent, (jgrps, cgrps) => {
             lines.push(jgrps.text);
             clines.push(cgrps.text);
         })

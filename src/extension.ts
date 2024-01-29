@@ -20,6 +20,7 @@ import * as singleline from './singleline';
 import * as auto_format from './auto-format';
 import * as fs from 'fs';
 import * as dictserver from './dictserver';
+import * as parser from './parser';
 
 
 
@@ -32,6 +33,7 @@ import * as dictserver from './dictserver';
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 	ContextHolder.set(context);
+	parser.activate(context);
 
 	if (!fs.existsSync(context.globalStoragePath)) {
 		fs.mkdirSync(context.globalStoragePath, { recursive: true });

@@ -11,6 +11,11 @@ export function activate(context: vscode.ExtensionContext) {
 export interface AutoDetector {
     autoDetectFormat(context: vscode.ExtensionContext): void;
 }
+export class NoopAutoDetector implements AutoDetector {
+    autoDetectFormat(context: vscode.ExtensionContext): void {
+        vscode.window.showInformationMessage(`当前配置下暂不支持自动识别文本格式`);
+    }
+}
 export class StandardParserAutoDetector implements AutoDetector {
     async autoDetectFormat(context: vscode.ExtensionContext) {
         const activeEditor = vscode.window.activeTextEditor;

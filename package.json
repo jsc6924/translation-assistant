@@ -939,7 +939,7 @@
 					"default": "standard",
 					"enum": [
 						"standard",
-						"repeatedPattern"
+						"text-block"
 					],
 					"description": "文件格式解析器"
 				},
@@ -957,6 +957,11 @@
 					"type": "string",
 					"default": "",
 					"description": "其他合法的开头的正则表达式"
+				},
+				"dltxt.core.textBlock.pattern": {
+					"type": "string",
+					"default": "^-+\\d+-+(\\r)?\\n((\\*+)|(【.*】))(\\r)?\\n(?<jp>.*)(\\r)?\\n=+(\\r)?\\n(?<cn>.*)((\\r)?\\n)*$",
+					"description": "text-block的正则表达式"
 				},
 				"dltxt.core.x.originalTextWhite": {
 					"type": "string",

@@ -25,6 +25,25 @@ export function findLastMatchIndex(pattern: RegExp, text: string): number {
   }
 }
 
+export function findAllAndProcess(pattern: RegExp, text: string, 
+  cb: (match: RegExpExecArray) => boolean) {
+  if (pattern.flags.indexOf('g') == -1) {
+    vscode.window.showErrorMessage('pattern must have a "g" flag');
+    return -1;
+  }
+  let match: RegExpExecArray | null;
+  let p = undefined;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match[0].length == 0) { //if matched empty string
+      pattern.lastIndex++;
+    } else {
+      if (cb(match)) {
+        return;
+      }
+    }
+  }
+}
+
 export function setCursorAndScroll(editor: vscode.TextEditor, dn: number, m: number, scroll: boolean = true) {
   const position = editor.selection.active;
   const targetLine = position.line + dn;

@@ -26,11 +26,26 @@ export function updateErrorDecorations() {
 
     if (showError) {
         diagnosticCollection.set(activeEditor.document.uri, diagnostics);
+    } else {
+
+        diagnosticCollection.set(activeEditor.document.uri, [
+            createErrorDiagnostic("发现太多错误，没有全部显示", 0, 1)
+        ]);
     }
 }
 
 export function createErrorDiagnostic(message: string, lineNumber: number, length: number) {
     const range = new vscode.Range(lineNumber, 0, lineNumber, length);
+    const diagnostic = new vscode.Diagnostic(
+        range,
+        message,
+        vscode.DiagnosticSeverity.Error
+    );
+    return diagnostic;
+}
+
+export function createErrorDiagnosticMultiLine(message: string, startLine: number, endLine: number) {
+    const range = new vscode.Range(startLine, 0, endLine, Number.MAX_SAFE_INTEGER);
     const diagnostic = new vscode.Diagnostic(
         range,
         message,
