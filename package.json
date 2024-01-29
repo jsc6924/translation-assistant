@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.14.1",
+	"version": "3.14.2",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -949,15 +949,25 @@
 					"default": "",
 					"description": "其他合法的开头的正则表达式"
 				},
-				"dltxt.core.y.commonSuffix": {
+				"dltxt.core.x.originalTextWhite": {
 					"type": "string",
-					"default": "",
-					"description": "每行共同的后缀（如果有）"
+					"default": "\\s*[「]?",
+					"description": "原文每行的前缀"
 				},
-				"dltxt.core.z.skipCharsPrefix": {
+				"dltxt.core.x.translatedTextWhite": {
 					"type": "string",
-					"default": " \t　「『n\\",
-					"description": "移动至译文开头时可以跳过的字符（用于nextLine等）"
+					"default": "\\s*[「]?",
+					"description": "译文每行的前缀"
+				},
+				"dltxt.core.y.originalTextSuffix": {
+					"type": "string",
+					"default": "[」]?",
+					"description": "原文每行的后缀"
+				},
+				"dltxt.core.y.translatedTextSuffix": {
+					"type": "string",
+					"default": "[」]?",
+					"description": "译文每行的后缀"
 				},
 				"dltxt.core.z.textDelimiter": {
 					"type": "string",

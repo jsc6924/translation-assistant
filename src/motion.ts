@@ -1,25 +1,52 @@
 import * as vscode from 'vscode';
 import * as utils from './utils';
 import { DocumentParser } from './parser';
+import { registerCommand } from './utils';
 
-function getTranslatedPrefixRegex() {
-  const config = vscode.workspace.getConfiguration("dltxt");
-  return config.get('core.translatedTextPrefixRegex')
+
+export function activate(context: vscode.ExtensionContext) {
+	registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
+	registerCommand(context, 'Extension.dltxt.cursorToLineEnd', cursorToLineEnd);
+  registerCommand(context, 'Extension.dltxt.cursorToNextLine', cursorToNextLine);
+	registerCommand(context, 'Extension.dltxt.cursorToPrevLine', cursorToPrevLine);
+	registerCommand(context, 'Extension.dltxt.cursorToNextWord', cursorToNextWord);
+	registerCommand(context, 'Extension.dltxt.cursorToPrevWord', cursorToPrevWord);
+  registerCommand(context, 'Extension.dltxt.cursorToSublineHead', () => {
+		cursorToSublineHead();
+	});
+
+	registerCommand(context, 'Extension.dltxt.cursorToSublineEnd', () => {
+		nextPuncInText(false);
+	});
+
+	registerCommand(context, 'Extension.dltxt.moveToNextLine', () => {
+		moveToNextLine();
+	});
+
+	registerCommand(context, 'Extension.dltxt.moveToPrevLine', () => {
+		moveToPrevLine();
+	});
+
+	registerCommand(context, 'Extension.dltxt.deleteUntilPunc', () => {
+		nextPuncInText(true);
+	});
+
+	registerCommand(context, 'Extension.dltxt.deleteAllAfter', () => {
+		deleteAllAfter();
+	});
+
+	registerCommand(context, 'Extension.dltxt.replaceAllInCurLine', (arg) => {
+		replaceAllInCurLine(arg.old_text, arg.new_text);
+	})
+	
+	registerCommand(context, 'Extension.dltxt.translateCurrentLine', translateCurrentLine);
 }
-function getSkipCharsSet() {
-  const config = vscode.workspace.getConfiguration("dltxt");
-  const skipCharsStr = config.get('core.z.skipCharsPrefix') as string;
-  let skipCharsSet = new Set<string>();
-  for (let i = 0; i < skipCharsStr.length; i++) {
-    skipCharsSet.add(skipCharsStr[i]);
-  }
-  return skipCharsSet;
-}
+
 export function getTextDelimiter() {
   const config = vscode.workspace.getConfiguration("dltxt");
-  const suffixPatternStr = config.get('core.z.textDelimiter') as string;
+  const textDelimiterStr = config.get('core.z.textDelimiter') as string;
   try {
-    const translatedSuffixRegex = new RegExp(suffixPatternStr, 'g');
+    const translatedSuffixRegex = new RegExp(textDelimiterStr, 'g');
     return translatedSuffixRegex;
   } catch (e) {
     vscode.window.showErrorMessage(`${e}`);
@@ -42,49 +69,43 @@ export function getCurrentLine() {
     )
   );
 }
-
-export function cursorToLineHead() {
+function cursorToLineHead() {
   const editor = vscode.window.activeTextEditor;
-  if (editor && editor.selection.isEmpty) {
-    const position = editor.selection.active;
-    const searchTxt = editor.document.getText(
-      new vscode.Range(
-        position.with(position.line, 0),
-        position.with(position.line, INT_MAX)
-      )
-    );
-
-    const translatedPrefixRegex = getTranslatedPrefixRegex();
-    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
-    const idx = searchTxt.search(reg);
-    if (idx >= 0) {
-      let m = utils.countCharBeforeNewline(searchTxt, idx);
-      m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
-      utils.setCursorAndScroll(editor, 0, m);
-    }
+  const [ok, curLine, g] = DocumentParser.getCurrentTranslationLine(editor);
+  if (editor && ok && curLine && g) {
+    let m = g.prefix.length + g.white.length;
+    utils.setCursorAndScroll(editor, 0, m);
   }
 }
 
-export function cursorToNextLine() {
+function cursorToLineEnd() {
   const editor = vscode.window.activeTextEditor;
-  if (editor && editor.selection.isEmpty) {
-    const sStart = editor.selection.start.with(editor.selection.start.line + 1, 0);
-    const sEnd = editor.selection.start.with(editor.selection.start.line + 16);
-    const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-
-    const translatedPrefixRegex = getTranslatedPrefixRegex();
-    let reg = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
-    const idx = searchTxt.search(reg);
-    if (idx >= 0) {
-      let m = utils.countCharBeforeNewline(searchTxt, idx);
-      m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
-      let n = utils.countLineUntil(searchTxt, idx);
-      utils.setCursorAndScroll(editor, n, m);
-    }
+  const [ok, curLine, g] = DocumentParser.getCurrentTranslationLine(editor);
+  if (editor && ok && curLine && g) {
+    let m = g.prefix.length + g.white.length + g.text.length;
+    utils.setCursorAndScroll(editor, 0, m);
   }
 }
 
-export function cursorToNextWord() {
+function cursorToNextLine() {
+  const editor = vscode.window.activeTextEditor;
+  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
+  if (editor?.selection?.active && ok && nextLine && g) {
+    let m = g.prefix.length + g.white.length;
+    utils.setCursorAndScroll(editor, nextLine.lineNumber - editor.selection.active.line, m);
+  }
+}
+
+function cursorToPrevLine() {
+  const editor = vscode.window.activeTextEditor;
+  const [ok, prevLine, g] = DocumentParser.getPrevTranslationLine(editor);
+  if (editor?.selection?.active && ok && prevLine && g) {
+    let m = g.prefix.length + g.white.length;
+    utils.setCursorAndScroll(editor, prevLine.lineNumber - editor.selection.active.line, m);
+  }
+}
+
+function cursorToNextWord() {
   const editor = vscode.window.activeTextEditor;
   if (editor && editor.selection.isEmpty) {
     const c = editor.selection.start;
@@ -98,7 +119,7 @@ export function cursorToNextWord() {
     }
   }
 }
-export function cursorToPrevWord() {
+function cursorToPrevWord() {
   const editor = vscode.window.activeTextEditor;
   if (editor && editor.selection.isEmpty) {
     const c = editor.selection.start;
@@ -117,48 +138,19 @@ export function cursorToPrevWord() {
   }
 }
 
-
-
-export function cursorToPrevLine() {
-  const editor = vscode.window.activeTextEditor;
-  if (editor && editor.selection.isEmpty) {
-    const startLine = Math.max(0, editor.selection.start.line - 16);
-    const endLine = Math.max(0, editor.selection.start.line - 1);
-    const sStart = editor.selection.start.with(startLine, 0);
-    const sEnd = editor.selection.start.with(endLine, 100);
-    const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-    const translatedPrefixRegex = getTranslatedPrefixRegex();
-    const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
-    let startIdx = utils.findLastMatchIndex(pattern, searchTxt);
-    if (startIdx != -1) {
-      let m = utils.countCharBeforeNewline(searchTxt, startIdx);
-      m += utils.countStartingUnimportantChar(searchTxt, startIdx, getSkipCharsSet());
-      let n = utils.countLineFrom(searchTxt, startIdx);
-      utils.setCursorAndScroll(editor, -n, m);
-    }
-  }
-}
-
-
-export function moveToNextLine() {
+function moveToNextLine() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  const translatedPrefixRegex = getTranslatedPrefixRegex();
-  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
-  const curLine = getCurrentLine();
-  if (curLine.search(pattern) == -1)
+  const [curIsTranslation] = DocumentParser.getCurrentTranslationLine(editor);
+  if (!curIsTranslation) {
     return;
-  const sStart = editor.selection.start.with(editor.selection.start.line + 1, 0);
-  const sEnd = editor.selection.start.with(editor.selection.start.line + 16);
-  const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-
-  const idx = searchTxt.search(pattern);
-  if (idx >= 0) {
-    let m = utils.countCharBeforeNewline(searchTxt, idx);
-    m += utils.countStartingUnimportantChar(searchTxt, idx, getSkipCharsSet());
-    let n = utils.countLineUntil(searchTxt, idx);
+  }
+  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
+  if (editor?.selection?.active && ok && nextLine && g) {
     const position = editor.selection.active;
+    let m = g.prefix.length + g.white.length;
+    let n = nextLine.lineNumber - position.line;
     const toMove = new vscode.Range(
       position.with(position.line, position.character),
       position.with(position.line, INT_MAX));
@@ -177,102 +169,105 @@ export function moveToNextLine() {
   }
 }
 
-export function deleteUntil(all: boolean, doDelete: boolean) {
+function moveToPrevLine() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  const translatedPrefixRegex = getTranslatedPrefixRegex();
-  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'm');
+  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
+  if (editor?.selection?.active && ok && nextLine && g) {
+    const position = editor.selection.active;
+    let m = g.prefix.length + g.white.length;
+    let n = nextLine.lineNumber - position.line;
+    const [ok2, curLine, curg] = DocumentParser.getCurrentTranslationLine(editor);
+    if (!ok2 || !curLine || !curg) {
+      return;
+    }
+    const t = curg.prefix.length + curg.white.length;
+    const toMove = new vscode.Range(
+      position.with(position.line, t),
+      position.with(position.line, position.character))
+    const toInsert = new vscode.Position(
+      position.line - n, INT_MAX
+    );
+    let sline = editor.document.getText(toMove);
+    editor.edit((editbuilder) => {
+      editbuilder.delete(toMove);
+      editbuilder.insert(toInsert, sline);
+    });
+  }
+}
+
+function nextPuncInText(del: boolean) {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return;
   const position = editor.selection.active;
-  const curLine = editor.document.getText(
-    new vscode.Range(
-      position.with(position.line, 0),
-      position.with(position.line, INT_MAX)
-    )
-  );
-  if (doDelete) {
-    if (curLine.search(pattern) == -1) {
-      return;
-    }
-    if (!editor.selection.isEmpty) {
-      editor.edit((editbuilder) => {
-        editbuilder.delete(editor.selection);
-      });
-      return;
-    }
+  const [curIsTranslation, curLine, curGroups] = DocumentParser.getCurrentTranslationLine(editor);
+  if (!curIsTranslation || !curLine || !curGroups) {
+    return;
   }
-
-  const curLineAfter = curLine.substring(position.character);
-
-  let iend = position.character + curLineAfter.length;
-  const getLastQuote = () => {
-    let last = position.character + curLineAfter.length;
-    const pattern = /」|』/;
-    for (let i = position.character; i < curLine.length; i++) {
-      if (pattern.test(curLine[i])) {
-        last = i;
-      }
-    }
-    return last;
-  }
-  if (all) {
-    iend = getLastQuote();
+  const textStartIdx = curGroups.prefix.length + curGroups.white.length;
+  let iend = position.character - textStartIdx;
+  const textAfter = curGroups.text.substring(iend);
+  const delimMatch = getTextDelimiter().exec(textAfter)
+  if (delimMatch) {
+    iend += delimMatch.index === 0 ? 1 : delimMatch.index;
+    curGroups.text.substring(iend - 1, 2) === "……" && iend++;
   } else {
-    const lastQuote = getLastQuote();
-    const delimMatch = getTextDelimiter().exec(curLineAfter)
-    if (delimMatch) {
-      iend = position.character + delimMatch.index;
-    }
-    if (iend == position.character) {
-      iend++;
-    }
-
-    const text = editor.document.getText(new vscode.Range(
-      position.with(position.line, iend-1), position.with(position.line, iend+1)));
-    if (text === '……') {
-      iend++;
-    }
-    if (iend > lastQuote) {
-      iend = lastQuote;
-    }
+    iend = curGroups.text.length;
   }
 
-  if (doDelete) {
-    if (position.character < iend) {
+  if (del) {
+    if (position.character < textStartIdx + iend) {
       const toDelete = new vscode.Range(
         position.with(position.line, position.character),
-        position.with(position.line, iend)
+        position.with(position.line, textStartIdx + iend)
       );
       editor.edit((editbuilder) => {
         editbuilder.delete(toDelete);
       });
     }
   } else {
-    const newPosition = position.with(position.line, iend);
+    const newPosition = position.with(position.line, textStartIdx + iend);
     editor.selection = new vscode.Selection(newPosition, newPosition);
   }
 }
 
-export function cursorToSublineHead() {
+function deleteAllAfter() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return;
+  const position = editor.selection.active;
+  const [curIsTranslation, curLine, curGroups] = DocumentParser.getCurrentTranslationLine(editor);
+  if (!curIsTranslation || !curLine || !curGroups) {
+    return;
+  }
+  const iend = curGroups.prefix.length + curGroups.white.length + curGroups.text.length;
+  editor.edit(builder => {
+    const toDelete = new vscode.Range(
+      position.with(position.line, position.character),
+      position.with(position.line, iend));
+    builder.delete(toDelete);
+  })
+}
+
+function cursorToSublineHead() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
 
   const delimiterPattern = getTextDelimiter();
   const position = editor.selection.active;
-  const curLine = editor.document.getText(
-    new vscode.Range(
-      position.with(position.line, 0),
-      position.with(position.line, INT_MAX)
-    )
-  );
-  const translatedPrefixRegex = getTranslatedPrefixRegex();
-  const pattern = new RegExp(`(${translatedPrefixRegex}).*`, 'm');
-  const transMatch = pattern.exec(curLine);
-  const prefixLen = transMatch ? transMatch[1].length : 0;
+  
+  const [isCurTrans, curLine, groups] = DocumentParser.getCurrentTranslationLine(editor);
+  if (!isCurTrans || !curLine || !groups) {
+    return;
+  }
+
+  const prefixLen = groups.prefix.length + groups.white.length;
 
   const curChar = position.character;
-  let textLeft = curLine.substring(0, curChar);
+  let textLeft = curLine.text.substring(0, curChar);
   let i = utils.findLastMatchIndex(delimiterPattern, textLeft);
   if (i == -1) {
     i = 0;
@@ -298,41 +293,7 @@ export function cursorToSublineHead() {
   editor.selection = new vscode.Selection(newPosition, newPosition);
 }
 
-
-export function moveToPrevLine() {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor)
-    return;
-  const startLine = Math.max(0, editor.selection.start.line - 16);
-  const endLine = Math.max(0, editor.selection.start.line - 1);
-  const sStart = editor.selection.start.with(startLine, 0);
-  const sEnd = editor.selection.start.with(endLine, INT_MAX);
-  const searchTxt = editor.document.getText(new vscode.Range(sStart, sEnd));
-  const translatedPrefixRegex = getTranslatedPrefixRegex();
-  const pattern = new RegExp(`(?<=${translatedPrefixRegex}).*`, 'gm');
-  let idx = utils.findLastMatchIndex(pattern, searchTxt);
-  if (idx != -1) {
-    let n = utils.countLineFrom(searchTxt, idx);
-    const position = editor.selection.active;
-    const strThisLine = getCurrentLine();
-    let t = strThisLine.search(pattern);
-    if (t == -1)
-      return;
-    t += utils.countStartingUnimportantChar(strThisLine, t, getSkipCharsSet());
-    const toMove = new vscode.Range(
-      position.with(position.line, t),
-      position.with(position.line, position.character))
-    const toInsert = new vscode.Position(
-      position.line - n, INT_MAX
-    );
-    let sline = editor.document.getText(toMove);
-    editor.edit((editbuilder) => {
-      editbuilder.delete(toMove);
-      editbuilder.insert(toInsert, sline);
-    });
-  }
-}
-export function replaceAllInCurLine(old_text: string, new_text: string) {
+function replaceAllInCurLine(old_text: string, new_text: string) {
   const lookupTable = new Map<string, string | ((arg: string)=>string) >([
     [old_text, new_text],
   ]);
@@ -394,7 +355,7 @@ export function translateCurrentLine(
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  let [ok, curLine] = DocumentParser.getCurrentTranslationLine();
+  let [ok, curLine] = DocumentParser.getCurrentTranslationLine(editor);
   if (!ok || !curLine) {
     return;
   }

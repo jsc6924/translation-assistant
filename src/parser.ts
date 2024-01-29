@@ -1,20 +1,23 @@
 import * as vscode from 'vscode';
 import { createErrorDiagnostic } from './error-check';
-import { contains } from './utils';
+import * as utils from './utils';
 
 export function getRegex() {
-    const config = vscode.workspace.getConfiguration("dltxt");
-    const jPreStr = config.get('core.originalTextPrefixRegex') as string;
-    const cPreStr = config.get('core.translatedTextPrefixRegex') as string;
-    const oPreStr = config.get('core.otherPrefixRegex') as string;
-    const suffixStr = config.get('core.y.commonSuffix') as string;
+    const config = vscode.workspace.getConfiguration("dltxt.core");
+    const jPreStr = config.get('originalTextPrefixRegex') as string;
+    const cPreStr = config.get('translatedTextPrefixRegex') as string;
+    const oPreStr = config.get('otherPrefixRegex') as string;
+    const jWhiteStr = config.get('x.originalTextWhite') as string;
+    const cWhiteStr = config.get('x.translatedTextWhite') as string;
+    const jSuffixStr = config.get('y.originalTextSuffix') as string;
+    const cSuffixStr = config.get('y.translatedTextSuffix') as string;
     if (!jPreStr || !cPreStr) {
       return [undefined, undefined, undefined];
     }
     try {
-      const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?${suffixStr})$`);
-      const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?${suffixStr})$`);
-      const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」]?)$`) : undefined;
+      const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
+      const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
+      const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<text>.*?)$`) : undefined;
       return [jreg, creg, oreg];
     } catch (e) {
       vscode.window.showErrorMessage(`${e}`);
@@ -28,6 +31,8 @@ export interface MatchedGroups {
     text: string;
     suffix: string;
 }
+
+////////////////////////Start standard parser///////////////////////////////
 
 class StandardDocumentParser {
     constructor() {
@@ -74,29 +79,8 @@ class StandardDocumentParser {
         }
     }
 
-    // get [['jp','cn'], ['jp2','cn2'], ...]
-    getPairedLines(text: string): string[][] {
-        const [jreg, creg] = getRegex();
-        if (!jreg || !creg) {
-            throw new Error('jreg or creg undefined');
-        }
-        const lines = text.split('\n');
-        let prevJline = '';
-        const res = [];
-        for (let line of lines) {
-            line = line.trim();
-            if (jreg.test(line)) {
-                prevJline = line;
-            } else if (creg.test(line)) {
-                res.push([prevJline, line]);
-            }
-        }
-        return res;
-    }
-
-    getCurrentTranslationLine(): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor || !editor.selection)
+    getCurrentTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+        if (!editor?.selection)
             return [false, undefined, undefined];
         const curLine = editor.document.lineAt(editor.selection.active.line);
         const [, creg] = getRegex();
@@ -107,8 +91,41 @@ class StandardDocumentParser {
         return !!m ? [true, curLine, m.groups as any as MatchedGroups] : [false, undefined, undefined];
     }
 
-    errorCheck(document: vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
+    getNextTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+      if (!editor?.selection)
+            return [false, undefined, undefined];
+      const [, creg] = getRegex();
+      if (!creg) {
+        return [false, undefined, undefined];
+      }
+      const position = editor.selection.active;
+      for (let i = 1; i <= 32 && position.line + i < editor.document.lineCount; i++) {
+        const m = creg.exec(editor.document.lineAt(position.line + i).text)
+        if (m && m.groups) {
+          return [true, editor.document.lineAt(position.line + i), m.groups as any as MatchedGroups]
+        }
+      }
+      return [false, undefined, undefined]
+    }
 
+    getPrevTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+      if (!editor?.selection)
+            return [false, undefined, undefined];
+      const [, creg] = getRegex();
+      if (!creg) {
+        return [false, undefined, undefined];
+      }
+      const position = editor.selection.active;
+      for (let i = 1; i <= 32 && position.line - i >= 0; i++) {
+        const m = creg.exec(editor.document.lineAt(position.line - i).text)
+        if (m && m.groups) {
+          return [true, editor.document.lineAt(position.line - i), m.groups as any as MatchedGroups]
+        }
+      }
+      return [false, undefined, undefined]
+    }
+
+    errorCheck(document: vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
         const config = vscode.workspace.getConfiguration("dltxt");
         const checkPrefixTag = config.get<boolean>('appearance.showError.checkPrefixTag');
         const checkDeletedLines = config.get<boolean>('appearance.showError.checkDeletedLines');
@@ -152,6 +169,8 @@ class StandardDocumentParser {
     }
 }
 
+////////////////////////End standard parser///////////////////////////////
+
 
 function checkValid(text: string): boolean[] {
     let stack: number[] = [];
@@ -177,7 +196,7 @@ function checkValid(text: string): boolean[] {
     return [stack[0] === 0, false];
   }
   function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
-    if (contains(jgrps.white, '「') || contains(jgrps.suffix, '」') || !jgrps.text)
+    if (utils.contains(jgrps.white, '「') || utils.contains(jgrps.suffix, '」') || !jgrps.text)
       return;
     if (jgrps.text[0] !== '『' && jgrps.text[jgrps.text.length - 1] !== '』')
       return;

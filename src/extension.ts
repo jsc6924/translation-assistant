@@ -107,47 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	registerCommand(context, 'Extension.dltxt.cursorToNextLine', motion.cursorToNextLine);
-
-	registerCommand(context, 'Extension.dltxt.cursorToPrevLine', motion.cursorToPrevLine);
-
-	registerCommand(context, 'Extension.dltxt.cursorToNextWord', motion.cursorToNextWord);
- 
-	registerCommand(context, 'Extension.dltxt.cursorToPrevWord', motion.cursorToPrevWord);
-
-	registerCommand(context, 'Extension.dltxt.cursorToLineHead', motion.cursorToLineHead);
-
-	registerCommand(context, 'Extension.dltxt.cursorToLineEnd', () => {
-		motion.deleteUntil(true, false);
-	});
-
-	registerCommand(context, 'Extension.dltxt.cursorToSublineHead', () => {
-		motion.cursorToSublineHead();
-	});
-
-	registerCommand(context, 'Extension.dltxt.cursorToSublineEnd', () => {
-		motion.deleteUntil(false, false);
-	});
-
-	registerCommand(context, 'Extension.dltxt.moveToNextLine', () => {
-		motion.moveToNextLine();
-	});
-
-	registerCommand(context, 'Extension.dltxt.moveToPrevLine', () => {
-		motion.moveToPrevLine();
-	});
-
-	registerCommand(context, 'Extension.dltxt.deleteUntilPunc', () => {
-		motion.deleteUntil(false, true);
-	});
-
-	registerCommand(context, 'Extension.dltxt.deleteAllAfter', () => {
-		motion.deleteUntil(true, true);
-	});
-
-	registerCommand(context, 'Extension.dltxt.replaceAllInCurLine', (arg) => {
-		motion.replaceAllInCurLine(arg.old_text, arg.new_text);
-	})
+	motion.activate(context);
 
 	const repeatFirstFunc = () => {
 		let editor = vscode.window.activeTextEditor;
@@ -160,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
 		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
 	};
 	registerCommand(context, 'Extension.dltxt.repeatFirst', repeatFirstFunc);
-	registerCommand(context, 'Extension.dltxt.translateCurrentLine', motion.translateCurrentLine);
+	
 	registerCommand(context, 'Extension.dltxt.convertToEncoding', batchConvertFilesEncoding);
 
 	registerCommand(context, 'Extension.dltxt.spellCheck', () => {

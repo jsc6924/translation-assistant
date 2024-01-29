@@ -197,6 +197,7 @@ export function copyOriginalToTranslation(context: vscode.ExtensionContext, docu
     editBuilder.replace(edit.range, edit.newText);
   });
 }
+
 export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode.TextEditor, editBuilder: vscode.TextEditorEdit) {
   const cur = editor.selection.start;
   let curChar = cur.character;
@@ -224,7 +225,7 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
     cgrps.text = text;
   }
 
-  const [ok, curLine, cgrps] = DocumentParser.getCurrentTranslationLine();
+  const [ok, curLine, cgrps] = DocumentParser.getCurrentTranslationLine(vscode.window.activeTextEditor);
   if (!ok || !curLine || !cgrps) {
     return;
   }
