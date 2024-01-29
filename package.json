@@ -950,7 +950,7 @@
 				},
 				"dltxt.core.translatedTextPrefixRegex": {
 					"type": "string",
-					"default": "(;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|((//[^\n]*\n)(?!<\\d+>))",
+					"default": "(;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))",
 					"description": "译文开头标签的正则表达式"
 				},
 				"dltxt.core.otherPrefixRegex": {
@@ -961,7 +961,7 @@
 				"dltxt.core.textBlock.pattern": {
 					"type": "string",
 					"default": "^-+\\d+-+(\\r)?\\n((\\*+)|(【.*】))(\\r)?\\n(?<jp>.*)(\\r)?\\n=+(\\r)?\\n(?<cn>.*)((\\r)?\\n)*$",
-					"description": "text-block的正则表达式"
+					"description": "段落的正则表达式"
 				},
 				"dltxt.core.x.originalTextWhite": {
 					"type": "string",

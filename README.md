@@ -132,7 +132,7 @@ DLTXT默认支持以下格式（用横线隔开）
 #### 段落格式：手动设置
 填写如下设置：
 - Document Parser（文本格式解析器）=> 改为"text-block"
-- Text Block: Pattern => 改为能匹配每个段落的正则表达式。其中原文部分和译文部分分别用命名捕获组`jp`和`cn`进行标注。
+- Text Block: Pattern （段落的正则表达式） => 改为能匹配每个段落的正则表达式。其中原文部分和译文部分分别用命名捕获组`jp`和`cn`进行标注。
 
 以上面的例子为例，可填
 ```
@@ -652,7 +652,7 @@ vsce publish
 ---
 ## Release Notes
 #### 3.15
-- 新增TextBlockDocumentParser，支持的文本格式变得更多了
+- 新增TextBlockDocumentParser，可支持“段落格式”的文本
   - 这种模式下除了暂时不能自动识别格式，其他功能均支持
 - 重构AutoDetector
 - 重构DocumentParser
