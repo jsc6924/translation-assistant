@@ -172,7 +172,7 @@ DLTXT默认支持以下格式（用横线隔开）
 ```
 ^-+\d+-+(\r)?\n((\*+)|(【.*】))(\r)?\n(?<jp>.*)(\r)?\n=+(\r)?\n(?<cn>.*)((\r)?\n)*$
 ```
-- 选填`*TextWhite`和`*TextSuffix`
+- 选填`textBlock.*Prefix`,`*TextWhite`和`*TextSuffix`
 
 
 ## 语法高亮
