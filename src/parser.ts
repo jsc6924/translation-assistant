@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { createErrorDiagnostic, createErrorDiagnosticMultiLine } from './error-check';
 import * as utils from './utils';
-import { AutoDetector, NoopAutoDetector, StandardParserAutoDetector } from './auto-format';
+import { AutoDetector, NoopAutoDetector, StandardParserAutoDetector, TextBlockAutoDetector } from './auto-format';
 import { findAllAndProcess } from './utils';
 
 export function getRegex() {
@@ -30,14 +30,16 @@ export function getRegex() {
 function getTextBlockRegex() {
   const config = vscode.workspace.getConfiguration("dltxt.core");
   const regStr = config.get('textBlock.pattern') as string;
+  const jPrefixStr = config.get('x.textBlock.originalPrefix') as string;
+  const cPrefixStr = config.get('x.textBlock.translatedPrefix') as string;
   const jWhiteStr = config.get('x.originalTextWhite') as string;
   const cWhiteStr = config.get('x.translatedTextWhite') as string;
   const jSuffixStr = config.get('y.originalTextSuffix') as string;
   const cSuffixStr = config.get('y.translatedTextSuffix') as string;
   
   const reg = new RegExp(regStr, 'gm');
-  const jreg = new RegExp(`^(?<prefix>)(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
-  const creg = new RegExp(`^(?<prefix>)(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
+  const jreg = new RegExp(`^(?<prefix>${jPrefixStr})(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
+  const creg = new RegExp(`^(?<prefix>${cPrefixStr})(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
   return [reg, jreg, creg];
 }
 
@@ -335,7 +337,7 @@ export class TextBlockDocumentParser implements DocumentParser {
     findAllAndProcess(reg, text, (match => {
       if (match.groups?.jp && match.groups?.cn) {
         const jm = this.jreg.exec(match.groups?.jp);
-        const cm = this.jreg.exec(match.groups?.cn);
+        const cm = this.creg.exec(match.groups?.cn);
         if (jm?.groups && cm?.groups) {
           const r_index = match.index;
           const blockIndex = queryLineNumber(lineMap, r_index);
@@ -480,7 +482,7 @@ export class TextBlockDocumentParser implements DocumentParser {
   }
 
   getFormatDetector(): AutoDetector {
-    return new NoopAutoDetector();
+    return new TextBlockAutoDetector();
   }
 }
 

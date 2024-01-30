@@ -1,16 +1,21 @@
 import * as vscode from 'vscode'
-import { contains, registerCommand } from './utils'
+import { contains, findEditorByUri, registerCommand } from './utils'
 import { DocumentParser } from './parser';
-import { relative } from 'path';
+import * as fs from "fs"; 
+import * as path from "path";
 
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, "Extension.dltxt.core.context.autoDetectFormat", async () => {
         const detector = DocumentParser.getFormatDetector();
         await detector.autoDetectFormat(context);
     })
+
+    registerCommand(context, 'Extension.dltxt.core.context.autoDetectFormatContinue', async function(){
+		autoDetectFormatContinue();
+	});
 }
 export interface AutoDetector {
-    autoDetectFormat(context: vscode.ExtensionContext): void;
+    autoDetectFormat(context: vscode.ExtensionContext): void | Promise<void>;
 }
 export class NoopAutoDetector implements AutoDetector {
     autoDetectFormat(context: vscode.ExtensionContext): void {
@@ -183,7 +188,7 @@ function hasAlphaNumPrefix(lines: string[]): boolean {
 }
 
 function escapeRegExp(text: string) {
-    return text.replace(/[-[\]{}()*+?.,\\^$|\s]/g, '\\$&');
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 const paraMap = new Map<string, string>([
@@ -280,4 +285,142 @@ function forceGeneratePrefix(lines: string[]) {
     prefixs.forEach(p => prefixList.push(escapeRegExp(p)));
     const reg = prefixList.join('|');
     return reg;
+}
+
+export class TextBlockAutoDetector implements AutoDetector {
+    async autoDetectFormat(context: vscode.ExtensionContext) {
+        if (!vscode.window.activeTextEditor) {
+            return;
+        }
+        const thisEditor = vscode.window.activeTextEditor;
+        if (!thisEditor.selection || thisEditor.selection.isEmpty) {
+            vscode.window.showInformationMessage("请选中一个段落后再使用自动识别");
+            return;
+        }
+        const text = thisEditor.document.getText(new vscode.Range(
+            new vscode.Position(thisEditor.selection.start.line, 0),
+            new vscode.Position(thisEditor.selection.end.line, Number.MAX_SAFE_INTEGER)
+        ));
+        const lines = text.split("\n").map((l) => `${l.trim()}`);
+        const template = `请把原文替换成【#JP#】，译文替换成【#CN#】\r\n其他所有会变化的部分替换成【#ANY#】\r\n如果变化的部分只包括字母或数字也可替换成【#ALPHA#】\r\n替换结束后在右键菜单中选择“自动识别文本格式：继续”\r\n\r\n<<<<<<<<<<不要动这行<<<<<<<<<<\r\n${lines.join('\r\n')}\r\n>>>>>>>>>>也不要动这行>>>>>>>>>>`;
+        const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
+		if (!filePath) return;
+        const dirPath = path.dirname(filePath);
+		const fileName = path.basename(filePath);
+        const tempDirPath = dirPath + '\\.dltxt'
+		if (!fs.existsSync(tempDirPath)) {
+			fs.mkdirSync(tempDirPath);
+		}
+        const tempFilePath = tempDirPath + '\\' + fileName + '.format';
+        fs.writeFileSync(tempFilePath, template);
+        let setting: vscode.Uri = vscode.Uri.file(tempFilePath);
+		
+		const document = await vscode.workspace.openTextDocument(setting)
+		await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside, false);
+    }
+}
+
+async function autoDetectFormatContinue() {
+    if (!vscode.window.activeTextEditor) {
+        vscode.window.showErrorMessage('请打开Auto Detector的临时文件');
+        return;
+    }
+    let curFilePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
+    let dlFilePath: string;
+    let tempFilePath: string;
+    const m = curFilePath.match(/(.*)\.dltxt\\(.*)\.format/);
+    if (!m) {
+        vscode.window.showErrorMessage('当前编辑器中打开的不是Auto Detector的临时文件');
+        return;
+    }
+    dlFilePath = path.join(m[1], m[2]);
+    tempFilePath = curFilePath;
+    const dlEditor = findEditorByUri(vscode.Uri.file(dlFilePath));
+    if (!dlEditor || !dlEditor?.document)
+    {
+        vscode.window.showErrorMessage('请先打开需要更改的双行文本');
+        return;
+    }
+    await vscode.window.activeTextEditor.document.save();
+    
+    const lines = fs.readFileSync(tempFilePath, 'utf8').split(/\r?\n/);
+    let dlDocument = dlEditor.document;
+    const templateLines: string[] = [];
+    const startReg = /^<<<<<+.*<<<<<+$/, endReg = /^>>>>>+.*>>>>>+$/;
+    let inTemplate = false;
+    for(let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!inTemplate && startReg.test(line.trim())) {
+            inTemplate = true;
+            continue;
+        }
+        if (inTemplate) {
+            if (endReg.test(line.trim())) {
+                break;
+            }
+            templateLines.push(line.trim());
+        }
+    }
+
+    const replaceMap = new Map<RegExp, string>([
+        [/【#ANY#】/g, '(.*)'],
+        [/【#ALPHA#】/g, '([0-9a-zA-Z]+)'],
+    ]);
+    const jreg = /^(?<prefix>.*)【#JP#】(?<suffix>.*)$/;
+    const creg = /^(?<prefix>.*)【#CN#】(?<suffix>.*)$/;
+    let jPreStr = '';
+    let cPreStr = '';
+    let jSuffixStr = '[」]?';
+    let cSuffixStr = '[」]?';
+
+    let jpCount = 0, cnCount = 0;
+    for(let i = 0; i < templateLines.length; i++) {
+        templateLines[i] = escapeRegExp(templateLines[i]);
+        for (const [k,v] of replaceMap) {
+            templateLines[i] = templateLines[i].replace(k, v);
+        }
+        let m = null;
+        if ((m = jreg.exec(templateLines[i])) && m.groups) {
+            jPreStr = m.groups.prefix;
+            jSuffixStr = `[」]?${m.groups.suffix}`;
+            templateLines[i] = '(?<jp>.*)';
+            jpCount++;
+        }
+        else if ((m = creg.exec(templateLines[i])) && m.groups) {
+            cPreStr = m.groups.prefix;
+            cSuffixStr = `[」]?${m.groups.suffix}`;
+            templateLines[i] = '(?<cn>.*)';
+            cnCount++;
+        }
+        
+    }
+    const template = templateLines.join("(\\r)?\\n") + "((\\r)?\\n)*";
+    try{
+        if (jpCount !== 1 || cnCount !== 1) {
+            throw new Error("每个段落必须有且只有一行原文和一行译文");
+        }
+        const reg = new RegExp(template);
+        const text = dlDocument.getText();
+        if (!reg.test(text)) {
+            throw new Error("无法匹配到文本");
+        }
+    } catch(e) {
+        vscode.window.showErrorMessage(`识别失败：${e}`);
+        return;
+    }
+    const u = await vscode.window.showInformationMessage(`识别成功！段落格式："${template}"，原文开头："${jPreStr}"，原文结尾："${jSuffixStr}"，译文开头："${cPreStr}"，译文结尾："${cSuffixStr}"，是否应用？`, '是', '否');
+    if (u !== '是') {
+        return;
+    }
+    
+    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    fs.unlinkSync(tempFilePath);
+    const config = vscode.workspace.getConfiguration("dltxt");
+    await config.update('core.textBlock.pattern', template, false);
+    await config.update('core.x.textBlock.originalPrefix', jPreStr, false);
+    await config.update('core.x.textBlock.translatedPrefix', cPreStr, false);
+    await config.update('core.y.originalTextSuffix', jSuffixStr, false);
+    await config.update('core.y.translatedTextSuffix', cSuffixStr, false);
+    vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
+    vscode.window.showInformationMessage(`已应用设置`);
 }

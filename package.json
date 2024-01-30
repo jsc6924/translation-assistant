@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.15.1",
+	"version": "3.16.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -34,6 +34,15 @@
 				],
 				"extensions": [
 					".txt.sl"
+				]
+			},
+			{
+				"id": "formattxt",
+				"aliases": [
+					"dltxt auto format detector temporary file"
+				],
+				"extensions": [
+					".txt.format"
 				]
 			}
 		],
@@ -376,6 +385,11 @@
 				"command": "Extension.dltxt.core.context.autoDetectFormat",
 				"category": "DLTXT",
 				"title": "自动识别文本格式"
+			},
+			{
+				"command": "Extension.dltxt.core.context.autoDetectFormatContinue",
+				"title": "自动识别文本格式：继续",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.detectEncoding",
@@ -795,6 +809,11 @@
 					"group": "dltxt.extract"
 				},
 				{
+					"when": "resourceLangId == formattxt",
+					"command": "Extension.dltxt.core.context.autoDetectFormatContinue",
+					"group": "dltxt.extract"
+				},
+				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.copy_original",
 					"group": "dltxt.edit"
@@ -962,6 +981,16 @@
 					"type": "string",
 					"default": "^-+\\d+-+(\\r)?\\n((\\*+)|(【.*】))(\\r)?\\n(?<jp>.*)(\\r)?\\n=+(\\r)?\\n(?<cn>.*)((\\r)?\\n)*$",
 					"description": "段落的正则表达式"
+				},
+				"dltxt.core.x.textBlock.originalPrefix": {
+					"type": "string",
+					"default": "",
+					"description": "段落格式原文行开头"
+				},
+				"dltxt.core.x.textBlock.translatedPrefix": {
+					"type": "string",
+					"default": "",
+					"description": "段落格式译文行开头"
 				},
 				"dltxt.core.x.originalTextWhite": {
 					"type": "string",

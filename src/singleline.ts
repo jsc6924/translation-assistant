@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		const lines: string[] = [];
 		DocumentParser.processTranslatedLines(document, (groups, i) => {
-			lines.push(groups.prefix + groups.white + groups.text + groups.suffix);
+			lines.push(document.lineAt(i).text);
 		})
 		const slFilePath = tempDirPath + '\\' + fileName + '.sl';
 		const data = lines.join('\r\n');
