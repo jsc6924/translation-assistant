@@ -219,8 +219,10 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         if (!query) {
             return;
         }
+        const config = vscode.workspace.getConfiguration("dltxt.trdb");
+        const limit = config.get("search.resultLimit") as number;
         const res = index.search(query, {
-            limit: 50
+            limit: limit
         });
         showSearchResults(context, query, res);
         
@@ -243,8 +245,10 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         }
         const tokenizer = await Tokenizer.getAsync(context);
         query = tokenizer.tokenize(query);
+        const config = vscode.workspace.getConfiguration("dltxt.trdb");
+        const limit = config.get("search.resultLimit") as number;
         const res = index.search(query, {
-            limit: 50,
+            limit: limit,
             suggest: true
         });
         showSearchResults(context, query, res);
@@ -311,8 +315,10 @@ function showSearchResults(context: vscode.ExtensionContext, query: string, matc
         totalRawLines.push('');
         totalTrLines.push('');
     }
+    const config = vscode.workspace.getConfiguration("dltxt.trdb");
+    const limit = config.get("search.resultLimit") as number;
     const res = memoryIndex.search(query, {
-        limit: 50,
+        limit: limit,
         suggest: true
     }) as any as number[];
 

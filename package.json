@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.16.0",
+	"version": "3.16.1",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -952,6 +952,11 @@
 				"dltxt.trdb.filteredLine": {
 					"type": "string",
 					"description": "添加至翻译数据库时需要过滤的行的正则表达式（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.search.resultLimit": {
+					"type": "number",
+					"default": 50,
+					"description": "翻译数据库每次搜索显示多少条结果"
 				},
 				"dltxt.core.a.documentParser": {
 					"type": "string",
