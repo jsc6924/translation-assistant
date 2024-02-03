@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder, DictType } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType, VSCodeContext } from './utils';
 const AhoCorasick = require('ahocorasick');
 
 
@@ -600,6 +600,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 
+export const DecorationMemoryStorage: Map<string, any> = new Map();
+
+
 export function updateKeywordDecorations() {
 
     let activeEditor = vscode.window.activeTextEditor;
@@ -665,18 +668,24 @@ export function updateKeywordDecorations() {
 				const word = dict.get(keyword)?.replace(/"/g, '') as string;
 				const originalWord = keyword.replace(/"/g, '') as string;
 				const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word)}"})`;
-				const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInCurLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}"})`;
+				const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}","line":${startPos.line}})`;
 				const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}`);
 				hoverMarkdown.isTrusted = true;
 				const decoration = {
 					range: new vscode.Range(startPos, endPos),
 					hoverMessage: hoverMarkdown,
-					renderOptions: {}
+					renderOptions: {},
+					__dltxt: {
+						old_text: originalWord,
+						new_text: word
+					}
 				};
 				keywordsDecos.push(decoration);
 			}
 		}
 		activeEditor.setDecorations(deco, keywordsDecos);
+		const decoID = `${activeEditor.document.uri.fsPath}::${dictName}`;
+		DecorationMemoryStorage.set(decoID, keywordsDecos);
 	}
     
 }

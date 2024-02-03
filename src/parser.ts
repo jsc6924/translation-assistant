@@ -57,7 +57,7 @@ interface DocumentParser {
 
   processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void): void;
 
-  getCurrentTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
+  getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
 
   getNextTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
 
@@ -121,10 +121,11 @@ class StandardDocumentParser {
       }
   }
 
-    getCurrentTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
-        if (!editor?.selection)
+    getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+        if (!editor || !lineNum && !editor?.selection)
             return [false, undefined, undefined];
-        const curLine = editor.document.lineAt(editor.selection.active.line);
+        lineNum = lineNum ?? editor.selection.active.line;
+        const curLine = editor.document.lineAt(lineNum);
         const [, creg] = getRegex();
         if (!creg) {
             return [false, undefined, undefined];
@@ -359,10 +360,11 @@ export class TextBlockDocumentParser implements DocumentParser {
     })
   }
 
-  getCurrentTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
-    if (!editor?.selection)
+  getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+    if (!editor || !lineNum && !editor?.selection)
         return [false, undefined, undefined];
-    const curLine = editor.document.lineAt(editor.selection.active.line);
+    lineNum = lineNum ?? editor.selection.active.line;
+    const curLine = editor.document.lineAt(lineNum);
     const m = this.creg.exec(curLine.text)
     return !!m ? [true, curLine, m.groups as any as MatchedGroups] : [false, undefined, undefined];
   }

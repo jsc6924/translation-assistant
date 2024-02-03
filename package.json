@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.16.1",
+	"version": "3.17.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -115,8 +115,13 @@
 				]
 			},
 			{
-				"command": "Extension.dltxt.replaceAllInCurLine",
-				"title": "当前行内全部替换",
+				"command": "Extension.dltxt.replaceAllKeywordsAtCurrentPosition",
+				"title": "替换当前光标上的全部关键字",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.replaceAllInLine",
+				"title": "指定行内全部替换",
 				"category": "DLTXT",
 				"args": [
 					{
@@ -128,6 +133,11 @@
 						"name": "new_text",
 						"type": "string",
 						"description": "new text"
+					},
+					{
+						"name": "line",
+						"type": "number",
+						"description": "line number"
 					}
 				]
 			},
@@ -526,6 +536,11 @@
 			{
 				"command": "Extension.dltxt.translateCurrentLine",
 				"key": "ctrl+alt+.",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.replaceAllKeywordsAtCurrentPosition",
+				"key": "ctrl+alt+,",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{

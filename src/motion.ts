@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as utils from './utils';
 import { DocumentParser } from './parser';
-import { registerCommand } from './utils';
+import { DictSettings, registerCommand } from './utils';
+import { DecorationMemoryStorage } from './simpletm';
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -35,8 +36,12 @@ export function activate(context: vscode.ExtensionContext) {
 		deleteAllAfter();
 	});
 
-	registerCommand(context, 'Extension.dltxt.replaceAllInCurLine', (arg) => {
-		replaceAllInCurLine(arg.old_text, arg.new_text);
+	registerCommand(context, 'Extension.dltxt.replaceAllKeywordsAtCurrentPosition', (arg) => {
+		replaceAllKeywordsAtCurrentPosition();
+	})
+
+  registerCommand(context, 'Extension.dltxt.replaceAllInLine', (arg) => {
+		replaceAllInLine(arg.old_text, arg.new_text, arg.line);
 	})
 	
 	registerCommand(context, 'Extension.dltxt.translateCurrentLine', translateCurrentLine);
@@ -293,11 +298,37 @@ function cursorToSublineHead() {
   editor.selection = new vscode.Selection(newPosition, newPosition);
 }
 
-function replaceAllInCurLine(old_text: string, new_text: string) {
+function replaceAllKeywordsAtCurrentPosition() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || !editor.selection) {
+    return;
+  }
+  const position = editor.selection.active;
+  const dictNames = DictSettings.getAllDictNames();
+  const lookupTable = new Map<string, string | ((arg: string)=>string) >();
+	for (const dictName of dictNames) {
+    const decoID = `${editor.document.uri.fsPath}::${dictName}`;
+    const decos = DecorationMemoryStorage.get(decoID);
+    if(Array.isArray(decos)) {
+      for(const d of decos) {
+        const deco: vscode.DecorationOptions & { __dltxt: any } = d;
+        if (deco.range.contains(position)) {
+          lookupTable.set(deco.__dltxt.old_text, deco.__dltxt.new_text);
+        }
+      }
+    }
+  }
+  if(lookupTable.size > 0) {
+    translateCurrentLine(lookupTable, position.line);
+  }
+ 
+}
+
+function replaceAllInLine(old_text: string, new_text: string, line: number) {
   const lookupTable = new Map<string, string | ((arg: string)=>string) >([
     [old_text, new_text],
   ]);
-  translateCurrentLine(lookupTable);
+  translateCurrentLine(lookupTable, line);
 }
 
 function repeatN(s: string, k: number): string {
@@ -351,11 +382,12 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
 ]);
 
 export function translateCurrentLine(
-  lookupTable:  Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable) {
+  lookupTable:  Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable,
+  lineNum? : number) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  let [ok, curLine] = DocumentParser.getCurrentTranslationLine(editor);
+  let [ok, curLine] = DocumentParser.getCurrentTranslationLine(editor, lineNum);
   if (!ok || !curLine) {
     return;
   }
