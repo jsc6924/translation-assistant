@@ -86,7 +86,7 @@
 			"endCaptures": {"0": {"name": "end"}}
 		},
 		"slash.infer.nme": {
-			"begin": "^(//)(([^<>\n\u3000-\u303F\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C]{0,8}|@.*|.*[Nn][Aa][Mm][Ee].*)\n)",
+			"begin": "^(//)(([^<>\n\u3000-\u303F\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C―]{0,8}|@.*|.*[Nn][Aa][Mm][Ee].*)\n)",
 			"end" : "^.*$",
 			"beginCaptures": {
 				"0" : { "name": "st.nme.original.tag" },
@@ -108,7 +108,7 @@
 			}
 		},
 		"infer.nme": {
-			"begin": "^((★|☆|○|●)[0-9a-zA-Z]+(★|☆|○|●)|\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>//)(([^\u3000-\u303F\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）]+)|@.*|.*[Nn][Aa][Mm][Ee].*)\n",
+			"begin": "^((★|☆|○|●)[0-9a-zA-Z]+(★|☆|○|●)|\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>//)(([^\u3000-\u303F\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)|@.*|.*[Nn][Aa][Mm][Ee].*)\n",
 			"end" : "((★|☆|○|●)[0-9a-zA-Z]+(★|☆|○|●)|;\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>(//)?)(.*)$",
 			"beginCaptures": {
 				"0" : { "name": "st.nme.original.tag" },
