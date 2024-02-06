@@ -27,7 +27,7 @@ function make_query(text: string, accessToken: string): Promise<any> {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     };
-    console.log(`send text: [${text}]`);
+    //console.log(`send text: [${text}]`);
     const data = {
         text: text
     };
