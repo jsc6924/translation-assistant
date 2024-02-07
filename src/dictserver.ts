@@ -148,7 +148,7 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
                 throw Error(`无法启动辞典服务器 ${err}`);
             });
 
-            const maxAttempts = 5;
+            const maxAttempts = 6;
     
             for(let attempt = 0, sleepTime = 2000; attempt < maxAttempts; attempt++, sleepTime *= 1.5) {
                 try {

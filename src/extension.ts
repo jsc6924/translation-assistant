@@ -195,9 +195,11 @@ async function migration(context: vscode.ExtensionContext) {
 		const baiduConfig = vscode.workspace.getConfiguration("dltxt.z.api.baidu");
 		const accessKey = baiduConfig.get("AccessKey");
 		const secretKey = baiduConfig.get("SecretKey");
-		if (accessKey && secretKey) {
+		if (accessKey || secretKey) {
 			ContextHolder.setGlobalState("dltxt.config.baidu.accesskey", accessKey);
 			ContextHolder.setGlobalState("dltxt.config.baidu.secretkey", secretKey);
+			baiduConfig.update("AccessKey", undefined, vscode.ConfigurationTarget.Global);
+			baiduConfig.update("SecretKey", undefined, vscode.ConfigurationTarget.Global);
 		}
 	}
 
