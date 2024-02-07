@@ -597,3 +597,136 @@ export namespace trdb_view {
         }
     }
 }
+
+export namespace cc_view {
+    class CCItem extends vscode.TreeItem {
+        contextValue = 'cc-item';
+        treeview: CCTreeView;
+        constructor(treeview: CCTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
+            super(label, state);
+            this.treeview = treeview;
+        }
+    }
+
+    class ConfigRootItem extends CCItem {
+        contextValue = 'cc-config-root-item';
+        children: ConfigEntryItem[] = [];
+        iconPath = new vscode.ThemeIcon('settings-gear');
+        constructor(treeview: CCTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
+            super(treeview, label, state);
+        }
+
+        
+        async configUpdated() {
+            //pass
+        }
+    }
+
+    class ConfigEntryItem extends CCItem {
+        contextValue = 'cc-config-entry-item';
+        config: string;
+        showFullValue: boolean;
+        global: boolean;
+        initLabel: string;
+        callback: (()=>Promise<void>) | undefined;
+        constructor(treeview: CCTreeView, configRoot: ConfigRootItem,
+             label: string, config: string, global: boolean, showFullValue: boolean) {
+            super(treeview, label, vscode.TreeItemCollapsibleState.None);
+            this.initLabel = label;
+            this.config = config;
+            this.showFullValue = showFullValue;
+            this.global = global;
+            this.updateLabel();
+            this.callback = async () => { 
+                this.updateLabel(); 
+                await configRoot.configUpdated();
+                treeview.dataChanged();
+            };
+            let usePathPicker = false;
+            if (config.includes('.localPath')) {
+                usePathPicker = true;
+            }
+            this.setCommand(global, {config, usePathPicker, callback: this.callback});
+        }
+
+        setCommand(global: boolean, args: any) {
+            if (global) {
+                this.iconPath = new vscode.ThemeIcon('symbol-property');
+                this.command = {
+                    command: 'Extension.dltxt.setGlobalState',
+                    title: `更改全局变量${this.config}`,
+                    arguments: [args]
+                }
+            } else {
+                this.iconPath = new vscode.ThemeIcon('settings');
+                this.command = {
+                    command: 'Extension.dltxt.setWorkspaceState',
+                    title: `更改当前工作区变量${this.config}`,
+                    arguments: [args]
+                }
+            }
+        }
+
+        getValue() {
+            if (this.global) {
+                return ContextHolder.getGlobalState(this.config);
+            }
+            return ContextHolder.getWorkspaceState(this.config);
+        }
+
+        updateLabel() {
+            let v = undefined;
+            if (this.global) {
+                v = ContextHolder.getGlobalState(this.config) as string;
+            } else {
+                v = ContextHolder.getWorkspaceState(this.config) as string;
+            }
+            if (v !== undefined) {
+                if (!this.showFullValue) {
+                    v = v.slice(0, 3) + '******';
+                }
+                this.label = `${this.initLabel}: ${v}`
+            }
+        }
+    }
+
+    export class CCTreeView implements vscode.TreeDataProvider<CCItem>
+    {
+        // with the vscode.EventEmitter we can refresh our  tree view
+        private m_onDidChangeTreeData: vscode.EventEmitter<CCItem | undefined> = new vscode.EventEmitter<CCItem | undefined>();
+        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
+        readonly onDidChangeTreeData ? : vscode.Event<CCItem | undefined> = this.m_onDidChangeTreeData.event;
+
+        roots: CCItem[] = [];
+
+        constructor(context: vscode.ExtensionContext) {
+            this.refresh(context);
+            const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);
+            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "AccessKey", "dltxt.config.baidu.accesskey", true, false));
+            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "SecretKey", "dltxt.config.baidu.secretkey", true, false));
+            
+            this.roots.push(baiduAPINode);
+        }
+        getTreeItem(item: CCItem): vscode.TreeItem {
+            return item;
+        }
+    
+        getChildren(element?: CCItem): Thenable<CCItem[]> {
+            if (!element) {
+                return Promise.resolve(this.roots);
+            }
+            if (element.contextValue == 'cc-config-root-item') {
+                return Promise.resolve((element as ConfigRootItem).children);
+            }
+            return Promise.resolve([]);
+        }
+
+        refresh(context: vscode.ExtensionContext) {
+            this.m_onDidChangeTreeData.fire(undefined);
+        }
+
+        dataChanged() {
+            this.m_onDidChangeTreeData.fire(undefined);
+        }
+    }
+}

@@ -89,15 +89,19 @@
 			"dltxt-view-container": [
 				{
 					"id": "dltxt-clipboard",
-					"name": "clickboard"
+					"name": "剪贴板"
 				},
 				{
 					"id": "dltxt-dict",
-					"name": "dictionary"
+					"name": "术语库"
 				},
 				{
 					"id": "dltxt-trdb",
-					"name": "translation db"
+					"name": "翻译数据库"
+				},
+				{
+					"id": "dltxt-configs-commands",
+					"name": "设置与命令"
 				}
 			]
 		},
@@ -1176,14 +1180,6 @@
 					"type": "boolean",
 					"default": true,
 					"description": "是否在鼠标停留在选中的单词上时使用辞典服务器查询"
-				},
-				"dltxt.z.api.baidu.AccessKey": {
-					"type": "string",
-					"description": "百度智能云API AccessKey"
-				},
-				"dltxt.z.api.baidu.SecretKey": {
-					"type": "string",
-					"description": "百度智能云API AccessKey"
 				}
 			}
 		}

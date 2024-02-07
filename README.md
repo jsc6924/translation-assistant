@@ -25,7 +25,7 @@
 - [格式支持](#格式支持)
 - [语法高亮](#语法高亮)
 - [错误检测](#错误检测)
-- [侧边栏](#侧边栏)
+- [侧边栏UI](#侧边栏UI)
 - [键盘快捷键](#键盘快捷键)
 - [批量编辑](#批量编辑)
 - [联网查词](#联网查词)
@@ -180,6 +180,18 @@ DLTXT默认支持以下格式（用横线隔开）
   区分人名栏，原文，译文。基本只有使用默认支持的格式时才有效。（注：需要选择Theme：DLTXT Dark+/Light+）
   ![img1](https://github.com/jsc6924/translation-assistant/blob/master/imgs/1.png?raw=true)
 
+## 侧边栏UI
+![treeview](https://github.com/jsc6924/translation-assistant/blob/master/imgs/treeview.png?raw=true)
+
+本插件自带一个侧边栏菜单。目前有以下子页面：
+
+- 剪贴板
+- 术语库
+- 翻译数据库
+- 设置与命令
+
+以上功能将在之后的章节介绍
+
 ## 错误检测
 #### 检测被误删的标签
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/2.png?raw=true)
@@ -195,27 +207,15 @@ DLTXT默认支持以下格式（用横线隔开）
   1. 在百度智能云注册账号后开通“人工智能-自然语言处理-文本纠错”服务
       - 记得领取免费额度（个人用户50万次试用），顺便再充几块钱
   2. 在百度智能云中创建新应用，勾选自然语言处理全部功能，创建完成后会获取一对`Access Key`和`Serect Key`
-  3. 在vscode设置中搜索`dltxt baidu`，填写百度智能云的`Access Key`和`Serect Key`
+  3. 在左侧侧边栏找到dltxt图标，点击，在`设置与命令`中找到`百度智能云API`，填写百度智能云的`Access Key`和`Serect Key`（输入后需要按回车）
   4. 打开你想检测的双行文本，在编辑器中右键，选择`DLTXT：译文错别字检查`即可
       - 译文每540字（程序会自动过滤人名行）发一个请求给百度云，检测一个1000句（大小100k左右）的双行文本大约需要15个请求，百度云文本纠错服务价格约为2元/千次请求，换算一下的话检测一个100k的文本大约3分钱。
   5. 如果想清除检测结果，在右键菜单选择`DLTXT：清除错别字检查结果`即可
 
-## 侧边栏
-![treeview](https://github.com/jsc6924/translation-assistant/blob/master/imgs/treeview.png?raw=true)
-
-本插件自带一个侧边栏菜单。目前有以下子页面：
-
-- 剪贴板
-- 术语词典
-- 翻译数据库
-
-以上功能将在之后的章节介绍
 
 ## 键盘快捷键
 在翻译文本时可使用键盘快捷键代替鼠标操作（注：可以在vscode设置中更改默认快捷键绑定）
 快捷键分为普通模式（Normal）和翻译模式（Translate）。普通模式下可以正常打字，以及使用部分快捷键。翻译模式下能使用更多快捷键以及打出更多全角符号，但不能打出数字和部分半角符号。默认为普通模式，普通模式下使用`Alt + t`进入翻译模式。翻译模式下按`Esc`返回普通模式。
-
-注：翻译模式尚在测试阶段，默认绑定随版本变化可能随时改动
 
 ![demo](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo.gif?raw=true)
 
