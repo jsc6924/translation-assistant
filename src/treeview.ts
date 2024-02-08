@@ -7,7 +7,7 @@ import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 
 
-class BasicTreeItem extends vscode.TreeItem {
+export class BasicTreeItem extends vscode.TreeItem {
     constructor(label: string, state: vscode.TreeItemCollapsibleState) {
         super(label, state);
     }
@@ -17,7 +17,7 @@ class BasicTreeItem extends vscode.TreeItem {
     }
 }
 
-class TreeItem<T> extends BasicTreeItem {
+export class TreeItem<T> extends BasicTreeItem {
     contextValue = '';
     treeview: T;
     constructor(treeview: T, label: string, state: vscode.TreeItemCollapsibleState) {
@@ -26,7 +26,7 @@ class TreeItem<T> extends BasicTreeItem {
     }
 }
 
-class ConfigRootItem<T> extends TreeItem<T> {
+export class ConfigRootItem<T> extends TreeItem<T> {
     children: BasicTreeItem[] = [];
     iconPath = new vscode.ThemeIcon('settings-gear');
     constructor(treeview: T, label: string, state: vscode.TreeItemCollapsibleState) {
@@ -42,7 +42,7 @@ class ConfigRootItem<T> extends TreeItem<T> {
     }
 }
 
-class ConfigEntryItem<T> extends TreeItem<T> {
+export class ConfigEntryItem<T> extends TreeItem<T> {
     config: string;
     showFullValue: boolean;
     global: boolean;
@@ -109,7 +109,7 @@ class ConfigEntryItem<T> extends TreeItem<T> {
     }
 }
 
-class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
+export class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
     selections: string[] = [];
     constructor(treeview: T, configRoot: ConfigRootItem<T>,
         label: string, config: string, global: boolean, selections: string[], defaultValue: string) {
@@ -129,7 +129,7 @@ class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
     }
 }
 
-class BasicTreeView<Item extends BasicTreeItem> implements vscode.TreeDataProvider<Item>
+export class BasicTreeView<Item extends BasicTreeItem> implements vscode.TreeDataProvider<Item>
 {
     // with the vscode.EventEmitter we can refresh our  tree view
     private m_onDidChangeTreeData: vscode.EventEmitter<Item | undefined> = new vscode.EventEmitter<Item | undefined>();
@@ -486,11 +486,7 @@ export namespace dict_view
     }
 }
 export namespace trdb_view {
-    class TRDBItem extends vscode.TreeItem {
-        constructor(label: string, collapsibleState?: vscode.TreeItemCollapsibleState) {
-            super(label, collapsibleState);
-        }
-    }
+    class TRDBItem extends BasicTreeItem {}
 
     export class TRDBFolderItem extends TRDBItem {
         folder: string = '';
@@ -520,17 +516,12 @@ export namespace trdb_view {
     }
 
 
-    export class TRDBTreeView implements vscode.TreeDataProvider<TRDBItem>
+    export class TRDBTreeView extends BasicTreeView<TRDBItem>
     {
-        // with the vscode.EventEmitter we can refresh our  tree view
-        private m_onDidChangeTreeData: vscode.EventEmitter<TRDBItem | undefined> = new vscode.EventEmitter<TRDBItem | undefined>();
-        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-        readonly onDidChangeTreeData ? : vscode.Event<TRDBItem | undefined> = this.m_onDidChangeTreeData.event;
-
-        items: TRDBItem[] = [];
         index: SearchIndex;
 
         constructor(context: vscode.ExtensionContext, index: SearchIndex) {
+            super();
             this.index = index;
             this.refresh(context);
             registerCommand(context, "Extension.dltxt.trdb.openVirtualFile", (args) => {
@@ -573,7 +564,7 @@ export namespace trdb_view {
     
         getChildren(element?: TRDBItem): Thenable<TRDBItem[]> {
             if (!element) {
-                return Promise.resolve(this.items);
+                return Promise.resolve(this.roots);
             }
             if (element.contextValue == 'trdb-folder') {
                 const folderItem = element as TRDBFolderItem;
@@ -594,7 +585,7 @@ export namespace trdb_view {
         }
 
         refresh(context: vscode.ExtensionContext) {
-            this.items = [];
+            this.roots = [];
             const folders = this.index.virtualDirectory.keys();
             const temp: TRDBFolderItem[] = [];
             for(const folder of folders) {
@@ -603,8 +594,8 @@ export namespace trdb_view {
             temp.sort((a, b) => {
                 return a.folder.localeCompare(b.folder);
             });
-            this.items = temp;
-            this.m_onDidChangeTreeData.fire(undefined);
+            this.roots = temp;
+            this.dataChanged();
         }
     }
 }
