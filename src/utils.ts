@@ -293,19 +293,15 @@ export function compareVersions(version1: string, version2: string) {
 */
 export class ContextHolder {
   private static context: vscode.ExtensionContext | undefined;
-  private static globalCache: Map<string, any> = new Map();
   private static workspaceCache: Map<string, any> = new Map();
   static set(context: vscode.ExtensionContext) {
     ContextHolder.context = context;
-    for(const k of (context.globalState as IterableMomento).keys()) {
-      ContextHolder.globalCache.set(k, context.globalState.get(k));
-    }
     for(const k of (context.workspaceState as IterableMomento).keys()) {
       ContextHolder.workspaceCache.set(k, context.workspaceState.get(k));
     }
   }
   static getGlobalState(key: string, defaultValue?: any): any {
-    const v = ContextHolder.globalCache.get(key);
+    const v = ContextHolder.context?.globalState.get(key);
     if(defaultValue !== undefined && v === undefined) {
       return defaultValue;
     }
@@ -319,11 +315,6 @@ export class ContextHolder {
     return v;
   }
   static setGlobalState(key: string, value: any) {
-    if (value === undefined) {
-      ContextHolder.globalCache.delete(key);
-    } else {
-      ContextHolder.globalCache.set(key, value);
-    }
     ContextHolder.context?.globalState.update(key, value);
   }
   static setWorkspaceState(key: string, value: any) {
@@ -349,6 +340,7 @@ export class ContextHolder {
     if (obj?.expire && obj.expire >= currentTimestampInSeconds) {
       return obj.value;
     }
+    ContextHolder.setGlobalState(`_tmp.${key}`, undefined);
     return undefined;
   }
   static getGlobalStateKeys() {
