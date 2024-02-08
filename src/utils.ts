@@ -420,6 +420,13 @@ export class DictSettings {
     return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.BorderStyle`, value);
   }
 
+  static getStyleBorderRadius(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.BorderRadius`);
+  }
+  static setStyleBorderRadius(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.BorderRadius`, value);
+  }
+
   static getStyleLightBackgroundColor(name: string) {
     return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.light.backgroundColor`);
   }
@@ -453,12 +460,13 @@ export class DictSettings {
     const overviewColor = DictSettings.getStyleOverviewColor(dictName);
     const borderWidth = DictSettings.getStyleBorderWidth(dictName);
     const borderStyle = DictSettings.getStyleBorderStyle(dictName);
+    const borderRadius = DictSettings.getStyleBorderRadius(dictName);
     const lightBorderColor = DictSettings.getStyleLightBorderColor(dictName);
     const lightBackgroundColor = DictSettings.getStyleLightBackgroundColor(dictName);
     const darkBorderColor = DictSettings.getStyleDarkBorderColor(dictName);
     const darkBackgroundColor = DictSettings.getStyleDarkBackgroundColor(dictName);
 
-    const decoVersion = `${overviewPosition}|${overviewColor}|${borderWidth}|${borderStyle}|${lightBorderColor}|${lightBackgroundColor}|${darkBorderColor}|${darkBackgroundColor}`;
+    const decoVersion = `${overviewPosition}|${overviewColor}|${borderWidth}|${borderStyle}|${borderRadius}|${lightBorderColor}|${lightBackgroundColor}|${darkBorderColor}|${darkBackgroundColor}`;
 
     let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
     if (DictSettings.decoRepo.has(dictName)) {
@@ -484,6 +492,7 @@ export class DictSettings {
     let obj = {
       borderWidth: borderWidth,
       borderStyle: borderStyle,
+      borderRadius: borderRadius,
       overviewRulerColor: overviewColor,
       overviewRulerLane: overviewPositionEnum,
       light: {

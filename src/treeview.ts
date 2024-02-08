@@ -389,6 +389,7 @@ export namespace dict_view
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条位置`, `dltxt.dict.${name}.style.overviewPosition`, true, ['left', 'right', 'center', 'full'], 'right'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框宽度`, `dltxt.dict.${name}.style.BorderWidth`, true, ['1px', '0 0 1px 0', '0'], '1px'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框样式`, `dltxt.dict.${name}.style.BorderStyle`, true, ['solid', 'dotted', 'dashed', 'double', 'none'], 'solid'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框半径`, `dltxt.dict.${name}.style.BorderRadius`, true, ['0', '2px', '3px', '5px', '8px', '10px'], '3px'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题高亮颜色`, `dltxt.dict.${name}.style.light.backgroundColor`, true, CSSNamedColors, 'lightblue'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题边框颜色`, `dltxt.dict.${name}.style.light.borderColor`, true, CSSNamedColors, 'darkblue'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `深色主题高亮颜色`, `dltxt.dict.${name}.style.dark.backgroundColor`, true, CSSNamedColors, 'darkblue'));
