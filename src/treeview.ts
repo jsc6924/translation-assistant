@@ -5,6 +5,7 @@ import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedC
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
+import { stopDictServer } from './dictserver';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -23,6 +24,19 @@ export class TreeItem<T> extends BasicTreeItem {
     constructor(treeview: T, label: string, state: vscode.TreeItemCollapsibleState) {
         super(label, state);
         this.treeview = treeview;
+    }
+}
+
+export class CommandItem extends BasicTreeItem {
+    iconPath = new vscode.ThemeIcon('debug-start');
+    constructor(label: string, callback: (() => void) | undefined) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+
+        this.command = {
+            command: 'Extension.dltxt.executeFunction',
+            title: `执行`,
+            arguments: [{callback}]
+        }
     }
 }
 
@@ -601,17 +615,36 @@ export namespace trdb_view {
 }
 
 export namespace cc_view {
-    class CCItem extends TreeItem<CCTreeView> {};
+    class CCDirectory extends TreeItem<CCTreeView> {
+        children: BasicTreeItem[] = [];
+        iconPath = new vscode.ThemeIcon('debug-collapse-all');
+        getChildren(): BasicTreeItem[] {
+            return this.children;
+        }
+    };
 
-    export class CCTreeView extends BasicTreeView<CCItem>
+
+
+    export class CCTreeView extends BasicTreeView<TreeItem<CCTreeView>>
     {
         constructor(context: vscode.ExtensionContext) {
             super();
             const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);
             baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "AccessKey", "dltxt.config.baidu.accesskey", true, false));
             baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "SecretKey", "dltxt.config.baidu.secretkey", true, false));
-            
             this.roots.push(baiduAPINode);
+
+            const dictServerNode = new CCDirectory(this, "辞典服务器", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(dictServerNode);
+
+            dictServerNode.children.push(new CommandItem("关闭辞典服务器", () => {
+                if(!stopDictServer()) {
+                    vscode.window.showInformationMessage("当前没有辞典服务器在运行，或者辞典服务器不是由vscode启动的");
+                } else {
+                    vscode.window.showInformationMessage("已关闭辞典服务器");
+                }
+            }));
+
 
             this.dataChanged();
         }

@@ -94,6 +94,9 @@ type ContextValue = boolean | string;
 
 /**
  * Wrapper around VS Code's `setContext`.
+ * 
+ * The value setted by setContext can be used in when clause in package.json
+ * 
  * The API call takes several milliseconds to seconds to complete,
  * so let's cache the values and only call the API when necessary.
  */
@@ -285,7 +288,9 @@ export function compareVersions(version1: string, version2: string) {
   return patch1 - patch2;
 }
 
-
+/*
+* Wrapper of globalState and workspaceState of vscode.ExtensionContext
+*/
 export class ContextHolder {
   private static context: vscode.ExtensionContext | undefined;
   private static globalCache: Map<string, any> = new Map();
@@ -329,6 +334,23 @@ export class ContextHolder {
     }
     ContextHolder.context?.workspaceState.update(key, value);
   }
+  static setGlobalTempState(key: string, value: any, durationSecond: number) {
+    const currentTimestampInSeconds = Math.floor(Date.now() / 1000);
+    const obj = {expire: currentTimestampInSeconds + durationSecond, value};
+    console.log("now = ", currentTimestampInSeconds);
+    console.log("set", obj);
+    ContextHolder.setGlobalState(`_tmp.${key}`, obj);
+  }
+  static getGlobalTempState(key: string) {
+    const currentTimestampInSeconds = Math.floor(Date.now() / 1000);
+    const obj = ContextHolder.getGlobalState(`_tmp.${key}`);
+    console.log("now = ", currentTimestampInSeconds);
+    console.log("get", obj);
+    if (obj?.expire && obj.expire >= currentTimestampInSeconds) {
+      return obj.value;
+    }
+    return undefined;
+  }
   static getGlobalStateKeys() {
     return (ContextHolder.context?.globalState as IterableMomento).keys();
   }
@@ -348,6 +370,10 @@ export class DictType {
   static Local = 'local';
 }
 
+/*
+* A further wrapper on ContextHolder for dictionary related settings, 
+* as there are too many of them and error-prone.
+*/
 export class DictSettings {
   static getAllDictNames() {
     let v = ContextHolder.getGlobalState(`dltxt.dict.list`) as Array<string>;

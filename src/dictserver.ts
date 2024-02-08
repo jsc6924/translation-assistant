@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { downloadFile, getWebviewContent, registerCommand, showOutputText, sleep } from './utils';
+import { ContextHolder, downloadFile, getWebviewContent, registerCommand, showOutputText, sleep } from './utils';
 import { resolve } from 'url';
 import { channel } from './dlbuild';
 import { spawn } from 'child_process';
+const process = require('process');
 import * as fs from 'fs';
 import path = require('path');
-import FlexSearch from 'flexsearch';
 const axios = require('axios');
 
 
@@ -129,6 +129,12 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
             channel.appendLine(`启动${executablePath}`);
             const argsList = executableArgs.split(/\s+/).filter(arg => arg.trim() !== '');
             const childProcess = spawn(executablePath, argsList);
+            const Interval = 10; //10 seconds
+            ContextHolder.setGlobalTempState("dictserver.pid", childProcess.pid, Interval * 1.5);
+            const hdl = setInterval(() => {
+                ContextHolder.setGlobalTempState("dictserver.pid", childProcess.pid, Interval * 1.5);
+            }, Interval * 1000);
+            
 
             childProcess.stdout.on('data', (data) => {
                 channel.append(`dict-server: ${data}`);
@@ -139,11 +145,13 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
             });
         
             childProcess.on('close', (code) => {
+                clearInterval(hdl);
                 channel.show();
                 throw Error(`辞典服务器退出 ${code}`);
             });
         
             childProcess.on('error', (err) => {
+                clearInterval(hdl);
                 channel.show();
                 throw Error(`无法启动辞典服务器 ${err}`);
             });
@@ -211,6 +219,19 @@ async function dictServerSearchLite(context: vscode.ExtensionContext, word: stri
     return response.data;
 }
 
+export function stopDictServer(): boolean {
+    const pid = ContextHolder.getGlobalTempState("dictserver.pid");
+    if (!pid) {
+        return false;
+    }
+    try {
+        process.kill(pid, 'SIGTERM');
+    } catch(e) {
+        return false;
+    }
+    return true;
+}
+
 
 export class DictServerHoverProvider implements vscode.HoverProvider {
 
@@ -242,11 +263,6 @@ export class DictServerHoverProvider implements vscode.HoverProvider {
         const selectedText = document.getText(activeSelection);
 
         const hover = new vscode.Hover(new vscode.MarkdownString(selectedText));
-
-        // const p = new Promise<vscode.Hover>((resolve, reject) => {
-        //     resolve(hover);
-        // })
-        // return p;
 
         const resultPromise = dictServerSearchLite(this.context, selectedText);
 

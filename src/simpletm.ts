@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder, DictType, VSCodeContext } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType } from './utils';
 const AhoCorasick = require('ahocorasick');
 
 

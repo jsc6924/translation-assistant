@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.18.2",
+	"version": "3.18.3",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -242,6 +242,11 @@
 			{
 				"command": "Extension.dltxt.setWorkspaceState",
 				"title": "更改当前工作区设置",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.executeFunction",
+				"title": "执行一个函数",
 				"category": "DLTXT"
 			},
 			{

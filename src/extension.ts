@@ -50,6 +50,11 @@ export function activate(context: vscode.ExtensionContext) {
 		mode.setModeStr(mode.getNextMode(m));
 	});
 
+	registerCommand(context, 'Extension.dltxt.executeFunction', async (args) => {
+		const callback = args.callback;
+		if (callback) callback();
+	});
+
 	registerCommand(context, 'Extension.dltxt.copyToClipboard', (arg) => {
         vscode.env.clipboard.writeText(arg.text).then(
 			() => {
