@@ -14,9 +14,7 @@ const fsextra = require('fs-extra');
 
 
 export async function activate(context: vscode.ExtensionContext, treeView: trdb_view.TRDBTreeView) {
-    if(index.load(context, treeView, true)) {
-        vscode.window.showInformationMessage(`已读取翻译数据库`);
-    }
+    index.load(context, treeView, true);
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
         TRDBCriticalSection(context, async () => {
@@ -516,7 +514,7 @@ function createFlexSearchIndex(): Index<IndexedDocument>{
     });
 }
 
-export function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
+function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
     const lockFilePath = path.join(context.globalStoragePath, "trdb-lock.json")
     const writeObj = { workspace: getCurrentWorkspaceFolder() }
     try {
@@ -539,7 +537,7 @@ export function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
       }
 }
 
-export function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolean = false) {
+function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolean = false) {
     const lockFilePath = path.join(context.globalStoragePath, "trdb-lock.json")
     try {
         fs.unlinkSync(lockFilePath);
@@ -552,7 +550,7 @@ export function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolea
 }
 
 
-export async function TRDBCriticalSection(context: vscode.ExtensionContext, callback: () => any): Promise<any> {
+async function TRDBCriticalSection(context: vscode.ExtensionContext, callback: () => any): Promise<any> {
     if (!lockTRDBIndex(context)) {
         vscode.window.showErrorMessage(`数据库正忙，请稍后再试。如果可以确定数据库当前没有任务在运行，可尝试手动清除同步锁`);
         return undefined;

@@ -5,19 +5,173 @@ import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedC
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
+import { stopDictServer } from './dictserver';
+
+
+export class BasicTreeItem extends vscode.TreeItem {
+    constructor(label: string, state: vscode.TreeItemCollapsibleState) {
+        super(label, state);
+    }
+
+    getChildren(): BasicTreeItem[]  {
+        return [];
+    }
+}
+
+export class TreeItem<T> extends BasicTreeItem {
+    contextValue = '';
+    treeview: T;
+    constructor(treeview: T, label: string, state: vscode.TreeItemCollapsibleState) {
+        super(label, state);
+        this.treeview = treeview;
+    }
+}
+
+export class CommandItem extends BasicTreeItem {
+    iconPath = new vscode.ThemeIcon('debug-start');
+    constructor(label: string, callback: (() => void) | undefined) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+
+        this.command = {
+            command: 'Extension.dltxt.executeFunction',
+            title: `执行`,
+            arguments: [{callback}]
+        }
+    }
+}
+
+export class ConfigRootItem<T> extends TreeItem<T> {
+    children: BasicTreeItem[] = [];
+    iconPath = new vscode.ThemeIcon('settings-gear');
+    constructor(treeview: T, label: string, state: vscode.TreeItemCollapsibleState) {
+        super(treeview, label, state);
+    }
+
+    getChildren(): BasicTreeItem[] {
+        return this.children;
+    }
+    
+    async configUpdated() {
+        //pass
+    }
+}
+
+export class ConfigEntryItem<T> extends TreeItem<T> {
+    config: string;
+    showFullValue: boolean;
+    global: boolean;
+    initLabel: string;
+    callback: (()=>Promise<void>) | undefined;
+    constructor(treeview: T, configRoot: ConfigRootItem<T>,
+         label: string, config: string, global: boolean, showFullValue: boolean) {
+        super(treeview, label, vscode.TreeItemCollapsibleState.None);
+        this.initLabel = label;
+        this.config = config;
+        this.showFullValue = showFullValue;
+        this.global = global;
+        this.updateLabel();
+        this.callback = async () => { 
+            this.updateLabel(); 
+            await configRoot.configUpdated();
+            (treeview as any).dataChanged();
+        };
+        let usePathPicker = false;
+        if (config.includes('.localPath')) {
+            usePathPicker = true;
+        }
+        this.setCommand(global, {config, usePathPicker, callback: this.callback});
+    }
+
+    setCommand(global: boolean, args: any) {
+        if (global) {
+            this.iconPath = new vscode.ThemeIcon('symbol-property');
+            this.command = {
+                command: 'Extension.dltxt.setGlobalState',
+                title: `更改全局变量${this.config}`,
+                arguments: [args]
+            }
+        } else {
+            this.iconPath = new vscode.ThemeIcon('settings');
+            this.command = {
+                command: 'Extension.dltxt.setWorkspaceState',
+                title: `更改当前工作区变量${this.config}`,
+                arguments: [args]
+            }
+        }
+    }
+
+    getValue() {
+        if (this.global) {
+            return ContextHolder.getGlobalState(this.config);
+        }
+        return ContextHolder.getWorkspaceState(this.config);
+    }
+
+    updateLabel() {
+        let v = undefined;
+        if (this.global) {
+            v = ContextHolder.getGlobalState(this.config) as string;
+        } else {
+            v = ContextHolder.getWorkspaceState(this.config) as string;
+        }
+        if (v !== undefined) {
+            if (!this.showFullValue) {
+                v = v.slice(0, 3) + '******';
+            }
+            this.label = `${this.initLabel}: ${v}`
+        }
+    }
+}
+
+export class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
+    selections: string[] = [];
+    constructor(treeview: T, configRoot: ConfigRootItem<T>,
+        label: string, config: string, global: boolean, selections: string[], defaultValue: string) {
+        super(treeview, configRoot, label, config, global, true);
+        this.selections = selections;
+        this.setCommand(global, {config, callback: this.callback, selections: this.selections});
+        if (global) {
+            if (ContextHolder.getGlobalState(this.config) === undefined) {
+                ContextHolder.setGlobalState(this.config, defaultValue);
+            }
+        } else {
+            if (ContextHolder.getWorkspaceState(this.config) === undefined) {
+                ContextHolder.setWorkspaceState(this.config, defaultValue);
+            }
+        }
+        this.updateLabel();
+    }
+}
+
+export class BasicTreeView<Item extends BasicTreeItem> implements vscode.TreeDataProvider<Item>
+{
+    // with the vscode.EventEmitter we can refresh our  tree view
+    private m_onDidChangeTreeData: vscode.EventEmitter<Item | undefined> = new vscode.EventEmitter<Item | undefined>();
+    // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
+    readonly onDidChangeTreeData ? : vscode.Event<Item | undefined> = this.m_onDidChangeTreeData.event;
+
+    roots: Item[] = [];
+
+    getTreeItem(item: Item): vscode.TreeItem {
+        return item;
+    }
+
+    getChildren(element?: Item): Thenable<Item[]> {
+        if (!element) {
+            return Promise.resolve(this.roots);
+        }
+        return Promise.resolve(element.getChildren() as Item[]);
+    }
+
+    dataChanged() {
+        this.m_onDidChangeTreeData.fire(undefined);
+    }
+}
 
 // lets put all in a cwt namespace
 export namespace dict_view
 {
-    export class DictItem extends vscode.TreeItem {
-        contextValue = 'dict-item';
-        treeview: DictTreeView;
-        constructor(treeview: DictTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
-            super(label, state);
-            this.treeview = treeview;
-        }
-    }
-
+    class DictItem extends TreeItem<DictTreeView> {};
     export class DictRootItem extends DictItem {
         dictName: string;
         contextValue = 'dict-root-item';
@@ -29,6 +183,9 @@ export namespace dict_view
             this.dictName = dictName;
             this.iconPath = new vscode.ThemeIcon('database');
             this.setConnectionStatus(false);
+        }
+        getChildren(): BasicTreeItem[] {
+            return this.children;
         }
         findEntryValue(key: string) {
             if (this.contentNode) {
@@ -50,19 +207,15 @@ export namespace dict_view
         }
     }
 
-    class DictConfigRootItem extends DictItem {
-        contextValue = 'dict-config-root-item';
-        children: DictConfigEntryItem[] = [];
-        iconPath = new vscode.ThemeIcon('settings-gear');
+    class DictConfigRootItem extends ConfigRootItem<DictTreeView> {
         dictName: string;
         constructor(treeview: DictTreeView, label: string, dictName: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, label, state);
             this.dictName = dictName;
         }
-
         
         async configUpdated() {
-            for(const child of this.children) {
+            for(const child of this.children as DictConfigEntryItem[]) {
                 if (!child.getValue()) {
                     const root = this.treeview.getDictByName(this.dictName);
                     root?.setConnectionStatus(false);
@@ -73,14 +226,15 @@ export namespace dict_view
             await vscode.commands.executeCommand('Extension.dltxt.sync_database', this.dictName);
         }
     }
-    class DictConfigStyleRootItem extends DictItem {
-        contextValue = 'dict-config-style-root-item';
-        children: DictConfigEntryItem[] = [];
-        iconPath = new vscode.ThemeIcon('settings-gear');
+    class DictConfigStyleRootItem extends ConfigRootItem<DictTreeView> {
         dictName: string;
         constructor(treeview: DictTreeView, label: string, dictName: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, label, state);
             this.dictName = dictName;
+        }
+
+        getChildren(): BasicTreeItem[] {
+            return this.children;
         }
 
         async configUpdated() {
@@ -88,93 +242,9 @@ export namespace dict_view
         }
     }
 
-    class DictConfigEntryItem extends DictItem {
-        contextValue = 'dict-config-entry-item';
-        config: string;
-        showFullValue: boolean;
-        global: boolean;
-        initLabel: string;
-        callback: (()=>Promise<void>) | undefined;
-        constructor(treeview: DictTreeView, configRoot: DictConfigRootItem,
-             label: string, config: string, global: boolean, showFullValue: boolean) {
-            super(treeview, label, vscode.TreeItemCollapsibleState.None);
-            this.initLabel = label;
-            this.config = config;
-            this.showFullValue = showFullValue;
-            this.global = global;
-            this.updateLabel();
-            this.callback = async () => { 
-                this.updateLabel(); 
-                await configRoot.configUpdated();
-                treeview.dataChanged();
-            };
-            let usePathPicker = false;
-            if (config.includes('.localPath')) {
-                usePathPicker = true;
-            }
-            this.setCommand(global, {config, usePathPicker, callback: this.callback});
-        }
+    class DictConfigEntryItem extends ConfigEntryItem<DictTreeView> {}
+    class DictConfigSelectionEntryItem extends ConfigSelectionEntryItem<DictTreeView>{}
 
-        setCommand(global: boolean, args: any) {
-            if (global) {
-                this.iconPath = new vscode.ThemeIcon('symbol-property');
-                this.command = {
-                    command: 'Extension.dltxt.setGlobalState',
-                    title: `更改全局变量${this.config}`,
-                    arguments: [args]
-                }
-            } else {
-                this.iconPath = new vscode.ThemeIcon('settings');
-                this.command = {
-                    command: 'Extension.dltxt.setWorkspaceState',
-                    title: `更改当前工作区变量${this.config}`,
-                    arguments: [args]
-                }
-            }
-        }
-
-        getValue() {
-            if (this.global) {
-                return ContextHolder.getGlobalState(this.config);
-            }
-            return ContextHolder.getWorkspaceState(this.config);
-        }
-
-        updateLabel() {
-            let v = undefined;
-            if (this.global) {
-                v = ContextHolder.getGlobalState(this.config) as string;
-            } else {
-                v = ContextHolder.getWorkspaceState(this.config) as string;
-            }
-            if (v !== undefined) {
-                if (!this.showFullValue) {
-                    v = v.slice(0, 3) + '******';
-                }
-                this.label = `${this.initLabel}: ${v}`
-            }
-        }
-    }
-    class DictConfigSelectionEntryItem extends DictConfigEntryItem {
-        contextValue = 'dict-config-selection-entry-item';
-        selections: string[] = [];
-        constructor(treeview: DictTreeView, configRoot: DictConfigRootItem,
-            label: string, config: string, global: boolean, selections: string[], defaultValue: string) {
-            super(treeview, configRoot, label, config, global, true);
-            this.selections = selections;
-            this.setCommand(global, {config, callback: this.callback, selections: this.selections});
-            if (global) {
-                if (ContextHolder.getGlobalState(this.config) === undefined) {
-                    ContextHolder.setGlobalState(this.config, defaultValue);
-                }
-            } else {
-                if (ContextHolder.getWorkspaceState(this.config) === undefined) {
-                    ContextHolder.setWorkspaceState(this.config, defaultValue);
-                }
-            }
-            this.updateLabel();
-        }
-    }
     class DictEntrySetItem extends DictItem {
         contextValue = 'dict-entry-set-item';
         children: DictEntryItem[] = [];
@@ -232,24 +302,13 @@ export namespace dict_view
             };
         }
     }
-    class DictPlaceholderItem extends DictItem {
-        contextValue = 'dict-placeholder-item';
-    }
 
     
-    // 1. we'll export this class and use it in our extension later
-    // 2. we need to implement vscode.TreeDataProvider
-    export class DictTreeView implements vscode.TreeDataProvider<DictItem>
+    export class DictTreeView extends BasicTreeView<DictItem>
     {
-        // with the vscode.EventEmitter we can refresh our  tree view
-        private m_onDidChangeTreeData: vscode.EventEmitter<DictItem | undefined> = new vscode.EventEmitter<DictItem | undefined>();
-        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-        readonly onDidChangeTreeData ? : vscode.Event<DictItem | undefined> = this.m_onDidChangeTreeData.event;
-
-        roots: DictRootItem[] = [];
-
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
         public constructor()  {
+            super();
             vscode.commands.registerCommand('Extension.dltxt.treeview.filter', r => this.filterDict(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.addItem', r => this.addItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
@@ -330,6 +389,7 @@ export namespace dict_view
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `预览条位置`, `dltxt.dict.${name}.style.overviewPosition`, true, ['left', 'right', 'center', 'full'], 'right'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框宽度`, `dltxt.dict.${name}.style.BorderWidth`, true, ['1px', '0 0 1px 0', '0'], '1px'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框样式`, `dltxt.dict.${name}.style.BorderStyle`, true, ['solid', 'dotted', 'dashed', 'double', 'none'], 'solid'));
+            styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `边框半径`, `dltxt.dict.${name}.style.BorderRadius`, true, ['0', '2px', '3px', '5px', '8px', '10px'], '3px'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题高亮颜色`, `dltxt.dict.${name}.style.light.backgroundColor`, true, CSSNamedColors, 'lightblue'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `浅色主题边框颜色`, `dltxt.dict.${name}.style.light.borderColor`, true, CSSNamedColors, 'darkblue'));
             styleNode.children.push(new DictConfigSelectionEntryItem(this, styleNode, `深色主题高亮颜色`, `dltxt.dict.${name}.style.dark.backgroundColor`, true, CSSNamedColors, 'darkblue'));
@@ -344,29 +404,6 @@ export namespace dict_view
                 this.roots.splice(index, 1);
             }
             this.dataChanged();
-        }
-
-        getTreeItem(item: DictItem): vscode.TreeItem {
-            return item;
-        }
-    
-        getChildren(element?: DictItem): Thenable<DictItem[]> {
-            if (!element) {
-                return Promise.resolve(this.roots);
-            }
-            if (element.contextValue == 'dict-root-item') {
-                return Promise.resolve((element as DictRootItem).children);
-            }
-            if (element.contextValue == 'dict-entry-set-item') {
-                return Promise.resolve((element as DictEntrySetItem).getChildren());
-            }
-            if (element.contextValue == 'dict-config-root-item') {
-                return Promise.resolve((element as DictConfigRootItem).children);
-            }
-            if (element.contextValue == 'dict-config-style-root-item') {
-                return Promise.resolve((element as DictConfigStyleRootItem).children);
-            }
-            return Promise.resolve([]);
         }
 
         public addItem(item: DictEntrySetItem) {
@@ -398,12 +435,8 @@ export namespace dict_view
             vscode.commands.executeCommand('Extension.dltxt.dict_update', item.name, item.key, true)
         }
 
-        dataChanged() {
-            this.m_onDidChangeTreeData.fire(undefined);
-        }
-
         getDictByName(name: string) {
-            for(const node of this.roots) {
+            for(const node of this.roots as DictRootItem[]) {
                 if (node.dictName === name) {
                     return node;
                 }
@@ -457,29 +490,18 @@ export namespace dict_view
                     return a.key.localeCompare(b.key);
                 });
                 (node.contentNode as DictEntrySetItem).children = dictEntryItems;
-                for (const item of (node.children[0] as DictConfigRootItem).children) {
-                    item.updateLabel();
+                for (const item of (node.children[0] as DictConfigRootItem).getChildren()) {
+                    (item as DictConfigEntryItem).updateLabel();
                 }
             }
-            else if (element.contextValue == 'dict-entry-set-item') {
-                
-            }
-            else if (element.contextValue == 'dict-config-root-item') {
-                
-            }
 
-            this.m_onDidChangeTreeData.fire(undefined);
-            
+            this.dataChanged();
         }
 
     }
 }
 export namespace trdb_view {
-    class TRDBItem extends vscode.TreeItem {
-        constructor(label: string, collapsibleState?: vscode.TreeItemCollapsibleState) {
-            super(label, collapsibleState);
-        }
-    }
+    class TRDBItem extends BasicTreeItem {}
 
     export class TRDBFolderItem extends TRDBItem {
         folder: string = '';
@@ -509,17 +531,12 @@ export namespace trdb_view {
     }
 
 
-    export class TRDBTreeView implements vscode.TreeDataProvider<TRDBItem>
+    export class TRDBTreeView extends BasicTreeView<TRDBItem>
     {
-        // with the vscode.EventEmitter we can refresh our  tree view
-        private m_onDidChangeTreeData: vscode.EventEmitter<TRDBItem | undefined> = new vscode.EventEmitter<TRDBItem | undefined>();
-        // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-        readonly onDidChangeTreeData ? : vscode.Event<TRDBItem | undefined> = this.m_onDidChangeTreeData.event;
-
-        items: TRDBItem[] = [];
         index: SearchIndex;
 
         constructor(context: vscode.ExtensionContext, index: SearchIndex) {
+            super();
             this.index = index;
             this.refresh(context);
             registerCommand(context, "Extension.dltxt.trdb.openVirtualFile", (args) => {
@@ -562,7 +579,7 @@ export namespace trdb_view {
     
         getChildren(element?: TRDBItem): Thenable<TRDBItem[]> {
             if (!element) {
-                return Promise.resolve(this.items);
+                return Promise.resolve(this.roots);
             }
             if (element.contextValue == 'trdb-folder') {
                 const folderItem = element as TRDBFolderItem;
@@ -583,7 +600,7 @@ export namespace trdb_view {
         }
 
         refresh(context: vscode.ExtensionContext) {
-            this.items = [];
+            this.roots = [];
             const folders = this.index.virtualDirectory.keys();
             const temp: TRDBFolderItem[] = [];
             for(const folder of folders) {
@@ -592,8 +609,46 @@ export namespace trdb_view {
             temp.sort((a, b) => {
                 return a.folder.localeCompare(b.folder);
             });
-            this.items = temp;
-            this.m_onDidChangeTreeData.fire(undefined);
+            this.roots = temp;
+            this.dataChanged();
         }
+    }
+}
+
+export namespace cc_view {
+    class CCDirectory extends TreeItem<CCTreeView> {
+        children: BasicTreeItem[] = [];
+        iconPath = new vscode.ThemeIcon('debug-collapse-all');
+        getChildren(): BasicTreeItem[] {
+            return this.children;
+        }
+    };
+
+
+
+    export class CCTreeView extends BasicTreeView<TreeItem<CCTreeView>>
+    {
+        constructor(context: vscode.ExtensionContext) {
+            super();
+            const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);
+            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "AccessKey", "dltxt.config.baidu.accesskey", true, false));
+            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "SecretKey", "dltxt.config.baidu.secretkey", true, false));
+            this.roots.push(baiduAPINode);
+
+            const dictServerNode = new CCDirectory(this, "辞典服务器", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(dictServerNode);
+
+            dictServerNode.children.push(new CommandItem("关闭辞典服务器", () => {
+                if(!stopDictServer()) {
+                    vscode.window.showInformationMessage("当前没有辞典服务器在运行，或者辞典服务器不是由vscode启动的");
+                } else {
+                    vscode.window.showInformationMessage("已关闭辞典服务器");
+                }
+            }));
+
+
+            this.dataChanged();
+        }
+
     }
 }

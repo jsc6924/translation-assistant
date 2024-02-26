@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { getOrCreateDiagnosticCollection } from './utils';
+import { VSCodeContext, getOrCreateDiagnosticCollection } from './utils';
 import { DocumentParser } from './parser';
 
 export function updateErrorDecorations() {
+    
     const config = vscode.workspace.getConfiguration("dltxt");
     let activeEditor = vscode.window.activeTextEditor;
     

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.17.3",
+	"version": "3.18.7",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -89,15 +89,19 @@
 			"dltxt-view-container": [
 				{
 					"id": "dltxt-clipboard",
-					"name": "clickboard"
+					"name": "剪贴板"
 				},
 				{
 					"id": "dltxt-dict",
-					"name": "dictionary"
+					"name": "术语库"
 				},
 				{
 					"id": "dltxt-trdb",
-					"name": "translation db"
+					"name": "翻译数据库"
+				},
+				{
+					"id": "dltxt-configs-commands",
+					"name": "设置与命令"
 				}
 			]
 		},
@@ -238,6 +242,11 @@
 			{
 				"command": "Extension.dltxt.setWorkspaceState",
 				"title": "更改当前工作区设置",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.executeFunction",
+				"title": "执行一个函数",
 				"category": "DLTXT"
 			},
 			{
@@ -1176,14 +1185,6 @@
 					"type": "boolean",
 					"default": true,
 					"description": "是否在鼠标停留在选中的单词上时使用辞典服务器查询"
-				},
-				"dltxt.z.api.baidu.AccessKey": {
-					"type": "string",
-					"description": "百度智能云API AccessKey"
-				},
-				"dltxt.z.api.baidu.SecretKey": {
-					"type": "string",
-					"description": "百度智能云API AccessKey"
 				}
 			}
 		}

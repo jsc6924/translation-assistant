@@ -2,14 +2,14 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as motion from './motion';
-import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder } from './utils';
+import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder, compareVersions } from './utils';
 import {
 	formatter, copyOriginalToTranslation,
 	repeatFirstChar
 } from "./formatter";
 import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
 import * as dlbuild from './dlbuild';
-import { trdb_view } from './treeview';
+import { trdb_view, cc_view } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import { updateErrorDecorations } from './error-check';
 import * as mode from './mode';
@@ -48,6 +48,11 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, "Extension.dltxt.toggleMode", () => {
 		const m = VSCodeContext.get('dltxt.mode') as string;
 		mode.setModeStr(mode.getNextMode(m));
+	});
+
+	registerCommand(context, 'Extension.dltxt.executeFunction', async (args) => {
+		const callback = args.callback;
+		if (callback) callback();
 	});
 
 	registerCommand(context, 'Extension.dltxt.copyToClipboard', (arg) => {
@@ -149,9 +154,13 @@ export function activate(context: vscode.ExtensionContext) {
 	dlbuild.activate(context);
 	singleline.activate(context);
 	clipboard.activate(context);
-	let trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);
+
+	const trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);
 	trdb.activate(context, trdb_tree);
 	vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
+	const cc_tree = new cc_view.CCTreeView(context);
+	vscode.window.registerTreeDataProvider('dltxt-configs-commands', cc_tree);
+
 	auto_format.activate(context);
 	dictserver.activate(context);
 	
@@ -176,15 +185,27 @@ export function deactivate() { }
 async function migration(context: vscode.ExtensionContext) {
 	let oldVersion = ContextHolder.getGlobalState('dltxt.version') as string;
 	if (!oldVersion) {
-		oldVersion = "2.34";
+		oldVersion = "2.34.99";
 	}
 	const curVersion = vscode.extensions.getExtension('jsc723.translateassistant')?.packageJSON.version;
 	if (!curVersion || oldVersion.length < 1 || curVersion.length < 1) {
 		return;
 	}
 	
-	if (true && oldVersion[0] == '2' && curVersion[0] == '3') {
+	if (compareVersions(oldVersion, "3.0.0") < 0) {
 		simpletm.migration(context);
+	}
+
+	if(compareVersions(oldVersion, "3.18.0") < 0) {
+		const baiduConfig = vscode.workspace.getConfiguration("dltxt.z.api.baidu");
+		const accessKey = baiduConfig.get("AccessKey");
+		const secretKey = baiduConfig.get("SecretKey");
+		if (accessKey || secretKey) {
+			ContextHolder.setGlobalState("dltxt.config.baidu.accesskey", accessKey);
+			ContextHolder.setGlobalState("dltxt.config.baidu.secretkey", secretKey);
+			baiduConfig.update("AccessKey", undefined, vscode.ConfigurationTarget.Global);
+			baiduConfig.update("SecretKey", undefined, vscode.ConfigurationTarget.Global);
+		}
 	}
 
 	ContextHolder.setGlobalState('dltxt.version', curVersion);

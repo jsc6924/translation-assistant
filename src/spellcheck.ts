@@ -91,8 +91,8 @@ export function spellCheck(context: vscode.ExtensionContext) {
     const diagnostics: vscode.Diagnostic[] = [];
     
 
-    const AK = config.get<string>('z.api.baidu.AccessKey');
-    const SK = config.get<string>('z.api.baidu.SecretKey');
+    const AK = utils.ContextHolder.getGlobalState('dltxt.config.baidu.accesskey');
+    const SK = utils.ContextHolder.getGlobalState('dltxt.config.baidu.secretkey');
 
     if (!AK || !SK) {
         vscode.window.showErrorMessage('请先填写BaiduAPI的AccessKey和SecretKey');

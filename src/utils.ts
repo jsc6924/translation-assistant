@@ -91,6 +91,9 @@ type ContextValue = boolean | string;
 
 /**
  * Wrapper around VS Code's `setContext`.
+ * 
+ * The value setted by setContext can be used in when clause in package.json
+ * 
  * The API call takes several milliseconds to seconds to complete,
  * so let's cache the values and only call the API when necessary.
  */
@@ -269,22 +272,33 @@ export function writeAtomic(filePath: string, data: string): void {
   }
 }
 
+export function compareVersions(version1: string, version2: string) {
+  const [major1, minor1, patch1] = version1.split('.').map(Number);
+  const [major2, minor2, patch2] = version2.split('.').map(Number);
 
+  if (major1 !== major2) {
+      return major1 - major2;
+  }
+  if (minor1 !== minor2) {
+      return minor1 - minor2;
+  }
+  return patch1 - patch2;
+}
+
+/*
+* Wrapper of globalState and workspaceState of vscode.ExtensionContext
+*/
 export class ContextHolder {
   private static context: vscode.ExtensionContext | undefined;
-  private static globalCache: Map<string, any> = new Map();
   private static workspaceCache: Map<string, any> = new Map();
   static set(context: vscode.ExtensionContext) {
     ContextHolder.context = context;
-    for(const k of (context.globalState as IterableMomento).keys()) {
-      ContextHolder.globalCache.set(k, context.globalState.get(k));
-    }
     for(const k of (context.workspaceState as IterableMomento).keys()) {
       ContextHolder.workspaceCache.set(k, context.workspaceState.get(k));
     }
   }
   static getGlobalState(key: string, defaultValue?: any): any {
-    const v = ContextHolder.globalCache.get(key);
+    const v = ContextHolder.context?.globalState.get(key);
     if(defaultValue !== undefined && v === undefined) {
       return defaultValue;
     }
@@ -298,11 +312,6 @@ export class ContextHolder {
     return v;
   }
   static setGlobalState(key: string, value: any) {
-    if (value === undefined) {
-      ContextHolder.globalCache.delete(key);
-    } else {
-      ContextHolder.globalCache.set(key, value);
-    }
     ContextHolder.context?.globalState.update(key, value);
   }
   static setWorkspaceState(key: string, value: any) {
@@ -312,6 +321,24 @@ export class ContextHolder {
       ContextHolder.workspaceCache.set(key, value);
     }
     ContextHolder.context?.workspaceState.update(key, value);
+  }
+  static setGlobalTempState(key: string, value: any, durationSecond: number) {
+    const currentTimestampInSeconds = Math.floor(Date.now() / 1000);
+    const obj = {expire: currentTimestampInSeconds + durationSecond, value};
+    console.log("now = ", currentTimestampInSeconds);
+    console.log("set", obj);
+    ContextHolder.setGlobalState(`_tmp.${key}`, obj);
+  }
+  static getGlobalTempState(key: string) {
+    const currentTimestampInSeconds = Math.floor(Date.now() / 1000);
+    const obj = ContextHolder.getGlobalState(`_tmp.${key}`);
+    console.log("now = ", currentTimestampInSeconds);
+    console.log("get", obj);
+    if (obj?.expire && obj.expire >= currentTimestampInSeconds) {
+      return obj.value;
+    }
+    ContextHolder.setGlobalState(`_tmp.${key}`, undefined);
+    return undefined;
   }
   static getGlobalStateKeys() {
     return (ContextHolder.context?.globalState as IterableMomento).keys();
@@ -332,6 +359,10 @@ export class DictType {
   static Local = 'local';
 }
 
+/*
+* A further wrapper on ContextHolder for dictionary related settings, 
+* as there are too many of them and error-prone.
+*/
 export class DictSettings {
   static getAllDictNames() {
     let v = ContextHolder.getGlobalState(`dltxt.dict.list`) as Array<string>;
@@ -386,6 +417,13 @@ export class DictSettings {
     return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.BorderStyle`, value);
   }
 
+  static getStyleBorderRadius(name: string) {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.BorderRadius`);
+  }
+  static setStyleBorderRadius(name: string, value: string) {
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.BorderRadius`, value);
+  }
+
   static getStyleLightBackgroundColor(name: string) {
     return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.light.backgroundColor`);
   }
@@ -419,12 +457,13 @@ export class DictSettings {
     const overviewColor = DictSettings.getStyleOverviewColor(dictName);
     const borderWidth = DictSettings.getStyleBorderWidth(dictName);
     const borderStyle = DictSettings.getStyleBorderStyle(dictName);
+    const borderRadius = DictSettings.getStyleBorderRadius(dictName);
     const lightBorderColor = DictSettings.getStyleLightBorderColor(dictName);
     const lightBackgroundColor = DictSettings.getStyleLightBackgroundColor(dictName);
     const darkBorderColor = DictSettings.getStyleDarkBorderColor(dictName);
     const darkBackgroundColor = DictSettings.getStyleDarkBackgroundColor(dictName);
 
-    const decoVersion = `${overviewPosition}|${overviewColor}|${borderWidth}|${borderStyle}|${lightBorderColor}|${lightBackgroundColor}|${darkBorderColor}|${darkBackgroundColor}`;
+    const decoVersion = `${overviewPosition}|${overviewColor}|${borderWidth}|${borderStyle}|${borderRadius}|${lightBorderColor}|${lightBackgroundColor}|${darkBorderColor}|${darkBackgroundColor}`;
 
     let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
     if (DictSettings.decoRepo.has(dictName)) {
@@ -450,6 +489,7 @@ export class DictSettings {
     let obj = {
       borderWidth: borderWidth,
       borderStyle: borderStyle,
+      borderRadius: borderRadius,
       overviewRulerColor: overviewColor,
       overviewRulerLane: overviewPositionEnum,
       light: {
