@@ -85,6 +85,30 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
     panel.reveal();
 }
 
+export async function downloadDefaultServer(context: vscode.ExtensionContext): Promise<string> {
+    const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
+    let executablePath = '';
+    const executableDir = path.join(context.globalStoragePath, "dict-server");
+    fs.mkdirSync(executableDir, {recursive: true});
+    executablePath = path.join(executableDir, 'dict-server.exe');
+    const downloadURLs = [
+        'https://github.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe', 
+        'https://gitee.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe'];
+    for(const downloadURL of downloadURLs) {
+        try {
+            channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
+            await downloadFile(downloadURL, executablePath);
+            break;
+        } catch (err) {
+            channel.appendLine(`下载失败`);
+        }
+    }
+    channel.appendLine(`下载完成，文件保存在${executablePath}`);
+    config.update('executable.path', executablePath, vscode.ConfigurationTarget.Global);
+    channel.appendLine(`已将服务器文件路径加入vscode全局设置中`);
+    return executablePath;
+}
+
 
 async function ensureDictServerRunning(context: vscode.ExtensionContext, autoStart: boolean): Promise<boolean> {
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
@@ -104,25 +128,8 @@ async function ensureDictServerRunning(context: vscode.ExtensionContext, autoSta
     try {
         let executablePath = config.get('executable.path') as string;
         let executableArgs = config.get('executable.arguments') as string;
-        if (!fs.existsSync(executablePath)) {
-            const executableDir = path.join(context.globalStoragePath, "dict-server");
-            fs.mkdirSync(executableDir, {recursive: true});
-            executablePath = path.join(executableDir, 'dict-server.exe');
-            const downloadURLs = [
-                'https://github.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe', 
-                'https://gitee.com/jsc723/moji-proxy-server/releases/download/latest/dict-server.exe'];
-            for(const downloadURL of downloadURLs) {
-                try {
-                    channel.appendLine(`正在从 ${downloadURL} 下载辞典服务器...`);
-                    await downloadFile(downloadURL, executablePath);
-                    break;
-                } catch (err) {
-                    channel.appendLine(`下载失败`);
-                }
-            }
-            channel.appendLine(`下载完成，文件保存在${executablePath}`);
-            config.update('executable.path', executablePath, vscode.ConfigurationTarget.Global);
-            channel.appendLine(`已将服务器文件路径加入vscode全局设置中`);
+        if (!executablePath || !fs.existsSync(executablePath)) {
+            executablePath = await downloadDefaultServer(context);
         }
     
         if (fs.existsSync(executablePath)) {

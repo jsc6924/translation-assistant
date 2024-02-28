@@ -5,7 +5,8 @@ import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedC
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
-import { stopDictServer } from './dictserver';
+import { downloadDefaultServer, stopDictServer } from './dictserver';
+import { channel } from './dlbuild';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -644,6 +645,12 @@ export namespace cc_view {
                 } else {
                     vscode.window.showInformationMessage("已关闭辞典服务器");
                 }
+            }));
+
+            dictServerNode.children.push(new CommandItem("更新辞典服务器", async () => {
+                stopDictServer();
+                channel.show();
+                await downloadDefaultServer(ContextHolder.get());
             }));
 
 

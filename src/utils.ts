@@ -290,6 +290,12 @@ export function compareVersions(version1: string, version2: string) {
 export class ContextHolder {
   private static context: vscode.ExtensionContext | undefined;
   private static workspaceCache: Map<string, any> = new Map();
+  static get(): vscode.ExtensionContext {
+    if (!ContextHolder.context) {
+      throw new Error("context is not initialized");
+    }
+    return ContextHolder.context;
+  }
   static set(context: vscode.ExtensionContext) {
     ContextHolder.context = context;
     for(const k of (context.workspaceState as IterableMomento).keys()) {
