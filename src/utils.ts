@@ -50,8 +50,7 @@ export function setCursorAndScroll(editor: vscode.TextEditor, dn: number, m: num
   const newPosition = position.with(targetLine, m);
   editor.selection = new vscode.Selection(newPosition, newPosition);
   if (scroll) {
-    const targetPosition = new vscode.Position(targetLine, 0);
-    editor.revealRange(new vscode.Range(targetPosition, targetPosition), vscode.TextEditorRevealType.InCenter);
+    editor.revealRange(new vscode.Range(newPosition, newPosition), vscode.TextEditorRevealType.InCenter);
   }
 };
 

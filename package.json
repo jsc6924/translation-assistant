@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.18.7",
+	"version": "3.18.8",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -993,12 +993,12 @@
 				},
 				"dltxt.core.originalTextPrefixRegex": {
 					"type": "string",
-					"default": "(\\[[a-z0-9]+\\])|((★|○)[a-z0-9]+(★|○))|((<\\d+>)?//)",
+					"default": "(\\[[a-z0-9]+\\])|((★|○|◇)[a-z0-9]+(★|○|◇))|((<\\d+>)?//)",
 					"description": "原文开头标签的正则表达式"
 				},
 				"dltxt.core.translatedTextPrefixRegex": {
 					"type": "string",
-					"default": "(;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))",
+					"default": "(;\\[[a-z0-9]+\\])|((☆|●|◆)[a-z0-9]+(☆|●|◆))|(<\\d+>(?!//))",
 					"description": "译文开头标签的正则表达式"
 				},
 				"dltxt.core.otherPrefixRegex": {
