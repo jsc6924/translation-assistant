@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.18.10",
+	"version": "3.19.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -165,11 +165,6 @@
 				"category": "DLTXT"
 			},
 			{
-				"command": "Extension.dltxt.batch_insert_local",
-				"title": "批量添加术语库词条",
-				"category": "DLTXT"
-			},
-			{
 				"command": "Extension.dltxt.extract_single_line",
 				"title": "提取译文",
 				"category": "DLTXT"
@@ -256,6 +251,24 @@
 				"icon": {
 					"light": "icons/light/add.svg",
 					"dark": "icons/dark/add.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.dict.batch_insert_local",
+				"title": "批量添加词条到本地术语库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/build.svg",
+					"dark": "icons/dark/build.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.dict.exportDict",
+				"title": "导出术语库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/export.svg",
+					"dark": "icons/dark/export.svg"
 				}
 			},
 			{
@@ -870,14 +883,24 @@
 			],
 			"view/title": [
 				{
-					"command": "Extension.dltxt.treeview.dict.addDict",
+					"command": "Extension.dltxt.sync_all_database",
 					"when": "view == dltxt-dict",
 					"group": "navigation@1"
 				},
 				{
-					"command": "Extension.dltxt.sync_all_database",
+					"command": "Extension.dltxt.treeview.dict.addDict",
 					"when": "view == dltxt-dict",
 					"group": "navigation@2"
+				},
+				{
+					"command": "Extension.dltxt.treeview.dict.batch_insert_local",
+					"when": "view == dltxt-dict",
+					"group": "navigation@3"
+				},
+				{
+					"command": "Extension.dltxt.treeview.dict.exportDict",
+					"when": "view == dltxt-dict",
+					"group": "navigation@4"
 				},
 				{
 					"command": "Extension.dltxt.trdb.treeview.loadDB",

@@ -108,8 +108,8 @@
 			}
 		},
 		"infer.nme": {
-			"begin": "^((?<group1>★|☆|○|●|◇|◆)[0-9a-zA-Z]+\\k<group1>|\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>//)(([^\u3000-\u303F\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)|@.*|.*[Nn][Aa][Mm][Ee].*)\n",
-			"end" : "((?<group1>★|☆|○|●|◇|◆)[0-9a-zA-Z]+\\k<group1>|;\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>(//)?)(.*)$",
+			"begin": "^((?<group1>★|☆|○|●|◇|◆)[\\x00-\\x7F]+\\k<group1>|\\[0x[0-9a-f]+\\]|<[\\x00-\\x7F]*>//)(([^\u3000-\u303F\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)|@.*|.*[Nn][Aa][Mm][Ee].*)\n",
+			"end" : "((?<group1>★|☆|○|●|◇|◆)[\\x00-\\x7F]+\\k<group1>|;\\[0x[0-9a-f]+\\]|<[\\x00-\\x7F]*>(//)?)(.*)$",
 			"beginCaptures": {
 				"0" : { "name": "st.nme.original.tag" },
 				"4" : { "name": "st.nme.original.txt" }
@@ -120,15 +120,15 @@
 			}
 		},
 		"infer.txt": {
-			"begin": "^((?<group1>★|☆|○|●|◇|◆)[0-9a-zA-Z]+\\k<group1>|\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>//)(.*)",
-			"end" : "((?<group1>★|☆|○|●|◇|◆)[0-9a-zA-Z]+\\k<group1>|;\\[0x[0-9a-f]+\\]|<[a-zA-Z0-9]*>(//)?)(.*)$",
+			"begin": "^((?<group1>★|☆|○|●|◇|◆)[\\x00-\\x7F]+\\k<group1>|\\[0x[0-9a-f]+\\]|<[\\x00-\\x7F]*>//)(.*)",
+			"end" : "((?<group1>★|☆|○|●|◇|◆)[\\x00-\\x7F]+\\k<group1>|;\\[0x[0-9a-f]+\\]|<[\\x00-\\x7F]*>(//)?)(.*)$",
 			"beginCaptures": {
 				"0" : { "name": "st.original.tag" },
-				"4" : { "name": "original.txt" }
+				"3" : { "name": "original.txt" }
 			},
 			"endCaptures": {
 				"0" : { "name": "st.translated.tag" },
-				"5" : { "name": "translated.txt" }
+				"4" : { "name": "translated.txt" }
 			}
 		},
 		"st.ctl.original": {

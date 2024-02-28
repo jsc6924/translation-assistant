@@ -61,6 +61,48 @@ export function activate(context: vscode.ExtensionContext) {
 		dictTree?.dataChanged();
 	});
 
+	registerCommand(context, 'Extension.dltxt.treeview.dict.exportDict', async () => {
+		const allDicts = DictSettings.getAllDictNames();
+		const dictName = await vscode.window.showQuickPick(allDicts, {
+			canPickMany: false,
+			placeHolder: "选择一个术语库"
+		});
+		if (!dictTree || !dictName) {
+			return;
+		}
+		const dict = dictTree.getDictByName(dictName);
+		const content = dict?.contentNode;
+		if (!content) {
+			return; //should never happen
+		}
+
+		const saveOptions: vscode.SaveDialogOptions = {
+            title: '导出术语库',
+            defaultUri: vscode.Uri.file(`${dictName}.xlsx`),
+            filters: {
+              'XLSX Files': ['xlsx']
+            }
+          };
+        
+        const saveUri = await vscode.window.showSaveDialog(saveOptions);
+        if(!saveUri) {
+            return;
+        }
+
+		const data: any[] = [['key', 'value']];
+		for(const item of content.children) {
+			data.push([item.key, item.value]);
+		}
+
+		const XLSX = require('xlsx');
+		const workbook = XLSX.utils.book_new();
+		const worksheet = XLSX.utils.aoa_to_sheet(data);
+		XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+		XLSX.writeFile(workbook, saveUri.fsPath);
+
+		vscode.window.showInformationMessage(`成功导出到${saveUri.fsPath}`);
+	});
+
 	registerCommand(context, 'Extension.dltxt.treeview.dict.removeDict', async (item: dict_view.DictRootItem) => {
 		const res = await vscode.window.showWarningMessage(`确定要断开与术语库${item.dictName}的连接吗`, 
 			"是", "否");
@@ -359,7 +401,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 	}
 
-	registerCommand(context, 'Extension.dltxt.batch_insert_local', async function() {
+	registerCommand(context, 'Extension.dltxt.treeview.dict.batch_insert_local', async function() {
 		const dictNames = DictSettings.getAllDictNames();
 		if (dictNames.length == 0) {
 			vscode.window.showInformationMessage('需要先连接术语库');
