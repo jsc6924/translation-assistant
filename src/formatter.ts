@@ -185,6 +185,20 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   if (config.get("formatter.c.omitPeriod"))
     ops.push(omitPeriod);
 
+  
+  const removeEllipsisPeriod = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    cgrps.text = cgrps.text.replace(/……。/g, '……');
+  };
+  if (config.get("formatter.c.removeEllipsisPeriod"))
+    ops.push(removeEllipsisPeriod);
+
+  const removeEllipsisQE = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    cgrps.text = cgrps.text.replace(/……？/g, '？');
+    cgrps.text = cgrps.text.replace(/……！/g, '！');
+  };
+  if (config.get("formatter.c.removeEllipsisQE"))
+    ops.push(removeEllipsisQE);
+
   const customMappingFunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     const nameMapping = config.get("formatter.d.customMapping") as object
     if (cgrps?.text) {

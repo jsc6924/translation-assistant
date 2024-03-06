@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.20.1",
+	"version": "3.20.2",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -1162,6 +1162,16 @@
 					"type": "boolean",
 					"default": true,
 					"description": "格式化文本：去除对话句末的句号"
+				},
+				"dltxt.formatter.c.removeEllipsisPeriod": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：把……。改成……"
+				},
+				"dltxt.formatter.c.removeEllipsisQE": {
+					"type": "boolean",
+					"default": false,
+					"description": "格式化文本：把……？/……！改成？/！"
 				},
 				"dltxt.formatter.d.customMapping": {
 					"type": "object",
