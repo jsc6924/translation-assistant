@@ -54,6 +54,26 @@ export function setCursorAndScroll(editor: vscode.TextEditor, dn: number, m: num
   }
 };
 
+export function repeatN(s: string, k: number): string {
+  let res = '';
+  while(k > 0) {
+    res += s;
+    k--;
+  }
+  return res;
+}
+
+export function repeatStr(s: string, k: number, addSuffix: boolean): string {
+  if (addSuffix && k >= 3) {
+    let res = '';
+    res = repeatN(s, k*2/3);
+    res += repeatN('～', k/3);
+    return res;
+  } else {
+    return repeatN(s, k);
+  }
+}
+
 export function toDBC(txtstring: string) {
   var tmp = "";
   for (var i = 0; i < txtstring.length; i++) {
@@ -62,6 +82,19 @@ export function toDBC(txtstring: string) {
     }
     if (txtstring.charCodeAt(i) < 127) {
       tmp = tmp + String.fromCharCode(txtstring.charCodeAt(i) + 65248);
+    }
+  }
+  return tmp;
+}
+
+export function toAscii(txtstring: string) {
+  var tmp = "";
+  for (var i = 0; i < txtstring.length; i++) {
+    if (txtstring.charCodeAt(i) == 12288) {
+      tmp = tmp + String.fromCharCode(32);
+    }
+    if (txtstring.charCodeAt(i) >= 65248 && txtstring.charCodeAt(i) < 65248 + 127) {
+      tmp = tmp + String.fromCharCode(txtstring.charCodeAt(i) - 65248);
     }
   }
   return tmp;

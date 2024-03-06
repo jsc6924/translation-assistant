@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { toDBC } from './utils';
+import { repeatStr, toAscii, toDBC } from './utils';
 import { getTextDelimiter } from './motion';
 import { findLastMatchIndex } from './utils';
 import { DocumentParser, MatchedGroups, getRegex } from './parser';
@@ -70,7 +70,10 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   const horizontalLine = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
     let target = config.get("formatter.a.horizontalLine.specify") as string;
-    text = text.replace(/[—―－\-]{2,}/g, target);
+    if (!target) {
+      target = '——';
+    }
+    text = text.replace(/[—―ー－\-]{2,}/g, s => repeatStr(target[0], s.length, false));
     cgrps.text = text;
   };
   if (config.get("formatter.a.horizontalLine.enable"))
@@ -157,8 +160,21 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     }
     cgrps.text = text;
   };
-  if (config.get("formatter.b.h2fAlpha"))
+  const h2fAscii = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    let text: string = cgrps.text as string;
+    let regAplha = /[０-９ａ-ｚＡ-Ｚ]/g;
+    let match;
+    while (match = regAplha.exec(text)) {
+      text = text.replace(match[0], toAscii(match[0]));
+    }
+    cgrps.text = text;
+  };
+  const h2fOption = config.get("formatter.b.h2fAlpha")
+  if (h2fOption === '统一为全角' || h2fOption === true) {
     ops.push(h2fAlpha);
+  } else if (h2fOption === '统一为半角') {
+    ops.push(h2fAscii);
+  }
 
 
   const omitPeriod = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {

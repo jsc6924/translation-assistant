@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.19.3",
+	"version": "3.20.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -1149,9 +1149,14 @@
 					"description": "格式化文本：将半角标点符号统一为中文全角标点（半角引号除外）"
 				},
 				"dltxt.formatter.b.h2fAlpha": {
-					"type": "boolean",
-					"default": false,
-					"description": "格式化文本：将英文与数字统一为全角（如果文本中有英文脚本请勿使用）"
+					"type": "string",
+					"enum": [
+						"关闭",
+						"统一为全角",
+						"统一为半角"
+					],
+					"default": "关闭",
+					"description": "格式化文本：将英文与数字统一为全角或半角"
 				},
 				"dltxt.formatter.c.omitPeriod": {
 					"type": "boolean",

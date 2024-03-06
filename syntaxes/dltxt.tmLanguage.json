@@ -97,14 +97,16 @@
 			}
 		},
 		"slash.infer.txt": {
-			"begin": "^(//)(.*\n)",
-			"end" : "^.*$",
+			"begin": "^(//)(【.*】(?=(?!\\s+$)))?(.*\n)",
+			"end" : "^(【.*】(?=(?!\\s+$)))?(.*)$",
 			"beginCaptures": {
 				"0" : { "name": "st.original.tag" },
-				"2" : { "name": "original.txt" }
+				"2" : { "name": "st.nme.original.txt" },
+				"3" : { "name": "original.txt" }
 			},
 			"endCaptures": {
-				"0" : { "name": "translated.txt" }
+				"1" : { "name": "st.nme.translated.txt" },
+				"2" : { "name": "translated.txt" }
 			}
 		},
 		"infer.nme": {

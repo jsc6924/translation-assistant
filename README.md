@@ -54,7 +54,6 @@ DLTXT支持的格式可分为两种：标准双行格式、段落格式
 #除了原文和译文之外，可以再添加其他内容，如注释等，只要能和原文译文区分即可（比如这里使用#开头）
 
 [原文标签c]原文3
-
 [译文标签c]译文3
 
 ```
@@ -305,7 +304,7 @@ DLTXT默认支持以下格式（用横线隔开）
   （`"英双"　“中双”　'英单'　‘中单’　”反的“　->　“英双”　“中双”　‘英单’　‘中单’　“反的”`）
   - 统一双引号（可选择“中文引号”或『日语引号』）
   - 将常用半角标点符号统一为中文全角标点（`,.:;!?()<半角空格><tab> -> ，。：；！？（）“”<全角空格><全角空格>`）
-  - 将英文与数字统一为全角（默认关闭）　（`123ABCdef -> １２３ＡＢＣｄｅｆ`）
+  - 将英文与数字统一为全角或半角（默认关闭）　（`123ABCdef -> １２３ＡＢＣｄｅｆ`）
   - 去除对话句末的句号　（`。」-> 」`）
   - 自定义翻译表（例如自动翻译人名）
 
@@ -564,7 +563,7 @@ wordcount:
 #### 自定义文本操作（dltransform.transform）
 可以实现文字的批量替换、删除等。（不能改变文件数量、文件行数）
 有两种方法：第一种是在yaml配置文件中编写简单脚本，完成简单操作；第二种是编写JavsScript脚本，在yaml中制定脚本名和函数名
-##### yaml中嵌入脚本
+#### yaml中嵌入脚本
 ```yaml
 transform:
   input: 
@@ -579,7 +578,7 @@ transform:
     - commit: ''
     - end-select: ''
 ```
-##### `select`
+#### `select`
 
 选择一个正则表达式，之后的每一行只有匹配了这个select的正则表达式才会被执行，直到下一个`select`或`end-select`为止。支持三个选项`@translation`,`@original`,`@other`，分别对应设置中的“译文开头标签的正则表达式”，“原文开头标签的正则表达式”，“其他合法开头的正则表达式”。如果不以`@`开头，可以在这里另外一个正则表达式。
 如果选择了三个选项之一，那这些正则表达式执行的结果的groups属性里会有以下四个named group: `prefix`,`white`,`text`,`suffix`
@@ -592,7 +591,7 @@ new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」
 
 如果这里选择另外定义正则表达式，需要仿照上面定义那四个named group
 
-##### `filter`
+#### `filter`
 填写一个Javascript表达式，只有返回true才会执行后续，直到下一个`select`或`end-select`。表达式中可以使用特殊的`$`变量（=select的正则表达式执行后的match对象的groups），并且可以通过`api`对象使用插件提供的工具函数，具体列表见后面。
 
 #### `exec`
@@ -602,7 +601,7 @@ new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」
 执行`current line = $.prefix + $.white + $.text + $.suffix;`
 没有这一条，不会更新文本。
 
-##### 使用JavaScript脚本
+#### 使用JavaScript脚本
 像这样写，其中select和commit不是必须的。注意脚本在读取每本文本时会被重新加载，所以脚本中的全局变量只在当前文本有效。
 ```yaml
 transform:
@@ -639,7 +638,7 @@ function clearChars() {
 }
 ```
 
-##### 提供的工具函数列表
+#### 提供的工具函数列表
 ```javascript
 getRegex(): [originalRegex : RegExp, translationRegex : RegExp, othersRegex : RegExp]
 contains(line: string, what: string): boolean 
@@ -697,6 +696,9 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.20 (2024/3/6)
+- 可以把英数字同意为半角
+- 优化了统一破折号的逻辑，修复问题
 #### 3.19 (2024/2/27)
 - 添加导入导出术语库的功能
 - 修复文本高亮的bug

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as utils from './utils';
 import { DocumentParser } from './parser';
-import { DictSettings, registerCommand } from './utils';
+import { DictSettings, registerCommand, repeatStr } from './utils';
 import { DecorationMemoryStorage } from './simpletm';
 
 
@@ -331,24 +331,6 @@ function replaceAllInLine(old_text: string, new_text: string, line: number) {
   translateCurrentLine(lookupTable, line);
 }
 
-function repeatN(s: string, k: number): string {
-  let res = '';
-  while(k > 0) {
-    res += s;
-    k--;
-  }
-  return res;
-}
-function repeatStr(s: string, k: number, addSuffix: boolean): string {
-  if (addSuffix && k >= 3) {
-    let res = '';
-    res = repeatN(s, k*2/3);
-    res += repeatN('～', k/3);
-    return res;
-  } else {
-    return repeatN(s, k);
-  }
-}
 
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/っ/g, ''],
