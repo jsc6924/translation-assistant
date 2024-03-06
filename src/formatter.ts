@@ -73,7 +73,8 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     if (!target) {
       target = '——';
     }
-    text = text.replace(/[—―ー－\-]{2,}/g, s => repeatStr(target[0], s.length, false));
+    text = text.replace(/[—―ー－]{2,}/g, s => repeatStr(target[0], s.length, false));
+    text = text.replace(/-{2,}/g, s => repeatStr(target[0], Math.max(2, Math.ceil(s.length / 2)), false));
     cgrps.text = text;
   };
   if (config.get("formatter.a.horizontalLine.enable"))
@@ -112,7 +113,6 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     ['\\?', '？'],
     ['\\(', '（'],
     ['\\)', '）'],
-    ['\\s', '　'],
   ];
   for (let entry of puncMap) {
     let reg = new RegExp(entry[0], 'g');

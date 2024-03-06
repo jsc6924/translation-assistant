@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.20.0",
+	"version": "3.20.1",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
