@@ -45,7 +45,17 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   const ops: Array<CallableFunction> = [];
   const padding = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     cgrps.white = jgrps.white;
-    cgrps.suffix = jgrps.suffix;
+    if (jgrps.suffix && !cgrps.suffix) {
+      const reg = new RegExp(`(.*${jgrps.suffix[0]})([(（].*[）)])?(.*)`);
+      let m = reg.exec(cgrps.text);
+      if (m && m[2]) {
+        cgrps.text = `${m[1]}${m[2]}${jgrps.suffix.substring(1)}`
+      } else {
+        cgrps.suffix = jgrps.suffix;
+      }
+    } else {
+      cgrps.suffix = jgrps.suffix;
+    }
   };
   if (config.get("formatter.a.padding"))
     ops.push(padding);
