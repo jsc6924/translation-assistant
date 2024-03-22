@@ -333,15 +333,16 @@ function replaceAllInLine(old_text: string, new_text: string, line: number) {
 
 
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
-    [/っ/g, ''],
+    [/[っ゛]/g, ''],
     [/だめ/g, '不行'],
     [/[れぺ][ろる]+/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
     [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
+    [/[ちじぢ]ゅ[ぷぶぽぼ]+/g, (s)=> '啾' + repeatStr('噗',s.length-2, false)],
     [/[ちじぢ]ゅ[うぅ]?/g, '啾'],
     [/りゅ/g, '噜'],
     [/[こご]くん/g, '咕噜'],
-    [/びゅ[く]?/g, (s)=>repeatStr('咻',s.length, false)],
-    [/びゅる+/g, (s)=>'咻' + repeatStr('噜',s.length-1, false)],
+    [/ど?[びぴ]ゅる+[うぅ]*/g, (s)=>'咻' + repeatStr('噜',s.length-1, true)],
+    [/ど?[びぴ]ゅ(く[うぅ]*)?/g, (s)=>repeatStr('咻',s.length, false)],
     [/ど[ぷく]+/g, (s)=>'咻' + repeatStr('噗',s.length-1, false)],
     [/や[あぁ]*/g, (s)=>'呀'+repeatStr('啊',s.length-1, true)],
     [/[あぁ]+/g, (s)=>repeatStr('啊',s.length, true)],
@@ -351,13 +352,13 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/ふう?/g, '呼'],
     [/う(?=あ)/g, '哇'],
     [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, false)],
-    [/[ひき][ゃ]?/g, '呀'],
+    [/[ひき][ゃぃ]?/g, '呀'],
     [/く/g, '咕'],
     [/ぐ/g, '咕'],
     [/ぬ/g, '呶'],
     [/ぱ[ん]?/g, '啪'],
     [/は[ん]?/g, '哈'],
-    [/ぷ[ん]?/g, '噗'],
+    [/[ぷぶ][ん]?/g, '噗'],
     [/む[ん]?/g, '姆'],
     [/る/g, '噜'],
     [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
@@ -374,6 +375,7 @@ export function translateCurrentLine(
     return;
   }
   let replacedLine = curLine.text;
+  replacedLine = utils.katakanaToHiragana(replacedLine);
   for (const [k,v] of lookupTable) {
     if (typeof v == "string") {
       replacedLine = replacedLine.replace(k, v);

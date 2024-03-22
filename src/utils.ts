@@ -100,6 +100,12 @@ export function toAscii(txtstring: string) {
   return tmp;
 }
 
+export function katakanaToHiragana(input: string): string {
+  return input.replace(/[\u30a1-\u30f6]/g, function(match) {
+      return String.fromCharCode(match.charCodeAt(0) - 0x60);
+  });
+}
+
 export function contains(str: string, search: string) {
   return str.indexOf(search) >= 0;
 }
