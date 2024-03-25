@@ -1,4 +1,5 @@
 import { getRegex } from './parser';
+import { channel } from './dlbuild';
 
 export function contains(line: string, what: string): boolean {
     if (what === undefined) {
@@ -29,6 +30,11 @@ export function clearExcept(target: string, except: string): string {
         }
     }
     return res;
+}
+
+export function log(msg: string) {
+    channel.appendLine('[user-log]' + msg);
+    channel.show();
 }
 
 export { getRegex };
