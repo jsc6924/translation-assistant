@@ -648,6 +648,7 @@ clear(target: string, what: string): string
 clearExcept(target: string, except: string): string
 getFileName(): string
 getFilePath(): string
+log(): void
 ```
 
 
@@ -698,6 +699,8 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.21 (2024/3/25)
+- dltransform支持输出log
 #### 3.20 (2024/3/6-3/22)
 - 可以把英数字统一为半角
 - 优化了统一破折号的逻辑，修复问题
