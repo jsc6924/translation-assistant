@@ -319,7 +319,7 @@ function replaceAllKeywordsAtCurrentPosition() {
     }
   }
   if(lookupTable.size > 0) {
-    translateCurrentLine(lookupTable, position.line);
+    translateCurrentLine(lookupTable, false, position.line);
   }
  
 }
@@ -328,7 +328,7 @@ function replaceAllInLine(old_text: string, new_text: string, line: number) {
   const lookupTable = new Map<string, string | ((arg: string)=>string) >([
     [old_text, new_text],
   ]);
-  translateCurrentLine(lookupTable, line);
+  translateCurrentLine(lookupTable, false, line);
 }
 
 
@@ -366,6 +366,7 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
 
 export function translateCurrentLine(
   lookupTable:  Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable,
+  kTohConversion: boolean = true,
   lineNum? : number) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
@@ -375,7 +376,9 @@ export function translateCurrentLine(
     return;
   }
   let replacedLine = curLine.text;
-  replacedLine = utils.katakanaToHiragana(replacedLine);
+  if (kTohConversion) {
+    replacedLine = utils.katakanaToHiragana(replacedLine);
+  }
   for (const [k,v] of lookupTable) {
     if (typeof v == "string") {
       replacedLine = replacedLine.replace(k, v);

@@ -23,7 +23,8 @@ export function updateErrorDecorations() {
     if (!bShow) {
         return;
     }
-    const [showError, diagnostics] = DocumentParser.errorCheck(activeEditor.document);
+    const [showError, diagnostics] = 
+    DocumentParser.errorCheck(activeEditor.document);
 
     if (showError) {
         diagnosticCollection.set(activeEditor.document.uri, diagnostics);
