@@ -756,7 +756,7 @@ vsce publish
 
 ---
 ## Release Notes
-#### 3.21 (2024/7/4)
+#### 3.22 (2024/7/4)
 - 添加dltransform功能
   - on-file-begin, on-file-end
   - on-global-begin, on-global-end
