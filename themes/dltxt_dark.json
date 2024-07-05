@@ -1,0 +1,86 @@
+{
+  "name": "DLTXT Dark+",
+  "type": "dark",
+  "include": "./dark_plus.json",
+  "tokenColors": [
+    {
+      "name": "Tags",
+      "scope": [
+          "st.original.tag",
+          "st.translated.tag",
+          "br.original.tag",
+          "br.translated.tag"
+      ],
+      "settings": {
+          "foreground": "#7d7d7d"
+      }
+    },
+    {
+      "name": "OriginalTexts",
+      "scope": [
+          "original.txt"
+      ],
+      "settings": {
+          "foreground": "#eee"
+      }
+    },
+    {
+      "name": "TranslatedTexts",
+      "scope": [
+          "translated.txt"
+      ],
+      "settings": {
+          "foreground": "#c2c2c2"
+      }
+    },
+    {
+      "name": "NameTags",
+      "scope": [
+          "st.nme.original.tag",
+          "st.nme.translated.tag"
+      ],
+      "settings": {
+          "foreground": "#6082a9"
+      }
+    },
+    {
+      "name": "NameTxts",
+      "scope": [
+          "st.nme.original.txt",
+          "st.nme.translated.txt"
+      ],
+      "settings": {
+          "foreground": "#7cb8c5"
+      }
+    },
+    {
+      "name": "CtrlTags",
+      "scope": [
+          "ctl.original.tag",
+          "ctl.translated.tag"
+      ],
+      "settings": {
+          "foreground": "#a04040"
+      }
+    },
+    {
+      "name": "CtrlTxts",
+      "scope": [
+          "ctl.original.txt",
+          "ctl.translated.txt"
+      ],
+      "settings": {
+          "foreground": "#fcb1b1"
+      }
+    },
+    {
+      "name": "Unknown",
+      "scope": [
+          "source.txt"
+      ],
+      "settings": {
+          "foreground": "#eee"
+      }
+    }
+  ]
+}

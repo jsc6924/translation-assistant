@@ -1,0 +1,34 @@
+#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
+#*.input.encoding也可以填auto（自动识别）
+
+extract: #配置提取操作
+  input:
+    path: './input/'   #游戏原脚本所在的文件夹
+    encoding: 'shift-jis'   #游戏脚本使用的编码格式
+    ext: 'ks'              #游戏脚本的后缀名，空字符串表示全部匹配
+    digits: 5               #双行文本标签中数字的长度
+    items:                  #配置想提取的文本，程序会一行行读取脚本并使用正则表达式匹配
+      - capture: '@Talk .*?name=(\S+)'             #描述要提取的文本
+        tag: 'nme'          #双行文本中标签的前缀
+        group: 1                                   #注明要提取capture中的哪个group
+      - capture: '@scene .*?text=(\S+)'
+        tag: 'scn'
+        group: 1
+      - capture: '@AddSelect .*?text=(\S+)'
+        tag: 'slt'
+        group: 1
+      - capture: '^\s*([^@\s].*)'
+        tag: 'txt'
+        group: 1
+  output:
+    path: './output/'    #提取出来的双行文本会保存到这里
+    encoding: 'utf16le-bom' #双行文本使用的编码格式
+
+pack: #配置替换操作
+  input:
+    path: './output/'  #翻译好的双行文本所在的文件夹，建议更改为一个与extract.output.path不同的文件夹
+    encoding: 'utf16le-bom'
+  output:
+    path: './replaced/' #替换好的脚本会保存到这里
+    encoding: 'utf16le-bom'
+

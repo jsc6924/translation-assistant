@@ -1,0 +1,62 @@
+#常用的encoding: ['utf8', 'utf8-bom', 'utf16le', 'utf16le-bom', 'utf16be', 'utf16be-bom', 'shift-jis', 'gb2312', 'gbk'];
+#*.input.encoding也可以填auto（自动识别）
+
+concat:
+  input: 
+    path: './input-folder'
+    encoding: 'auto'
+  output:
+    path: './concated'
+    encoding: 'utf16le-bom'
+
+wordcount:
+  input: 
+    path: './input-folder'
+
+transform:
+  input: 
+    path: './test'
+  output:
+    path: './transform-output'
+    encoding: 'utf8'
+  script:
+    path: './my-script.js'
+  operations:
+    - select: '@translation'
+    - script: 'clearChars'
+    - commit: ''
+  # operations:
+  #   - select: '@translation'
+  #   - filter: $.text.length >= 8 || @contains($.text, "[。！—…「」『』]")
+  #   - exec:   $.text = @clearExcept($.text, "[「」『』。？！～\x00-\x7F]")
+  #   - commit: ''
+  #   - end-select: ''
+  #   - script: 'hello'
+    
+
+
+# split:
+#   input: 
+#     path: './input'
+#     encoding: 'utf8'
+#   output:
+#     raw:
+#       path: './raw'
+#       encoding: 'utf8'
+#     translation:
+#       path: './translation'
+#       encoding: 'utf8'
+
+# merge:
+#   input:
+#     raw:
+#       path: './raw'
+#       encoding: 'utf8'
+#     translation:
+#       path: './translation'
+#       encoding: 'utf8'
+#   output: 
+#     digits: 5
+#     tag: 'txt'
+#     path: './input'
+#     encoding: 'utf8'

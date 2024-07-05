@@ -1,0 +1,1278 @@
+{
+	"name": "translateassistant",
+	"displayName": "DLTXT: 双行文本翻译解决方案",
+	"publisher": "jsc723",
+	"icon": "assets/logo.png",
+	"description": "",
+	"version": "3.22.0",
+	"engines": {
+		"vscode": "^1.63.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"activationEvents": [
+		"onLanguage:dltxt",
+		"onLanguage:sltxt"
+	],
+	"main": "./out/main.js",
+	"contributes": {
+		"languages": [
+			{
+				"id": "dltxt",
+				"aliases": [
+					"Double Line TXT for translation"
+				],
+				"extensions": [
+					".txt"
+				]
+			},
+			{
+				"id": "sltxt",
+				"aliases": [
+					"Single Line TXT translation extracted from dltxt"
+				],
+				"extensions": [
+					".txt.sl"
+				]
+			},
+			{
+				"id": "formattxt",
+				"aliases": [
+					"dltxt auto format detector temporary file"
+				],
+				"extensions": [
+					".txt.format"
+				]
+			}
+		],
+		"grammars": [
+			{
+				"language": "dltxt",
+				"scopeName": "source.txt",
+				"path": "./syntaxes/dltxt.tmLanguage.json"
+			}
+		],
+		"themes": [
+			{
+				"label": "DLTXT Dark+",
+				"uiTheme": "vs-dark",
+				"path": "themes/dltxt_dark.json"
+			},
+			{
+				"label": "DLTXT Light+",
+				"uiTheme": "vs",
+				"path": "themes/dltxt_light.json"
+			}
+		],
+		"colors": [
+			{
+				"id": "myextension.largeNumberBackground",
+				"description": "Background decoration color for large numbers",
+				"defaults": {
+					"dark": "#FF000055",
+					"light": "#FF000055",
+					"highContrast": "#FF000055"
+				}
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "dltxt-view-container",
+					"title": "dltxt",
+					"icon": "assets/logo.png"
+				}
+			]
+		},
+		"views": {
+			"dltxt-view-container": [
+				{
+					"id": "dltxt-clipboard",
+					"name": "剪贴板"
+				},
+				{
+					"id": "dltxt-dict",
+					"name": "术语库"
+				},
+				{
+					"id": "dltxt-trdb",
+					"name": "翻译数据库"
+				},
+				{
+					"id": "dltxt-configs-commands",
+					"name": "设置与命令"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "Extension.dltxt.copyToClipboard",
+				"title": "复制到剪贴板",
+				"category": "DLTXT",
+				"args": [
+					{
+						"name": "text",
+						"type": "string",
+						"description": "Text to copy"
+					}
+				]
+			},
+			{
+				"command": "Extension.dltxt.replaceAllKeywordsAtCurrentPosition",
+				"title": "替换当前光标上的全部关键字",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.replaceAllInLine",
+				"title": "指定行内全部替换",
+				"category": "DLTXT",
+				"args": [
+					{
+						"name": "old_text",
+						"type": "string",
+						"description": "original text"
+					},
+					{
+						"name": "new_text",
+						"type": "string",
+						"description": "new text"
+					},
+					{
+						"name": "line",
+						"type": "number",
+						"description": "line number"
+					}
+				]
+			},
+			{
+				"command": "Extension.dltxt.sync_all_database",
+				"title": "重新加载全部术语库",
+				"category": "DLTXT",
+				"icon": {
+					"dark": "icons/dark/sync.svg",
+					"light": "icons/light/sync.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.context_menu_insert",
+				"title": "添加术语库词条",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.context_menu_update",
+				"title": "更新术语库词条",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.extract_single_line",
+				"title": "提取译文",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.merge_into_double_line",
+				"title": "应用译文至双行文本",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.merge_into_double_line_del_temp",
+				"title": "应用译文至双行文本（删除单行文本）",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.copy_original",
+				"title": "复制原文到未翻译的译文行",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dictserver.editor.searchWord",
+				"title": "使用辞典服务器搜索",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.convertToEncoding",
+				"title": "批量转换文件编码格式",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dlbuild.extract",
+				"title": "将脚本提取为双行文本 (dlbuild.extract)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dlbuild.pack",
+				"title": "用双行文本的翻译替换脚本中的原文 (dlbuild.pack)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dltransform.concat",
+				"title": "将文本连接 (dltransform.concat)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dltransform.wordcount",
+				"title": "字数统计 (dltransform.wordcount)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.dltransform.transform",
+				"title": "执行自定义批量文本操作 (dltransform.transform)",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.spellCheck",
+				"title": "译文错别字检查",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.spellCheckClear",
+				"title": "清除错别字检查结果",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.setGlobalState",
+				"title": "更改全局设置",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.setWorkspaceState",
+				"title": "更改当前工作区设置",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.executeFunction",
+				"title": "执行一个函数",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.treeview.dict.addDict",
+				"title": "添加术语库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/add.svg",
+					"dark": "icons/dark/add.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.dict.batch_insert_local",
+				"title": "批量添加词条到本地术语库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/build.svg",
+					"dark": "icons/dark/build.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.dict.exportDict",
+				"title": "导出术语库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/export.svg",
+					"dark": "icons/dark/export.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.dict.removeDict",
+				"title": "移除术语库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/remove.svg",
+					"dark": "icons/dark/remove.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.filter",
+				"title": "过滤术语词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/list-filter.svg",
+					"dark": "icons/dark/list-filter.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.addItem",
+				"title": "添加术语词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/add.svg",
+					"dark": "icons/dark/add.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.editItem",
+				"title": "编辑术语词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/edit.svg",
+					"dark": "icons/dark/edit.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.deleteItem",
+				"title": "删除术语词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/trash.svg",
+					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.setClipboardString",
+				"title": "编辑剪贴板",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/edit.svg",
+					"dark": "icons/dark/edit.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.writeClipboardString",
+				"title": "插入剪贴板内容",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/debug-step-over.svg",
+					"dark": "icons/dark/debug-step-over.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.deleteDoc",
+				"title": "从翻译数据库中移除",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/trash.svg",
+					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.deleteFolder",
+				"title": "从翻译数据库中移除",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/trash.svg",
+					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.loadDB",
+				"title": "重新加载翻译数据库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/sync.svg",
+					"dark": "icons/dark/sync.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.unlock",
+				"title": "手动清除翻译数据库同步锁",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/unlock.svg",
+					"dark": "icons/dark/unlock.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.import",
+				"title": "导入翻译数据库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/build.svg",
+					"dark": "icons/dark/build.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.treeview.export",
+				"title": "导出翻译数据库",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/export.svg",
+					"dark": "icons/dark/export.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.addDoc",
+				"title": "添加到翻译数据库",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.trdb.context.addFolder",
+				"category": "DLTXT",
+				"title": "添加文件夹到翻译数据库"
+			},
+			{
+				"command": "Extension.dltxt.trdb.editor.searchWord",
+				"category": "DLTXT",
+				"title": "在翻译数据库搜索单词"
+			},
+			{
+				"command": "Extension.dltxt.trdb.editor.searchText",
+				"category": "DLTXT",
+				"title": "在翻译数据库搜索句子"
+			},
+			{
+				"command": "Extension.dltxt.trdb.debug.showDB",
+				"category": "DLTXT",
+				"title": "查看翻译数据库当前状态"
+			},
+			{
+				"command": "Extension.dltxt.core.context.autoDetectFormat",
+				"category": "DLTXT",
+				"title": "自动识别文本格式"
+			},
+			{
+				"command": "Extension.dltxt.core.context.autoDetectFormatContinue",
+				"title": "自动识别文本格式：继续",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.detectEncoding",
+				"category": "DLTXT",
+				"title": "自动识别文本编码"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "Extension.dltxt.cursorToNextLine",
+				"key": "alt+enter",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextLine",
+				"key": "enter",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevLine",
+				"key": "alt+\\",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevLine",
+				"key": "\\",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextLine",
+				"key": "ctrl+enter",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevLine",
+				"key": "ctrl+\\",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextWord",
+				"key": "]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevWord",
+				"key": "[",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextWord",
+				"key": "alt+]",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToPrevWord",
+				"key": "alt+[",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineHead",
+				"key": "shift+alt+[",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineEnd",
+				"key": "shift+alt+]",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineHead",
+				"key": "shift+[",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToSublineEnd",
+				"key": "shift+]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineHead",
+				"key": "ctrl+alt+[",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineEnd",
+				"key": "ctrl+alt+]",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineHead",
+				"key": "ctrl+[",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToLineEnd",
+				"key": "ctrl+]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.moveToNextLine",
+				"key": "ctrl+alt+enter",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.moveToPrevLine",
+				"key": "ctrl+alt+\\",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.deleteUntilPunc",
+				"key": "alt+backspace",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'"
+			},
+			{
+				"command": "Extension.dltxt.deleteUntilPunc",
+				"key": "=",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.deleteAllAfter",
+				"key": "alt+backspace",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.deleteAllAfter",
+				"key": "alt+delete",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.repeatFirst",
+				"key": "ctrl+alt+space",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.translateCurrentLine",
+				"key": "ctrl+alt+.",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.replaceAllKeywordsAtCurrentPosition",
+				"key": "ctrl+alt+,",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.dictserver.editor.searchWord",
+				"key": "ctrl+alt+m",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.customWriteKey",
+				"key": "alt+1",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString1"
+				}
+			},
+			{
+				"command": "Extension.dltxt.customWriteKey",
+				"key": "alt+2",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString2"
+				}
+			},
+			{
+				"command": "Extension.dltxt.customWriteKey",
+				"key": "alt+3",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString3"
+				}
+			},
+			{
+				"command": "Extension.dltxt.customWriteKey",
+				"key": "alt+4",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString4"
+				}
+			},
+			{
+				"command": "Extension.dltxt.customWriteKey",
+				"key": "alt+5",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString5"
+				}
+			},
+			{
+				"command": "Extension.dltxt.customWriteKey",
+				"key": "alt+6",
+				"when": "editorTextFocus && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString6"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setClipboardString",
+				"key": "ctrl+alt+1",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString1"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setClipboardString",
+				"key": "ctrl+alt+2",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString2"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setClipboardString",
+				"key": "ctrl+alt+3",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString3"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setClipboardString",
+				"key": "ctrl+alt+4",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString4"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setClipboardString",
+				"key": "ctrl+alt+5",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString5"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setClipboardString",
+				"key": "ctrl+alt+6",
+				"when": "editorTextFocus  && resourceLangId == dltxt",
+				"args": {
+					"arg1": "clipboard.customString6"
+				}
+			},
+			{
+				"command": "type",
+				"key": "shift+`",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "～"
+				}
+			},
+			{
+				"command": "type",
+				"key": "1",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "！"
+				}
+			},
+			{
+				"command": "type",
+				"key": "2",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "♪"
+				}
+			},
+			{
+				"command": "type",
+				"key": "3",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "？"
+				}
+			},
+			{
+				"command": "type",
+				"key": "4",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "、"
+				}
+			},
+			{
+				"command": "type",
+				"key": "6",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "……"
+				}
+			},
+			{
+				"command": "type",
+				"key": "-",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "——"
+				}
+			},
+			{
+				"command": "type",
+				"key": "space",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "　"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setMode",
+				"key": "escape",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode != 'Normal'",
+				"args": {
+					"arg": "Normal"
+				}
+			},
+			{
+				"command": "Extension.dltxt.setMode",
+				"key": "alt+t",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'",
+				"args": {
+					"arg": "Translate"
+				}
+			}
+		],
+		"submenus": [
+			{
+				"id": "dltxt-explorer-submenu",
+				"label": "DLTXT"
+			},
+			{
+				"id": "dltxt-editor-submenu",
+				"label": "DLTXT"
+			}
+		],
+		"menus": {
+			"explorer/context": [
+				{
+					"submenu": "dltxt-explorer-submenu",
+					"group": "dltxt.submenu"
+				},
+				{
+					"when": "resourceLangId == dltxt && resourceScheme == file",
+					"command": "Extension.dltxt.trdb.context.addDoc",
+					"group": "dltxt.trdb@1"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.trdb.context.addFolder",
+					"group": "dltxt.trdb@1"
+				}
+			],
+			"dltxt-explorer-submenu": [
+				{
+					"command": "Extension.dltxt.convertToEncoding",
+					"group": "dltxt.dlencoding@1"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.extract",
+					"group": "dltxt.dlbuild@1"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.pack",
+					"group": "dltxt.dlbuild@2"
+				},
+				{
+					"command": "Extension.dltxt.dltransform.concat",
+					"group": "dltxt.dltransform@1"
+				},
+				{
+					"command": "Extension.dltxt.dltransform.wordcount",
+					"group": "dltxt.dltransform@2"
+				},
+				{
+					"command": "Extension.dltxt.dltransform.transform",
+					"group": "dltxt.dltransform@3"
+				}
+			],
+			"editor/context": [
+				{
+					"submenu": "dltxt-editor-submenu",
+					"group": "dltxt"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.trdb.editor.searchWord",
+					"group": "dltxt.trdb@1"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.trdb.editor.searchText",
+					"group": "dltxt.trdb@2"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.dictserver.editor.searchWord",
+					"group": "dltxt.dictserver"
+				}
+			],
+			"dltxt-editor-submenu": [
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.extract_single_line",
+					"group": "dltxt.extract"
+				},
+				{
+					"when": "resourceLangId == sltxt",
+					"command": "Extension.dltxt.merge_into_double_line",
+					"group": "dltxt.extract"
+				},
+				{
+					"when": "resourceLangId == sltxt",
+					"command": "Extension.dltxt.merge_into_double_line_del_temp",
+					"group": "dltxt.extract"
+				},
+				{
+					"when": "resourceLangId == formattxt",
+					"command": "Extension.dltxt.core.context.autoDetectFormatContinue",
+					"group": "dltxt.extract"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.copy_original",
+					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.spellCheck",
+					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.spellCheckClear",
+					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.core.context.autoDetectFormat",
+					"group": "dltxt.other"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_insert",
+					"group": "dltxt.simpleTM.a"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_update",
+					"group": "dltxt.simpleTM.a"
+				}
+			],
+			"view/title": [
+				{
+					"command": "Extension.dltxt.sync_all_database",
+					"when": "view == dltxt-dict",
+					"group": "navigation@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.dict.addDict",
+					"when": "view == dltxt-dict",
+					"group": "navigation@2"
+				},
+				{
+					"command": "Extension.dltxt.treeview.dict.batch_insert_local",
+					"when": "view == dltxt-dict",
+					"group": "navigation@3"
+				},
+				{
+					"command": "Extension.dltxt.treeview.dict.exportDict",
+					"when": "view == dltxt-dict",
+					"group": "navigation@4"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.loadDB",
+					"when": "view == dltxt-trdb",
+					"group": "navigation@1"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.unlock",
+					"when": "view == dltxt-trdb",
+					"group": "navigation@2"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.import",
+					"when": "view == dltxt-trdb",
+					"group": "navigation@3"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.export",
+					"when": "view == dltxt-trdb",
+					"group": "navigation@4"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "Extension.dltxt.treeview.dict.removeDict",
+					"when": "view == dltxt-dict && viewItem == dict-root-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.filter",
+					"when": "view == dltxt-dict && viewItem == dict-entry-set-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.addItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-set-item",
+					"group": "inline@2"
+				},
+				{
+					"command": "Extension.dltxt.treeview.editItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.deleteItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-item",
+					"group": "inline@2"
+				},
+				{
+					"command": "Extension.dltxt.treeview.writeClipboardString",
+					"when": "view == dltxt-clipboard && viewItem == clipboard-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.setClipboardString",
+					"when": "view == dltxt-clipboard && viewItem == clipboard-item",
+					"group": "inline@2"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.deleteDoc",
+					"when": "view == dltxt-trdb && viewItem == trdb-file",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.deleteFolder",
+					"when": "view == dltxt-trdb && viewItem == trdb-folder",
+					"group": "inline@1"
+				}
+			]
+		},
+		"configuration": {
+			"title": "dltxt",
+			"properties": {
+				"dltxt.simpleTM.syncInterval": {
+					"type": "integer",
+					"default": 300,
+					"description": "SimpleTM数据库自动同步间隔（单位：秒，最小30秒。填0不自动更新）"
+				},
+				"dltxt.trdb.project": {
+					"type": "string",
+					"description": "翻译数据库项目名（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.fileEncoding": {
+					"type": "string",
+					"default": "utf8",
+					"enum": [
+						"utf8",
+						"utf16le",
+						"utf16be",
+						"gb2312",
+						"gbk",
+						"shift-jis"
+					],
+					"description": "翻译数据库打开文件时的encoding（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.filteredLine": {
+					"type": "string",
+					"description": "添加至翻译数据库时需要过滤的行的正则表达式（建议在Workspace中填写）"
+				},
+				"dltxt.trdb.search.resultLimit": {
+					"type": "number",
+					"default": 50,
+					"description": "翻译数据库每次搜索显示多少条结果"
+				},
+				"dltxt.core.a.documentParser": {
+					"type": "string",
+					"default": "standard",
+					"enum": [
+						"standard",
+						"text-block"
+					],
+					"description": "文件格式解析器"
+				},
+				"dltxt.core.originalTextPrefixRegex": {
+					"type": "string",
+					"default": "(\\[[a-z0-9]+\\])|((★|○|◇)[a-z0-9]+(★|○|◇))|((<\\d+>)?//)",
+					"description": "原文开头标签的正则表达式"
+				},
+				"dltxt.core.translatedTextPrefixRegex": {
+					"type": "string",
+					"default": "(;\\[[a-z0-9]+\\])|((☆|●|◆)[a-z0-9]+(☆|●|◆))|(<\\d+>(?!//))",
+					"description": "译文开头标签的正则表达式"
+				},
+				"dltxt.core.otherPrefixRegex": {
+					"type": "string",
+					"default": "",
+					"description": "其他合法的开头的正则表达式"
+				},
+				"dltxt.core.textBlock.pattern": {
+					"type": "string",
+					"default": "^-+\\d+-+(\\r)?\\n((\\*+)|(【.*】))(\\r)?\\n(?<jp>.*)(\\r)?\\n=+(\\r)?\\n(?<cn>.*)((\\r)?\\n)*$",
+					"description": "段落的正则表达式"
+				},
+				"dltxt.core.x.textBlock.originalPrefix": {
+					"type": "string",
+					"default": "",
+					"description": "段落格式原文行开头"
+				},
+				"dltxt.core.x.textBlock.translatedPrefix": {
+					"type": "string",
+					"default": "",
+					"description": "段落格式译文行开头"
+				},
+				"dltxt.core.x.originalTextWhite": {
+					"type": "string",
+					"default": "\\s*[「]?",
+					"description": "原文每行的前缀"
+				},
+				"dltxt.core.x.translatedTextWhite": {
+					"type": "string",
+					"default": "\\s*[「]?",
+					"description": "译文每行的前缀"
+				},
+				"dltxt.core.y.originalTextSuffix": {
+					"type": "string",
+					"default": "[」]?",
+					"description": "原文每行的后缀"
+				},
+				"dltxt.core.y.translatedTextSuffix": {
+					"type": "string",
+					"default": "[」]?",
+					"description": "译文每行的后缀"
+				},
+				"dltxt.core.z.textDelimiter": {
+					"type": "string",
+					"default": "[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]|(\\\\@)",
+					"description": "分割句段的正则表达式（用于repeatFirstChar/deleteUntilPunc）"
+				},
+				"dltxt.appearance.showKeywordHighlight": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示术语高亮"
+				},
+				"dltxt.appearance.showError.all": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示错误"
+				},
+				"dltxt.appearance.showError.checkPrefixTag": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示标签错误"
+				},
+				"dltxt.appearance.showError.checkDeletedLines": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示删行错误"
+				},
+				"dltxt.formatter.a.padding": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一缩进与对话外的单括号（「」）"
+				},
+				"dltxt.formatter.a.ellipsis.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一省略号"
+				},
+				"dltxt.formatter.a.ellipsis.specify": {
+					"type": "string",
+					"default": "……",
+					"description": "格式化文本：省略号统一改为"
+				},
+				"dltxt.formatter.a.wave.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一波浪号"
+				},
+				"dltxt.formatter.a.wave.specify": {
+					"type": "string",
+					"default": "～",
+					"description": "格式化文本：波浪号统一改为"
+				},
+				"dltxt.formatter.a.horizontalLine.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一破折号"
+				},
+				"dltxt.formatter.a.horizontalLine.specify": {
+					"type": "string",
+					"default": "——",
+					"description": "格式化文本：破折号统一改为"
+				},
+				"dltxt.formatter.b.fixReversedQuote": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一写反的、或半角的单引号、双引号（”ａ“）"
+				},
+				"dltxt.formatter.b.formatQuote.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一双引号"
+				},
+				"dltxt.formatter.b.formatQuote.specify": {
+					"type": "string",
+					"enum": [
+						"“中文双引号”",
+						"『日语双引号』"
+					],
+					"default": "“中文双引号”",
+					"description": "格式化文本：双引号统一改为"
+				},
+				"dltxt.formatter.b.h2fPunc": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：将半角标点符号统一为中文全角标点（半角引号除外）"
+				},
+				"dltxt.formatter.b.h2fAlpha": {
+					"type": "string",
+					"enum": [
+						"关闭",
+						"统一为全角",
+						"统一为半角"
+					],
+					"default": "关闭",
+					"description": "格式化文本：将英文与数字统一为全角或半角"
+				},
+				"dltxt.formatter.c.omitPeriod": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：去除对话句末的句号"
+				},
+				"dltxt.formatter.c.removeEllipsisPeriod": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：把……。改成……"
+				},
+				"dltxt.formatter.c.removeEllipsisQE": {
+					"type": "boolean",
+					"default": false,
+					"description": "格式化文本：把……？/……！改成？/！"
+				},
+				"dltxt.formatter.d.customMapping": {
+					"type": "object",
+					"default": {},
+					"description": "格式化文本：自定义翻译表",
+					"additionalProperties": {
+						"type": "string"
+					}
+				},
+				"dltxt.formatter.z.debugMode": {
+					"type": "boolean",
+					"default": false,
+					"description": "格式化文本：debug模式（请不要选）"
+				},
+				"dltxt.spellingCheck.skipSet": {
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "string"
+					},
+					"description": "错别字检查：跳过的字段（例如人名）"
+				},
+				"dltxt.motion.moveToNextLine.moveCursor": {
+					"type": "boolean",
+					"default": true,
+					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
+				},
+				"dltxt.y.searchWord.dictserver.displayCount": {
+					"type": "number",
+					"default": 5,
+					"description": "辞典服务显示的词条数（最大5）"
+				},
+				"dltxt.y.searchWord.dictserver.baseURL": {
+					"type": "string",
+					"default": "http://localhost:9285/",
+					"description": "辞典服务器的网址（包括端口号）"
+				},
+				"dltxt.y.searchWord.dictserver.executable.path": {
+					"type": "string",
+					"default": "",
+					"description": "辞典服务器的路径（在网址连不上时使用）"
+				},
+				"dltxt.y.searchWord.dictserver.executable.arguments": {
+					"type": "string",
+					"default": "",
+					"description": "辞典服务器的命令行参数（在网址连不上时使用）"
+				},
+				"dltxt.y.searchWord.dictserver.hover.show": {
+					"type": "boolean",
+					"default": true,
+					"description": "是否在鼠标停留在选中的单词上时使用辞典服务器查询"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile && npm run esbuild-base -- --minify",
+		"compile": "tsc -p ./",
+		"lint": "eslint src --ext ts",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"test": "node ./out/test/runTest.js",
+		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+		"esbuild": "npm run esbuild-base -- --sourcemap",
+		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+		"test-compile": "tsc -p ./"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.1.1",
+		"@types/js-yaml": "^4.0.5",
+		"@types/kuromoji": "^0.1.1",
+		"@types/mocha": "^7.0.2",
+		"@types/node": "^13.11.0",
+		"@types/vscode": "^1.47.0",
+		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"@typescript-eslint/parser": "^2.30.0",
+		"esbuild": "^0.17.19",
+		"eslint": "^6.8.0",
+		"glob": "^7.1.6",
+		"mocha": "^7.1.2",
+		"typescript": "^3.8.3",
+		"vscode-test": "^1.3.0"
+	},
+	"dependencies": {
+		"ahocorasick": "^1.0.2",
+		"archiver": "^5.3.1",
+		"axios": "^0.19.2",
+		"decompress": "^4.2.1",
+		"detect-file-encoding-and-language": "^2.4.0",
+		"flexsearch": "^0.6.32",
+		"fs-extra": "^11.1.1",
+		"iconv-lite": "^0.6.3",
+		"js-yaml": "^4.1.0",
+		"kuromoji": "^0.1.2",
+		"open": "^7.4.2",
+		"request": "^2.88.2",
+		"typed-rest-client": "^1.8.11",
+		"xlsx": "^0.18.5"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jsc723/translation-assistant.git"
+	}
+}

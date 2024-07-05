@@ -1,0 +1,30 @@
+#view-root {
+    padding-top: 16px;
+}
+.example {
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 16px;
+}
+.example-title {
+    padding: 8px;
+}
+.sentence-pair {
+    padding: 8px;
+}
+.vscode-light .dict-widget{
+    border-color: rgba(0, 0, 0, 0.653)
+}
+
+.vscode-dark .dict-widget{
+    border-color: #ddd
+}
+
+.vscode-high-contrast .dict-widget {
+    border-color: white; 
+  }
+  
+.vscode-high-contrast-light .dict-widget {
+    border-color: black; 
+}

@@ -1,0 +1,168 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Double Line TXT for translation",
+	"patterns": [
+		{
+			"include": "#st.original"
+		},
+		{
+			"include": "#st.translated"
+		},
+		
+		{
+			"include": "#st.ctl.original"
+		},
+		{
+			"include": "#st.ctl.translated"
+		},
+		{
+			"include": "#st.nme.original"
+		},
+		{
+			"include": "#st.nme.translated"
+		},
+		{
+			"include": "#slash.infer.nme"
+		},
+		{
+			"include": "#slash.infer.txt"
+		},
+		{
+			"include": "#infer.nme"
+		},
+		{
+			"include": "#infer.txt"
+		}
+	],
+	"repository": {
+		"st.original": {
+			"begin": "(★|○)txt\\d+(★|○)",
+			"end" : "$",
+			"beginCaptures": {
+				"0" : { "name" : "st.original.tag" }
+			},
+			"patterns" : [
+				{
+					"match": ".*",
+					"name" : "original.txt"
+				}
+			],
+			"name" : "st.original.group"
+		},
+		"st.translated": {
+			"begin": "(☆|●)txt\\d+(☆|●)",
+			"end" : "$",
+			"beginCaptures": {
+				"0" : { "name" : "st.translated.tag" }
+			},
+			"patterns" : [
+				{
+					"match": ".*",
+					"name" : "translated.txt"
+				}
+			],
+			"name" : "st.translated.group"
+		},
+		
+		
+		"st.nme.original": {
+			"match": "(★nme\\d+★)(.*)",
+			"captures": {
+				"1": { "name" : "st.nme.original.tag" },
+				"2": { "name" : "st.nme.original.txt" }
+			}
+		},
+		"st.nme.translated": {
+			"match": "(☆nme\\d+☆)(.*)",
+			"captures": {
+				"1": { "name" : "st.nme.translated.tag" },
+				"2": { "name" : "st.nme.translated.txt" }
+			}
+		},
+		"test": {
+			"begin": "<%\\s*\n",
+			"beginCaptures": {"0": {"name": "begin"}},
+			"end": "%>",
+			"endCaptures": {"0": {"name": "end"}}
+		},
+		"slash.infer.nme": {
+			"begin": "^(//)(([^<>\n\u3001\u3002\u3008-\u301B\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+|.*[Nn][Aa][Mm][Ee].*)\n)",
+			"end" : "^.*$",
+			"beginCaptures": {
+				"0" : { "name": "st.nme.original.tag" },
+				"2" : { "name": "st.nme.original.txt" }
+			},
+			"endCaptures": {
+				"0" : { "name": "st.nme.translated.txt" }
+			}
+		},
+		"slash.infer.txt": {
+			"begin": "^(//)(【.*】(?=(?!\\s+$)))?(.*\n)",
+			"end" : "^(【.*】(?=(?!\\s+$)))?(.*)$",
+			"beginCaptures": {
+				"0" : { "name": "st.original.tag" },
+				"2" : { "name": "st.nme.original.txt" },
+				"3" : { "name": "original.txt" }
+			},
+			"endCaptures": {
+				"1" : { "name": "st.nme.translated.txt" },
+				"2" : { "name": "translated.txt" }
+			}
+		},
+		"infer.nme": {
+			"begin": "^((?<group1>[\u25A0-\u26FF])[\\x00-\\x7F]+\\k<group1>|\\[0x[0-9a-f]+\\]|[▷▶][\\x00-\\x7F]*[◁◀]|<[\\x00-\\x7F]*>//)(([^\u3001\u3002\u3008-\u301B\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)|.*[Nn][Aa][Mm][Ee].*)\n",
+			"end" : "((?<group1>[\u25A0-\u26FF])[\\x00-\\x7F]+\\k<group1>|;\\[0x[0-9a-f]+\\]|[▷▶][\\x00-\\x7F]*[◁◀]|<[\\x00-\\x7F]*>(//)?)(.*)$",
+			"beginCaptures": {
+				"0" : { "name": "st.nme.original.tag" },
+				"4" : { "name": "st.nme.original.txt" }
+			},
+			"endCaptures": {
+				"0" : { "name": "st.nme.translated.tag" },
+				"4" : { "name": "st.nme.translated.txt" }
+			}
+		},
+		"infer.txt": {
+			"begin": "^((?<group1>[\u25A0-\u26FF])[\\x00-\\x7F]+\\k<group1>|\\[0x[0-9a-f]+\\]|[▷▶][\\x00-\\x7F]*[◁◀]|<[\\x00-\\x7F]*>//)(【.*】(?=(?!\\s+$)))?(.*)",
+			"end" : "((?<group1>[\u25A0-\u26FF])[\\x00-\\x7F]+\\k<group1>|;\\[0x[0-9a-f]+\\]|[▷▶][\\x00-\\x7F]*[◁◀]|<[\\x00-\\x7F]*>(//)?)(【.*】(?=(?!\\s+$)))?(.*)$",
+			"beginCaptures": {
+				"0" : { "name": "st.original.tag" },
+				"3" : { "name": "st.nme.original.txt" },
+				"4" : { "name": "original.txt" }
+			},
+			"endCaptures": {
+				"0" : { "name": "st.translated.tag" },
+				"4" : { "name": "st.nme.translated.txt" },
+				"5" : { "name": "translated.txt" }
+			}
+		},
+		"st.ctl.original": {
+			"begin": "(★|○)(scn|slt)\\d+(★|○)",
+			"end" : "$",
+			"beginCaptures": {
+				"0" : { "name" : "ctl.original.tag" }
+			},
+			"patterns" : [
+				{
+					"match": ".*",
+					"name" : "ctl.original.txt"
+				}
+			],
+			"name" : "st.original.group"
+		},
+		"st.ctl.translated": {
+			"begin": "(☆|●)(scn|slt)\\d+(☆|●)",
+			"end" : "$",
+			"beginCaptures": {
+				"0" : { "name" : "ctl.translated.tag" }
+			},
+			"patterns" : [
+				{
+					"match": ".*",
+					"name" : "ctl.translated.txt"
+				}
+			],
+			"name" : "original.group"
+		}
+	},
+	"scopeName": "source.txt"
+}

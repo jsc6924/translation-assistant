@@ -1,0 +1,86 @@
+{
+  "name": "DLTXT Light+",
+  "type": "light",
+  "include": "./light_plus.json",
+  "tokenColors": [
+    {
+      "name": "Tags",
+      "scope": [
+          "st.original.tag",
+          "st.translated.tag",
+          "br.original.tag",
+          "br.translated.tag"
+      ],
+      "settings": {
+          "foreground": "#999999"
+      }
+    },
+    {
+      "name": "OriginalTexts",
+      "scope": [
+          "original.txt"
+      ],
+      "settings": {
+          "foreground": "#20272F"
+      }
+    },
+    {
+      "name": "TranslatedTexts",
+      "scope": [
+          "translated.txt"
+      ],
+      "settings": {
+          "foreground": "#534b4b"
+      }
+    },
+    {
+      "name": "NameTags",
+      "scope": [
+          "st.nme.original.tag",
+          "st.nme.translated.tag"
+      ],
+      "settings": {
+          "foreground": "#6c8cb2"
+      }
+    },
+    {
+      "name": "NameTxts",
+      "scope": [
+          "st.nme.original.txt",
+          "st.nme.translated.txt"
+      ],
+      "settings": {
+          "foreground": "#114b8d"
+      }
+    },
+    {
+      "name": "CtrlTags",
+      "scope": [
+          "ctl.original.tag",
+          "ctl.translated.tag"
+      ],
+      "settings": {
+          "foreground": "#cf9354"
+      }
+    },
+    {
+      "name": "CtrlTxts",
+      "scope": [
+          "ctl.original.txt",
+          "ctl.translated.txt"
+      ],
+      "settings": {
+          "foreground": "#a95e0f"
+      }
+    },
+    {
+      "name": "Unknown",
+      "scope": [
+          "source.txt"
+      ],
+      "settings": {
+          "foreground": "#000000"
+      }
+    }
+  ]
+}
