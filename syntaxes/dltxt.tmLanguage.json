@@ -22,6 +22,18 @@
 			"include": "#st.nme.translated"
 		},
 		{
+			"include": "#st2.nme.original"
+		},
+		{
+			"include": "#st2.nme.translated"
+		},
+		{
+			"include": "#st2.txt.original"
+		},
+		{
+			"include": "#st2.txt.translated"
+		},
+		{
 			"include": "#slash.infer.nme"
 		},
 		{
@@ -63,8 +75,34 @@
 			],
 			"name" : "st.translated.group"
 		},
-		
-		
+		"st2.txt.original": {
+			"match": "(☆\\d+\\|text☆)(.*)",
+			"captures": {
+				"1": { "name" : "st.original.tag" },
+				"2": { "name" : "original.txt" }
+			}
+		},
+		"st2.txt.translated": {
+			"match": "(★\\d+\\|text★)(.*)",
+			"captures": {
+				"1": { "name" : "st.translated.tag" },
+				"2": { "name" : "translated.txt" }
+			}
+		},
+		"st2.nme.original": {
+			"match": "(☆\\d+\\|name☆)(.*)",
+			"captures": {
+				"1": { "name" : "st.nme.original.tag" },
+				"2": { "name" : "st.nme.original.txt" }
+			}
+		},
+		"st2.nme.translated": {
+			"match": "(★\\d+\\|name★)(.*)",
+			"captures": {
+				"1": { "name" : "st.nme.translated.tag" },
+				"2": { "name" : "st.nme.translated.txt" }
+			}
+		},
 		"st.nme.original": {
 			"match": "(★nme\\d+★)(.*)",
 			"captures": {
