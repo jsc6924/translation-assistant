@@ -626,6 +626,12 @@ export class DictSettings {
       .filter(k => k.startsWith(`dltxt.dict.${name}`))
       .map(k => ContextHolder.setWorkspaceState(k, undefined));
   }
+
+  static clearLocalDict(name: string) {
+    ContextHolder.getWorkspaceStateKeys()
+      .filter(k => k.startsWith(`dltxt.dict.${name}`))
+      .map(k => ContextHolder.setWorkspaceState(k, undefined));
+  }
   
 }
 

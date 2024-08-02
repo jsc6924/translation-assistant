@@ -756,6 +756,9 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.23 (2024/8/2)
+- 添加对amkn2新格式高亮支持
+- 支持与本地术语库断开连接
 #### 3.22 (2024/7/4)
 - 添加dltransform功能
   - on-file-begin, on-file-end

@@ -116,8 +116,8 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	async function pickPath(): Promise<string| undefined> {
-		const options = ['新建本地术语库', '打开本地术语库'];
+	async function pickPath(): Promise<string| undefined | null> {
+		const options = ['新建本地术语库', '打开本地术语库', '与本地术语库断开连接'];
 		const r = await vscode.window.showQuickPick(options, {
 			placeHolder: '请选择一个操作继续'
 		});
@@ -134,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			fs.writeFileSync(res.fsPath, JSON.stringify({'values': []}), { encoding: 'utf8'});
 			return res.fsPath;
-		} else {
+		} else if (r == options[1]) {
 			const uris = await vscode.window.showOpenDialog({
 				defaultUri: vscode.Uri.file('dltxtLocalDict.json'),
 				canSelectMany: false,
@@ -145,6 +145,8 @@ export function activate(context: vscode.ExtensionContext) {
 				return undefined;
 			}
 			return uris[0].fsPath;
+		} else {
+			return null;
 		}
 	}
 
@@ -168,6 +170,11 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 		if (newValue === undefined) {
+			if (callback) callback();
+			return;
+		}
+		if (newValue === null) {
+			ContextHolder.setGlobalState(config, undefined);
 			if (callback) callback();
 			return;
 		}
@@ -195,6 +202,11 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 		if (newValue === undefined) {
+			if (callback) callback();
+			return;
+		}
+		if (newValue === null) {
+			ContextHolder.setWorkspaceState(config, undefined);
 			if (callback) callback();
 			return;
 		}

@@ -62,7 +62,14 @@ export class ConfigEntryItem<T> extends TreeItem<T> {
     showFullValue: boolean;
     global: boolean;
     initLabel: string;
-    callback: (()=>Promise<void>) | undefined;
+
+    configRoot: ConfigRootItem<T>;
+    treeview: T;
+    async callback() {
+        this.updateLabel(); 
+        await this.configRoot.configUpdated();
+        (this.treeview as any).dataChanged();
+    }
     constructor(treeview: T, configRoot: ConfigRootItem<T>,
          label: string, config: string, global: boolean, showFullValue: boolean) {
         super(treeview, label, vscode.TreeItemCollapsibleState.None);
@@ -71,16 +78,13 @@ export class ConfigEntryItem<T> extends TreeItem<T> {
         this.showFullValue = showFullValue;
         this.global = global;
         this.updateLabel();
-        this.callback = async () => { 
-            this.updateLabel(); 
-            await configRoot.configUpdated();
-            (treeview as any).dataChanged();
-        };
+        this.configRoot = configRoot;
+        this.treeview = treeview;
         let usePathPicker = false;
         if (config.includes('.localPath')) {
             usePathPicker = true;
         }
-        this.setCommand(global, {config, usePathPicker, callback: this.callback});
+        this.setCommand(global, {config, usePathPicker, callback: () => this.callback()});
     }
 
     setCommand(global: boolean, args: any) {
@@ -120,6 +124,8 @@ export class ConfigEntryItem<T> extends TreeItem<T> {
                 v = v.slice(0, 3) + '******';
             }
             this.label = `${this.initLabel}: ${v}`
+        } else {
+            this.label = `${this.initLabel}`
         }
     }
 }
@@ -243,7 +249,17 @@ export namespace dict_view
         }
     }
 
-    class DictConfigEntryItem extends ConfigEntryItem<DictTreeView> {}
+    class DictConfigEntryItem extends ConfigEntryItem<DictTreeView> {
+        async callback() {
+            this.updateLabel();
+            if (!ContextHolder.getWorkspaceState(this.config)) {
+                const dictName = (this.configRoot as DictConfigRootItem).dictName;
+                DictSettings.clearLocalDict(dictName);
+            }
+            await this.configRoot.configUpdated();
+            this.treeview.dataChanged();
+        }
+    }
     class DictConfigSelectionEntryItem extends ConfigSelectionEntryItem<DictTreeView>{}
 
     class DictEntrySetItem extends DictItem {
