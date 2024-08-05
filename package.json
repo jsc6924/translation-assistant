@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.23.0",
+	"version": "3.24.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -177,6 +177,11 @@
 			{
 				"command": "Extension.dltxt.merge_into_double_line_del_temp",
 				"title": "应用译文至双行文本（删除单行文本）",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_replace",
+				"title": "批量替换选中的译文",
 				"category": "DLTXT"
 			},
 			{
@@ -830,6 +835,11 @@
 				}
 			],
 			"dltxt-editor-submenu": [
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.batch_replace",
+					"group": "dltxt.replace"
+				},
 				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.extract_single_line",

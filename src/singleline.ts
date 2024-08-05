@@ -4,6 +4,8 @@ import * as utils from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
 import { DocumentParser } from './parser';
+import { selectBatchRange } from './encoding';
+import { channel } from './dlbuild';
 
 export function activate(context: vscode.ExtensionContext) {
     	
@@ -94,6 +96,60 @@ export function activate(context: vscode.ExtensionContext) {
 
 	registerCommand(context, 'Extension.dltxt.merge_into_double_line_del_temp', async () => {
 		await merge_into_double_line(true);
+	});
+
+	registerCommand(context, 'Extension.dltxt.batch_replace', async () => {
+		const document = vscode.window.activeTextEditor?.document;
+		if (!document) return;
+		// get raw text from current selection
+		const rawText = document.getText(vscode.window.activeTextEditor?.selection);
+		if (!rawText) {
+			return;
+		}
+		const replaced = await vscode.window.showInputBox({ placeHolder: '输入替换的文本' });
+		if (!replaced) {
+			return;
+		}
+		const documentUris = await selectBatchRange(true, 'txt');
+		if (!documentUris) {
+			return;
+		}
+		// replace text in all selected files, using workspace edit
+		const workspaceEdit = new vscode.WorkspaceEdit();
+		const total_file = documentUris.length;
+		let success = 0, success_file = 0, file_processed = 0;
+		channel.show();
+		channel.append(`已处理 0/${total_file}`);
+
+		for (const uri of documentUris) {
+			const doc = await vscode.workspace.openTextDocument(uri);
+			let file_success = 0;
+
+			DocumentParser.processTranslatedLines(doc, (groups, i) => {
+				const line = doc.lineAt(i);
+				const text = line.text;
+				if (text.includes(rawText)) {
+					const newText = text.replace(rawText, replaced);
+					const newLine = new vscode.Range(line.range.start, line.range.end);
+					workspaceEdit.replace(uri, newLine, newText);
+					file_success++;
+				}
+			});
+			if (file_success > 0) {
+				success_file++;
+				success += file_success;
+			}
+			file_processed++;
+			channel.clear();
+			channel.append(`已处理 ${file_processed}/${total_file}`);
+		}
+		channel.appendLine('');
+		channel.hide();
+		if(await vscode.workspace.applyEdit(workspaceEdit)) {
+			vscode.window.showInformationMessage(`[${rawText}]=>[${replaced}]，成功在${success_file}/${total_file} 个文件中替换了${success} 处`);
+		} else {
+			vscode.window.showErrorMessage('替换失败');
+		}
 	});
 	
 }

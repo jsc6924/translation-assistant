@@ -24,8 +24,7 @@ export function encodeWithBom(content: string, encoding: string): Buffer {
     return iconv.encode(content, encoding);
 }
 
-export async function batchConvertFilesEncoding() {
-    
+export async function selectBatchRange(undoable: boolean, ext?: string): Promise<vscode.Uri[] | undefined> {
     const convertRange = ['所有打开的文件', '当前目录下所有文件'];
     // Show encoding selection menu
     const selectedRange = await vscode.window.showQuickPick(convertRange, {
@@ -36,12 +35,14 @@ export async function batchConvertFilesEncoding() {
     }
     let documentUris: vscode.Uri[] = [];
     if (selectedRange === '当前目录下所有文件') {
-        const userInput = await vscode.window.showInputBox({
-            prompt: '当前操作不可撤销，请确保已经备份。输入字母y继续，否则将取消操作'
-
-        });
-        if (userInput?.toLowerCase() != "y") {
-            return;
+        if (!undoable) {
+            const userInput = await vscode.window.showInputBox({
+                prompt: '当前操作不可撤销，请确保已经备份。输入字母y继续，否则将取消操作'
+    
+            });
+            if (userInput?.toLowerCase() != "y") {
+                return;
+            }
         }
         if (!vscode.workspace.workspaceFolders) {
             vscode.window.showErrorMessage('当前没有打开的文件夹');
@@ -49,7 +50,7 @@ export async function batchConvertFilesEncoding() {
         }
 
         // Specify the file search pattern to match all files
-        const filePattern = '**/*';
+        const filePattern = ext ? `**/*.${ext}` : '**/*';
         const excludePattern = '**/.*/**'
 
         // Search for all files in the workspace folder
@@ -58,6 +59,15 @@ export async function batchConvertFilesEncoding() {
     } else {
         documentUris = vscode.workspace.textDocuments.filter(document => !document.fileName.includes('.git'))
                         .map(document => document.uri);
+    }
+    return documentUris;
+}
+
+export async function batchConvertFilesEncoding() {
+    
+   const documentUris = await selectBatchRange(false);
+    if (!documentUris) {
+        return;
     }
     // Show encoding selection menu
     const selectedSrcEncoding = await vscode.window.showQuickPick(srcEncodings, {
