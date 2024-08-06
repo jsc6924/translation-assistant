@@ -125,6 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		for (let i = 0; i < documentUris.length;) {
 			const tasks = [];
+			// batch size = 100时，处理速度比=1时快约4倍
 			const batch_size = Math.min(100, documentUris.length - i);
 			for(let j = 0; j < batch_size; j++) {
 				const uri = documentUris[i + j];
@@ -148,8 +149,7 @@ export function activate(context: vscode.ExtensionContext) {
 				tasks.push(task);
 			}
 			await Promise.all(tasks);
-			i += batch_size;;
-			channel.clear();
+			i += batch_size;
 			channel.append(`已处理 ${i}/${total_file}`);
 		}
 		const endTime = performance.now();
