@@ -6,6 +6,7 @@ import * as path from "path";
 import { DocumentParser } from './parser';
 import { selectBatchRange } from './encoding';
 import { channel } from './dlbuild';
+import { performance } from 'perf_hooks';
 
 export function activate(context: vscode.ExtensionContext) {
     	
@@ -120,30 +121,40 @@ export function activate(context: vscode.ExtensionContext) {
 		let success = 0, success_file = 0, file_processed = 0;
 		channel.show();
 		channel.append(`已处理 0/${total_file}`);
+		const startTime = performance.now();
 
-		for (const uri of documentUris) {
-			const doc = await vscode.workspace.openTextDocument(uri);
-			let file_success = 0;
-
-			DocumentParser.processTranslatedLines(doc, (groups, i) => {
-				const line = doc.lineAt(i);
-				const text = line.text;
-				if (text.includes(rawText)) {
-					const newText = text.replace(rawText, replaced);
-					const newLine = new vscode.Range(line.range.start, line.range.end);
-					workspaceEdit.replace(uri, newLine, newText);
-					file_success++;
-				}
-			});
-			if (file_success > 0) {
-				success_file++;
-				success += file_success;
+		for (let i = 0; i < documentUris.length;) {
+			const tasks = [];
+			const batch_size = Math.min(100, documentUris.length - i);
+			for(let j = 0; j < batch_size; j++) {
+				const uri = documentUris[i + j];
+				let file_success = 0;
+				const task = vscode.workspace.openTextDocument(uri).then(doc => {
+					DocumentParser.processTranslatedLines(doc, (groups, i) => {
+						const line = doc.lineAt(i);
+						const text = line.text;
+						if (text.includes(rawText)) {
+							const newText = text.replace(rawText, replaced);
+							const newLine = new vscode.Range(line.range.start, line.range.end);
+							workspaceEdit.replace(uri, newLine, newText);
+							file_success++;
+						}
+					});
+					if (file_success > 0) {
+						success_file++;
+						success += file_success;
+					}
+				});
+				tasks.push(task);
 			}
-			file_processed++;
+			await Promise.all(tasks);
+			i += batch_size;;
 			channel.clear();
-			channel.append(`已处理 ${file_processed}/${total_file}`);
+			channel.append(`已处理 ${i}/${total_file}`);
 		}
-		channel.appendLine('');
+		const endTime = performance.now();
+		const executionTime = endTime - startTime;
+		channel.appendLine(`Execution Time: ${executionTime.toFixed(2)} ms`);
 		channel.hide();
 		if(await vscode.workspace.applyEdit(workspaceEdit)) {
 			vscode.window.showInformationMessage(`[${rawText}]=>[${replaced}]，成功在${success_file}/${total_file} 个文件中替换了${success} 处`);
