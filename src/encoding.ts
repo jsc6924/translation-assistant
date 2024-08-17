@@ -25,7 +25,7 @@ export function encodeWithBom(content: string, encoding: string): Buffer {
 }
 
 export async function selectBatchRange(undoable: boolean, ext?: string): Promise<vscode.Uri[] | undefined> {
-    const convertRange = ['所有打开的文件', '当前目录下所有文件'];
+    const convertRange = ['所有打开的文件', '当前目录下所有文件', '当前目录下所有文件（不包含子目录）'];
     // Show encoding selection menu
     const selectedRange = await vscode.window.showQuickPick(convertRange, {
         placeHolder: '选择转换范围',
@@ -33,8 +33,7 @@ export async function selectBatchRange(undoable: boolean, ext?: string): Promise
     if (!selectedRange) {
         return;
     }
-    let documentUris: vscode.Uri[] = [];
-    if (selectedRange === '当前目录下所有文件') {
+    const globAllFilesHelper = async (pattern: string) => {
         if (!undoable) {
             const userInput = await vscode.window.showInputBox({
                 prompt: '当前操作不可撤销，请确保已经备份。输入字母y继续，否则将取消操作'
@@ -50,17 +49,21 @@ export async function selectBatchRange(undoable: boolean, ext?: string): Promise
         }
 
         // Specify the file search pattern to match all files
-        const filePattern = ext ? `**/*.${ext}` : '**/*';
+        const filePattern = ext ? `${pattern}.${ext}` : `${pattern}`;
         const excludePattern = '**/.*/**'
 
         // Search for all files in the workspace folder
-        documentUris = await vscode.workspace.findFiles(filePattern, excludePattern, undefined, undefined);
+        return await vscode.workspace.findFiles(filePattern, excludePattern, undefined, undefined);
+    }
+    if (selectedRange === '当前目录下所有文件') {
+        return globAllFilesHelper("**/*");
 
+    } else if (selectedRange === '当前目录下所有文件（不包含子目录）') {
+        return globAllFilesHelper("*");
     } else {
-        documentUris = vscode.workspace.textDocuments.filter(document => !document.fileName.includes('.git'))
+        return vscode.workspace.textDocuments.filter(document => !document.fileName.includes('.git'))
                         .map(document => document.uri);
     }
-    return documentUris;
 }
 
 export async function batchConvertFilesEncoding() {
