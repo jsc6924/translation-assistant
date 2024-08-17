@@ -19,6 +19,10 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToSublineEnd', () => {
 		nextPuncInText(false);
 	});
+  
+  registerCommand(context, 'Extension.dltxt.cursorToPrevBinarySearch', cursorToPrevBinarySearch);
+
+  registerCommand(context, 'Extension.dltxt.cursorToNextBinarySearch', cursorToNextBinarySearch);
 
 	registerCommand(context, 'Extension.dltxt.moveToNextLine', () => {
 		moveToNextLine();
@@ -140,6 +144,71 @@ function cursorToPrevWord() {
       utils.setCursorAndScroll(editor, 0, c.character - 2, false);
     else
       utils.setCursorAndScroll(editor, 0, c.character - 1, false);
+  }
+}
+
+const BinarySearchState = {
+  step: 0,
+  filename: "",
+  lineNumber: -1,
+  pos: -1
+}
+
+function cursorToNextBinarySearch() {
+  const editor = vscode.window.activeTextEditor;
+  if (editor && editor.selection.isEmpty) {
+    const c = editor.selection.active;
+    const [curIsTranslation, curLine, curGroups] = DocumentParser.getCurrentTranslationLine(editor);
+    if (!curIsTranslation || !curLine || !curGroups) {
+      return;
+    }
+    const textStartIdx = curGroups.prefix.length + curGroups.white.length;
+    let relativePos = c.character - textStartIdx;
+    const textAfter = curGroups.text.substring(relativePos);
+    const upperBound = textStartIdx + curGroups.text.length;
+    
+    const st = BinarySearchState;
+    let step = 1;
+    if (st.filename === editor.document.fileName && st.lineNumber === c.line && st.pos === c.character) {
+      step = Math.max(1, Math.floor(st.step / 2));
+    } else {
+      step = Math.max(1, Math.floor(textAfter.length / 2));
+    }
+    const target = Math.min(c.character + step, upperBound);
+    utils.setCursorAndScroll(editor, 0, target, false);
+    st.filename = editor.document.fileName;
+    st.lineNumber = c.line;
+    st.step = step;
+    st.pos = target;
+  }
+}
+
+function cursorToPrevBinarySearch() {
+  const editor = vscode.window.activeTextEditor;
+  if (editor && editor.selection.isEmpty) {
+    const c = editor.selection.active;
+    const [curIsTranslation, curLine, curGroups] = DocumentParser.getCurrentTranslationLine(editor);
+    if (!curIsTranslation || !curLine || !curGroups) {
+      return;
+    }
+    const textStartIdx = curGroups.prefix.length + curGroups.white.length;
+    let relativePos = c.character - textStartIdx;
+    const textBefore = curGroups.text.substring(0, relativePos);
+    const lowerBound = textStartIdx;
+
+    const st = BinarySearchState;
+    let step = 1;
+    if (st.filename === editor.document.fileName && st.lineNumber === c.line && st.pos === c.character) {
+      step = Math.max(1, Math.floor(st.step / 2));
+    } else {
+      step = Math.max(1, Math.floor(textBefore.length / 2))
+    }
+    const target = Math.max(lowerBound, c.character - step, lowerBound);
+    utils.setCursorAndScroll(editor, 0, target, false);
+    st.filename = editor.document.fileName;
+    st.lineNumber = c.line;
+    st.step = step;
+    st.pos = target;
   }
 }
 
