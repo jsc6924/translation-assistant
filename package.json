@@ -478,12 +478,12 @@
 			{
 				"command": "Extension.dltxt.cursorToNextWord",
 				"key": "alt+]",
-				"when": "editorTextFocus && resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'"
 			},
 			{
 				"command": "Extension.dltxt.cursorToPrevWord",
 				"key": "alt+[",
-				"when": "editorTextFocus && resourceLangId == dltxt"
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'"
 			},
 			{
 				"command": "Extension.dltxt.cursorToSublineHead",
