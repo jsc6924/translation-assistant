@@ -697,7 +697,7 @@ export function updateKeywordDecorations() {
 		const testArray: Array<String> = [];
 		for (let i = 0; i < keywords.length; i++) {
 			let v = keywords[i];
-			let vr = v['raw'];
+			let vr = String(v['raw']);
 			if(vr)
 				testArray.push(vr);
 		}
@@ -772,8 +772,8 @@ function batchUpdateLocalDictKey(dictName: string, kvs: any[]): boolean {
 	for(const kv of kvs) {
 		let processed = false;
 		if (kv.hasOwnProperty('key')) {
-			const key = kv.key;
-			const value = kv.value;
+			const key = String(kv.key);
+			const value = String(kv.value);
 			for(let i = 0; i < data.length && !processed; i++) {
 				if (data[i]['raw'] == key) {
 					if (value === undefined) {

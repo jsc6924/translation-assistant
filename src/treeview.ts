@@ -136,7 +136,7 @@ export class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
         label: string, config: string, global: boolean, selections: string[], defaultValue: string) {
         super(treeview, configRoot, label, config, global, true);
         this.selections = selections;
-        this.setCommand(global, {config, callback: this.callback, selections: this.selections});
+        this.setCommand(global, {config, callback: () => this.callback(), selections: this.selections});
         if (global) {
             if (ContextHolder.getGlobalState(this.config) === undefined) {
                 ContextHolder.setGlobalState(this.config, defaultValue);
@@ -504,7 +504,7 @@ export namespace dict_view
                     }
                 }
                 dictEntryItems.sort((a, b) => {
-                    return a.key.localeCompare(b.key);
+                    return String(a.key).localeCompare(b.key);
                 });
                 (node.contentNode as DictEntrySetItem).children = dictEntryItems;
                 for (const item of (node.children[0] as DictConfigRootItem).getChildren()) {
