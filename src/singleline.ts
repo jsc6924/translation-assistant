@@ -135,7 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
 						const line = doc.lineAt(i);
 						const text = line.text;
 						if (text.includes(rawText)) {
-							const newText = text.replace(rawText, replaced);
+							const newText = text.replace(new RegExp(utils.regEscape(rawText), 'g'), replaced);
 							const newLine = new vscode.Range(line.range.start, line.range.end);
 							workspaceEdit.replace(uri, newLine, newText);
 							file_success++;
