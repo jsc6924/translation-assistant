@@ -79,12 +79,9 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
 
   const horizontalLine = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
-    let target = config.get("formatter.a.horizontalLine.specify") as string;
-    if (!target) {
-      target = '——';
-    }
-    text = text.replace(/[—―ー－]{2,}/g, s => repeatStr(target[0], s.length, false));
-    text = text.replace(/-{2,}/g, s => repeatStr(target[0], Math.max(2, Math.ceil(s.length / 2)), false));
+    let target = '—';
+    text = text.replace(/[—―ー－]{2,}/g, s => repeatStr(target, s.length, false));
+    text = text.replace(/-{2,}/g, s => repeatStr(target, Math.max(2, Math.ceil(s.length / 2)), false));
     cgrps.text = text;
   };
   if (config.get("formatter.a.horizontalLine.enable"))
@@ -188,7 +185,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
 
 
   const omitPeriod = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    if (cgrps?.suffix === '」' || cgrps?.suffix === '』') {
+    if (cgrps?.suffix.startsWith('」') || cgrps?.suffix.startsWith('』')) {
       cgrps.text = cgrps.text.replace(/(?<![\.。])[\.。]$/g, '');
     }
   };

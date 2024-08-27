@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { createErrorDiagnostic, createErrorDiagnosticMultiLine } from './error-check';
+import { createErrorDiagnostic, createErrorDiagnosticMultiLine, createDiagnostic } from './error-check';
 import * as utils from './utils';
 import { AutoDetector, NoopAutoDetector, StandardParserAutoDetector, TextBlockAutoDetector } from './auto-format';
 import { findAllAndProcess } from './utils';
@@ -68,7 +68,7 @@ interface DocumentParser {
   getFormatDetector(): AutoDetector;
 }
 
-class StandardDocumentParser {
+class StandardDocumentParser implements DocumentParser {
     constructor() {
 
     }
@@ -329,6 +329,9 @@ export class TextBlockDocumentParser implements DocumentParser {
     const [jLineReg, cLineReg] = rewriteTextBlockRegex(reg);
     this.jLineReg = jLineReg;
     this.cLineReg = cLineReg;
+  }
+  warningCheck(document: string | string[] | vscode.TextDocument): vscode.Diagnostic[] {
+    throw new Error('Method not implemented.');
   }
 
 

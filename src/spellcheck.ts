@@ -56,23 +56,6 @@ function queryLineNumber(offsetMap: [number, number, number][], offset: number):
     return [offsetMap[x][0], offset - offsetMap[x][1], offsetMap[x][2]]
 }
 
-function isAsciiOnly(str: string): boolean {
-    for (let i = 0; i < str.length; i++) {
-      const code = str.charCodeAt(i);
-      if (code > 127) {
-        return false;
-      }
-    }
-    return true;
-}
-
-function shouldSkipChecking(text: string, delims: RegExp) {
-    if (isAsciiOnly(text)) {
-        return true;
-    }
-    return text.length <= 6 && !delims.test(text);
-}
-
 export function spellCheck(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration("dltxt");
     const activeEditor = vscode.window.activeTextEditor;
@@ -116,7 +99,7 @@ export function spellCheck(context: vscode.ExtensionContext) {
         let queryPromises: Promise<any>[] = [];
 
         DocumentParser.processTranslatedLines(activeEditor.document, (matchedGroups, c_index) => {
-            if (shouldSkipChecking(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
+            if (utils.shouldSkipChecking(matchedGroups.white + matchedGroups.text + matchedGroups.suffix, delims)) {
                 return;
             }
             if (queryString.length + matchedGroups.text.length + 1 >= BAIDU_MAX_QUERY_LEN) {

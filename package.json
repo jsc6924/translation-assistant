@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.25.2",
+	"version": "3.26.0",
 	"engines": {
 		"vscode": "^1.63.0"
 	},
@@ -1109,6 +1109,16 @@
 					"default": true,
 					"description": "外观：显示删行错误"
 				},
+				"dltxt.appearance.warning.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示警告"
+				},
+				"dltxt.appearance.warning.enableDynamicMissingTranslationCheck": {
+					"type": "boolean",
+					"default": false,
+					"description": "外观：显示警告：动态显示未翻译警告"
+				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",
 					"default": true,
@@ -1138,11 +1148,6 @@
 					"type": "boolean",
 					"default": true,
 					"description": "格式化文本：统一破折号"
-				},
-				"dltxt.formatter.a.horizontalLine.specify": {
-					"type": "string",
-					"default": "——",
-					"description": "格式化文本：破折号统一改为"
 				},
 				"dltxt.formatter.b.fixReversedQuote": {
 					"type": "boolean",

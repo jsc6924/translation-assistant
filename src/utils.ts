@@ -200,6 +200,23 @@ export function mapToObject<K, V>(map: Map<K, V>) : any {
   return plainObject;
 }
 
+export function isAsciiOnly(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code > 127) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function shouldSkipChecking(text: string, delims: RegExp) {
+  if (isAsciiOnly(text)) {
+      return true;
+  }
+  return text.length <= 6 && !delims.test(text);
+}
+
 
 export function showOutputText(title:string, output: string) {
   // Create a new webview panel
