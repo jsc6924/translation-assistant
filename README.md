@@ -21,7 +21,7 @@
 - [格式支持](#格式支持)
 - [语法高亮](#语法高亮)
 - [侧边栏UI](#侧边栏UI)
-- [错误检测](#错误检测)
+- [错误与警告](#错误与警告)
 - [键盘快捷键](#键盘快捷键)
 - [批量编辑](#批量编辑)
 - [联网查词](#联网查词)
@@ -198,17 +198,25 @@ DLTXT默认支持以下格式（用横线隔开）
 
 以上功能将在之后的章节介绍
 
-## 错误检测
+## 错误与警告
+### 错误（可能会导致封包失败的问题）
 #### 检测被误删的标签
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/2.png?raw=true)
 
 #### 检测被误删的译文/原文行
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/error-deleteline.png?raw=true)
 
+### 警告（标点符号、错别字、漏翻等问题）
+#### 检测标点符号的使用
+自动检测，不需要任何操作
+
+#### 检测漏翻
+需要在设置中找到`dltxt.appearance.warning.enableDynamicMissingTranslationCheck`并手动打开
+
 #### 检测错别字
   ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
 
-  检测译文的错别字，此功能需要连接百度智能云API（收费，不过很便宜），使用方法如下：
+  手动检测译文的错别字，此功能需要连接百度智能云API（收费，不过很便宜），使用方法如下：
 
   1. 在百度智能云注册账号后开通“人工智能-自然语言处理-文本纠错”服务
       - 记得领取免费额度（个人用户50万次试用），顺便再充几块钱
@@ -764,6 +772,8 @@ vsce publish
 
 ---
 ## Release Notes
+#### 3.26 (2024/8/28)
+- 检测当前文本的标点符号问题、漏翻，并显示警告
 #### 3.25 (2024/8/17)
 - 实现光标的二分查找（`Alt+[` `Alt+]`）
 - 编码转换和批量替换的范围可以选择当前文件夹下的所有文件但不包含子目录
