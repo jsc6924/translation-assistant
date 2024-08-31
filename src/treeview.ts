@@ -1,12 +1,14 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
+import { clearAllWarnings } from './error-check';
+import { batchCheckCommand } from './batch';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -669,6 +671,14 @@ export namespace cc_view {
                 await downloadDefaultServer(ContextHolder.get());
             }));
 
+            const errorWarningNode = new CCDirectory(this, "错误与警告", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(errorWarningNode);
+            errorWarningNode.children.push(new CommandItem("批量检查译文", async () => {
+                await batchCheckCommand();
+            }));
+            errorWarningNode.children.push(new CommandItem("清除所有警告", async () => {
+                clearAllWarnings();
+            }));
 
             this.dataChanged();
         }

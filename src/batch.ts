@@ -106,6 +106,36 @@ function filterFilesByGlobExt(files: vscode.Uri[], ext: string) {
     });
 }
 
+async function batch_check(documentUris: vscode.Uri[]) {
+    // replace text in all selected files, using workspace edit
+    const total_file = documentUris.length;
+    let file_checked = 0;
+
+    await batchProcess(documentUris, doc => {
+        const [diags, untranslatedLines] = warningCheck(doc);
+        utils.DltxtDiagCollection.set(doc.uri, diags);
+
+        const missinglineDiags = untranslatedLines.map(line => {
+            const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '未翻译', line, 0, 1000);
+            return d;
+        });
+        utils.DltxtDiagCollectionMissionLine.set(doc.uri, missinglineDiags);
+
+        file_checked++;
+    });
+
+    vscode.window.showInformationMessage(`已检查 ${file_checked}/${total_file} 个文件`);
+}
+
+
+export async function batchCheckCommand() {
+    const documentUris = await selectBatchRange(true, '{txt,TXT}');
+    if (!documentUris) {
+        return;
+    }
+    await batch_check(documentUris);
+}
+
 
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, 'Extension.dltxt.batch_replace', async () => {
@@ -155,35 +185,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-    const batch_check = async (documentUris: vscode.Uri[]) => {
-        // replace text in all selected files, using workspace edit
-        const total_file = documentUris.length;
-        let file_checked = 0;
-
-        await batchProcess(documentUris, doc => {
-            const [diags, untranslatedLines] = warningCheck(doc);
-            utils.DltxtDiagCollection.set(doc.uri, diags);
-
-            const missinglineDiags = untranslatedLines.map(line => {
-                const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '未翻译', line, 0, 1000);
-                return d;
-            });
-            utils.DltxtDiagCollectionMissionLine.set(doc.uri, missinglineDiags);
-
-            file_checked++;
-        });
-
-        vscode.window.showInformationMessage(`已检查 ${file_checked}/${total_file} 个文件`);
-    }
-
-
-    registerCommand(context, 'Extension.dltxt.batch_check', async () => {
-		const documentUris = await selectBatchRange(true, '{txt,TXT}');
-		if (!documentUris) {
-			return;
-		}
-		await batch_check(documentUris);
-	});
+    registerCommand(context, 'Extension.dltxt.batch_check', batchCheckCommand);
 
     registerCommand(context, 'Extension.dltxt.batch_check_folder', async (arg) => {
         const folderPath = arg.fsPath;

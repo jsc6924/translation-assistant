@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { VSCodeContext, findAllAndProcess, DltxtDiagCollection, DltxtDiagCollectionMissionLine } from './utils';
+import { VSCodeContext, findAllAndProcess, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck } from './utils';
 import { DocumentParser, MatchedGroups } from './parser';
 import { shouldSkipChecking } from './utils';
 import { getTextDelimiter } from './motion';
@@ -144,4 +144,10 @@ export function createErrorDiagnosticMultiLine(message: string, startLine: numbe
         vscode.DiagnosticSeverity.Error
     );
     return diagnostic;
+}
+
+export function clearAllWarnings() {
+    DltxtDiagCollection.clear();
+    DltxtDiagCollectionMissionLine.clear();
+    DltxtDiagCollectionSpellcheck.clear();
 }
