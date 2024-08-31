@@ -359,7 +359,7 @@ export class ContextHolder {
   }
   static set(context: vscode.ExtensionContext) {
     ContextHolder.context = context;
-    for(const k of (context.workspaceState as IterableMomento).keys()) {
+    for(const k of context.workspaceState.keys()) {
       ContextHolder.workspaceCache.set(k, context.workspaceState.get(k));
     }
   }
@@ -407,16 +407,11 @@ export class ContextHolder {
     return undefined;
   }
   static getGlobalStateKeys() {
-    return (ContextHolder.context?.globalState as unknown as IterableMomento).keys();
+    return ContextHolder.context?.globalState.keys() ?? [];
   }
   static getWorkspaceStateKeys() {
-    return (ContextHolder.context?.workspaceState as IterableMomento).keys();
+    return ContextHolder.context?.workspaceState.keys() ?? [];
   }
-}
-
-
-interface IterableMomento extends vscode.Memento {
-  keys(): string[];
 }
 
 export class DictType {
