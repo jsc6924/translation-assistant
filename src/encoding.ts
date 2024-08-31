@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from "fs";
 import * as iconv from "iconv-lite";
+import { selectBatchRange } from './batch';
 const languageEncoding = require("detect-file-encoding-and-language");
 
 const srcEncodings = ['utf8', 'utf16le', 'utf16be', 'shift-jis', 'gb2312', 'gbk'];
@@ -22,48 +23,6 @@ export function encodeWithBom(content: string, encoding: string): Buffer {
         return Buffer.concat([bomBuffer, iconv.encode(content, encoding)]);
     }
     return iconv.encode(content, encoding);
-}
-
-export async function selectBatchRange(undoable: boolean, ext?: string): Promise<vscode.Uri[] | undefined> {
-    const convertRange = ['所有打开的文件', '当前目录下所有文件', '当前目录下所有文件（不包含子目录）'];
-    // Show encoding selection menu
-    const selectedRange = await vscode.window.showQuickPick(convertRange, {
-        placeHolder: '选择转换范围',
-    });
-    if (!selectedRange) {
-        return;
-    }
-    const globAllFilesHelper = async (pattern: string) => {
-        if (!undoable) {
-            const userInput = await vscode.window.showInputBox({
-                prompt: '当前操作不可撤销，请确保已经备份。输入字母y继续，否则将取消操作'
-    
-            });
-            if (userInput?.toLowerCase() != "y") {
-                return;
-            }
-        }
-        if (!vscode.workspace.workspaceFolders) {
-            vscode.window.showErrorMessage('当前没有打开的文件夹');
-            return;
-        }
-
-        // Specify the file search pattern to match all files
-        const filePattern = ext ? `${pattern}.${ext}` : `${pattern}`;
-        const excludePattern = '**/.*/**'
-
-        // Search for all files in the workspace folder
-        return await vscode.workspace.findFiles(filePattern, excludePattern, undefined, undefined);
-    }
-    if (selectedRange === '当前目录下所有文件') {
-        return globAllFilesHelper("**/*");
-
-    } else if (selectedRange === '当前目录下所有文件（不包含子目录）') {
-        return globAllFilesHelper("*");
-    } else {
-        return vscode.workspace.textDocuments.filter(document => !document.fileName.includes('.git'))
-                        .map(document => document.uri);
-    }
 }
 
 export async function batchConvertFilesEncoding() {

@@ -87,7 +87,7 @@ class StandardDocumentParser implements DocumentParser {
             const m = jreg.exec(line);
             if (m && m.groups) {
                 if (!!jgrps) {
-                    throw new Error(`Unmatched jgrps: ${jgrps}`)
+                    throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
                 }
                 jgrps = m.groups as any as MatchedGroups;
                 j_index = i;
@@ -190,10 +190,12 @@ class StandardDocumentParser implements DocumentParser {
                 const reg = valid_regs[i];
                 if (reg && reg.test(lineText)) {
                     if (checkDeletedLines) {
-                        if (i == 0 && prev_matched_i == 0) {
+                        if (prev_matched_i == 0 && (i == 0 || i == 2)) {
                             diagnostics.push(createErrorDiagnostic('译文行被删除', lineNumber, lineText.length));
-                        } else if (i == 1 && prev_matched_i == 1) {
+                        } else if (prev_matched_i == 1 && i == 1) {
                             diagnostics.push(createErrorDiagnostic('原文行被删除', lineNumber, lineText.length));
+                        } else if (prev_matched_i == 2 && i == 1) {
+                            diagnostics.push(createErrorDiagnostic('译文行被删除', lineNumber, lineText.length));
                         }
                     }
                     prev_matched_i = i;

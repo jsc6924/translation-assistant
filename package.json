@@ -4,14 +4,14 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.26.0",
+	"version": "3.27.0",
 	"engines": {
-		"vscode": "^1.63.0"
+		"vscode": "^1.67.0"
 	},
 	"categories": [
 		"Programming Languages"
 	],
-	"activationEvents": [ 
+	"activationEvents": [
 		"onLanguage:dltxt",
 		"onLanguage:sltxt"
 	],
@@ -182,6 +182,16 @@
 			{
 				"command": "Extension.dltxt.batch_replace",
 				"title": "批量替换选中的译文",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_check",
+				"title": "批量检查译文",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_check_folder",
+				"title": "批量检查译文",
 				"category": "DLTXT"
 			},
 			{
@@ -789,12 +799,17 @@
 				{
 					"when": "resourceLangId == dltxt && resourceScheme == file",
 					"command": "Extension.dltxt.trdb.context.addDoc",
-					"group": "dltxt.trdb@1"
+					"group": "dltxt.t.menu@1"
 				},
 				{
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.trdb.context.addFolder",
-					"group": "dltxt.trdb@1"
+					"group": "dltxt.t.menu@1"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.batch_check_folder",
+					"group": "dltxt.t.menu@2"
 				}
 			],
 			"dltxt-explorer-submenu": [
@@ -846,11 +861,6 @@
 			],
 			"dltxt-editor-submenu": [
 				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.batch_replace",
-					"group": "dltxt.replace"
-				},
-				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.extract_single_line",
 					"group": "dltxt.extract"
@@ -884,6 +894,16 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.spellCheckClear",
 					"group": "dltxt.edit"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.batch_replace",
+					"group": "dltxt.rbatch"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.batch_check",
+					"group": "dltxt.rbatch"
 				},
 				{
 					"when": "resourceLangId == dltxt",
@@ -1112,12 +1132,7 @@
 				"dltxt.appearance.warning.enable": {
 					"type": "boolean",
 					"default": true,
-					"description": "外观：显示警告"
-				},
-				"dltxt.appearance.warning.enableDynamicMissingTranslationCheck": {
-					"type": "boolean",
-					"default": false,
-					"description": "外观：显示警告：动态显示未翻译警告"
+					"description": "外观：显示警告（必须显示错误时才能显示）"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",
@@ -1270,7 +1285,6 @@
 		"@types/kuromoji": "^0.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
-		"@types/vscode": "^1.47.0",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
 		"esbuild": "^0.17.19",
@@ -1281,6 +1295,7 @@
 		"vscode-test": "^1.3.0"
 	},
 	"dependencies": {
+		"@types/vscode": "v1.67",
 		"ahocorasick": "^1.0.2",
 		"archiver": "^5.3.1",
 		"async-mutex": "^0.5.0",

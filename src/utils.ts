@@ -115,15 +115,9 @@ export function isAscii(char: string) {
   return charCode <= 127;
 }
 
-let diagnosticCollection: Map<string, vscode.DiagnosticCollection> = new Map<string, vscode.DiagnosticCollection>();
-
-export function getOrCreateDiagnosticCollection(file: string) : vscode.DiagnosticCollection | undefined {
-    if (!diagnosticCollection.has(file)) {
-        diagnosticCollection.set(file, vscode.languages.createDiagnosticCollection(`dltxt-${file}`));
-    }
-    return diagnosticCollection.get(file);
-}
-
+export const DltxtDiagCollection = vscode.languages.createDiagnosticCollection(`dltxt`);
+export const DltxtDiagCollectionSpellcheck = vscode.languages.createDiagnosticCollection(`dltxt-spellcheck`);
+export const DltxtDiagCollectionMissionLine = vscode.languages.createDiagnosticCollection(`dltxt-missingline`);
 
 type ContextValue = boolean | string;
 
@@ -210,11 +204,22 @@ export function isAsciiOnly(str: string): boolean {
   return true;
 }
 
+export function isFunctionalCharsOnly(text: string): boolean {
+  return /^[…。，、！？「」『』【】（）～~♪]+$/.test(text);
+}
+
 export function shouldSkipChecking(text: string, delims: RegExp) {
-  if (isAsciiOnly(text)) {
+  if (isAsciiOnly(text) || isFunctionalCharsOnly(text)) {
       return true;
   }
-  return text.length <= 6 && !delims.test(text);
+
+  const hasQuestionMark = /？？？/.test(text);
+  if (hasQuestionMark) { // is name
+      return true;
+  }
+  delims.lastIndex = 0;
+  const hasDelims = delims.test(text);
+  return !hasDelims; //is name
 }
 
 
@@ -402,7 +407,7 @@ export class ContextHolder {
     return undefined;
   }
   static getGlobalStateKeys() {
-    return (ContextHolder.context?.globalState as IterableMomento).keys();
+    return (ContextHolder.context?.globalState as unknown as IterableMomento).keys();
   }
   static getWorkspaceStateKeys() {
     return (ContextHolder.context?.workspaceState as IterableMomento).keys();

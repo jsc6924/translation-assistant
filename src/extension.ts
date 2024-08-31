@@ -21,6 +21,7 @@ import * as auto_format from './auto-format';
 import * as fs from 'fs';
 import * as dictserver from './dictserver';
 import * as parser from './parser';
+import * as batch from './batch';
 
 
 
@@ -163,6 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	auto_format.activate(context);
 	dictserver.activate(context);
+	batch.activate(context);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
 		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {

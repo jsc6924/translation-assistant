@@ -66,11 +66,8 @@ export function spellCheck(context: vscode.ExtensionContext) {
     if(!fileName.toLocaleLowerCase().endsWith('.txt')) {
         return;
     }
-    const diagnosticCollection = utils.getOrCreateDiagnosticCollection(fileName + '.spellcheck');
-    if (!diagnosticCollection) {
-        return;
-    }
-    diagnosticCollection.clear();
+    const diagnosticCollection = utils.DltxtDiagCollectionSpellcheck;
+    diagnosticCollection.set(activeEditor.document.uri, undefined);
     const diagnostics: vscode.Diagnostic[] = [];
     
 
@@ -175,18 +172,9 @@ export function spellCheck(context: vscode.ExtensionContext) {
 }
 
 export function clearSpellCheck() {
-    const config = vscode.workspace.getConfiguration("dltxt");
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor) {
         return;
     }
-    const fileName = activeEditor.document.fileName;
-    if(!fileName.toLocaleLowerCase().endsWith('.txt')) {
-        return;
-    }
-    const diagnosticCollection = utils.getOrCreateDiagnosticCollection(fileName + '.spellcheck');
-    if (!diagnosticCollection) {
-        return;
-    }
-    diagnosticCollection.clear();
+    utils.DltxtDiagCollectionSpellcheck.set(activeEditor.document.uri, undefined);
 }

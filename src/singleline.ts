@@ -4,10 +4,6 @@ import * as utils from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
 import { DocumentParser } from './parser';
-import { selectBatchRange } from './encoding';
-import { channel } from './dlbuild';
-import { performance } from 'perf_hooks';
-
 export function activate(context: vscode.ExtensionContext) {
     	
 	registerCommand(context, 'Extension.dltxt.extract_single_line', async () => {
@@ -99,68 +95,6 @@ export function activate(context: vscode.ExtensionContext) {
 		await merge_into_double_line(true);
 	});
 
-	registerCommand(context, 'Extension.dltxt.batch_replace', async () => {
-		const document = vscode.window.activeTextEditor?.document;
-		if (!document) return;
-		// get raw text from current selection
-		const rawText = document.getText(vscode.window.activeTextEditor?.selection);
-		if (!rawText) {
-			return;
-		}
-		const replaced = await vscode.window.showInputBox({ placeHolder: '输入替换的文本' });
-		if (!replaced) {
-			return;
-		}
-		const documentUris = await selectBatchRange(true, 'txt');
-		if (!documentUris) {
-			return;
-		}
-		// replace text in all selected files, using workspace edit
-		const workspaceEdit = new vscode.WorkspaceEdit();
-		const total_file = documentUris.length;
-		let success = 0, success_file = 0, file_processed = 0;
-		channel.show();
-		channel.append(`已处理 0/${total_file}`);
-		const startTime = performance.now();
-
-		for (let i = 0; i < documentUris.length;) {
-			const tasks = [];
-			// batch size = 100时，处理速度比=1时快约4倍
-			const batch_size = Math.min(100, documentUris.length - i);
-			for(let j = 0; j < batch_size; j++) {
-				const uri = documentUris[i + j];
-				let file_success = 0;
-				const task = vscode.workspace.openTextDocument(uri).then(doc => {
-					DocumentParser.processTranslatedLines(doc, (groups, i) => {
-						const line = doc.lineAt(i);
-						const text = line.text;
-						if (text.includes(rawText)) {
-							const newText = text.replace(new RegExp(utils.regEscape(rawText), 'g'), replaced);
-							const newLine = new vscode.Range(line.range.start, line.range.end);
-							workspaceEdit.replace(uri, newLine, newText);
-							file_success++;
-						}
-					});
-					if (file_success > 0) {
-						success_file++;
-						success += file_success;
-					}
-				});
-				tasks.push(task);
-			}
-			await Promise.all(tasks);
-			i += batch_size;
-			channel.append(`已处理 ${i}/${total_file}`);
-		}
-		const endTime = performance.now();
-		const executionTime = endTime - startTime;
-		channel.appendLine(`Execution Time: ${executionTime.toFixed(2)} ms`);
-		channel.hide();
-		if(await vscode.workspace.applyEdit(workspaceEdit)) {
-			vscode.window.showInformationMessage(`[${rawText}]=>[${replaced}]，成功在${success_file}/${total_file} 个文件中替换了${success} 处`);
-		} else {
-			vscode.window.showErrorMessage('替换失败');
-		}
-	});
+	
 	
 }

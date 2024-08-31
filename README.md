@@ -211,7 +211,7 @@ DLTXT默认支持以下格式（用横线隔开）
 自动检测，不需要任何操作
 
 #### 检测漏翻
-需要在设置中找到`dltxt.appearance.warning.enableDynamicMissingTranslationCheck`并手动打开
+TODO
 
 #### 检测错别字
   ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
