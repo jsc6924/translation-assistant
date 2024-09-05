@@ -221,6 +221,8 @@ DLTXT默认支持以下格式（用横线隔开）
 
   ![escape-char](https://github.com/jsc6924/translation-assistant/blob/master/imgs/warning-escape-char.png?raw=true)
 
+如果想恢复不再显示警告的汉字，可使用“设置与命令”->“错误与警告”->“清除常用汉字警告白名单”
+
 #### 检测错别字
   ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
 
@@ -817,7 +819,8 @@ find ./src -type f -print0 | xargs -0 wc -l
 ---
 ## Release Notes
 #### 3.28 (2024/9/5)
-- 
+- 非常用汉字检查
+- 非常用汉字警告白名单
 #### 3.27 (2024/8/31)
 - 批量检查文本的问题并显示警告
 - 修复批量处理时，选择“所有打开的文件”时范围不正确的bug
