@@ -217,7 +217,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 可在设置中单独关闭
 
-如果想让某个汉字不再弹出警告，可把鼠标移到文字上，点击警告界面弹窗中的Quick，再选择“不再显示这个汉字的警告”
+如果想让某个汉字不再弹出警告，可把鼠标移到那个汉字上，点击警告界面弹窗中的Quick，再选择“不再显示这个汉字的警告”
 
   ![escape-char](https://github.com/jsc6924/translation-assistant/blob/master/imgs/warning-escape-char.png?raw=true)
 
