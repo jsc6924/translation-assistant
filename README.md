@@ -201,6 +201,7 @@ DLTXT默认支持以下格式（用横线隔开）
 
 ## 错误与警告
 ### 错误（可能会导致封包失败的问题）
+可在设置中关闭，但不建议关闭
 #### 检测被误删的标签
   ![img2](https://github.com/jsc6924/translation-assistant/blob/master/imgs/2.png?raw=true)
 
@@ -209,7 +210,16 @@ DLTXT默认支持以下格式（用横线隔开）
 
 ### 警告（标点符号、错别字等问题）
 #### 检测标点符号的使用
-自动检测，不需要任何操作
+  ![punc-check](https://github.com/jsc6924/translation-assistant/blob/master/imgs/warning-punc-check.png?raw=true)
+
+#### 检测非常用汉字
+  ![unusual-char](https://github.com/jsc6924/translation-assistant/blob/master/imgs/warning-unusual-char.png?raw=true)
+
+可在设置中单独关闭
+
+如果想让某个汉字不再弹出警告，可把鼠标移到文字上，点击警告界面弹窗中的Quick，再选择“不再显示这个汉字的警告”
+
+  ![escape-char](https://github.com/jsc6924/translation-assistant/blob/master/imgs/warning-escape-char.png?raw=true)
 
 #### 检测错别字
   ![spellcheck](https://github.com/jsc6924/translation-assistant/blob/master/imgs/spellcheck.png?raw=true)
@@ -797,8 +807,17 @@ npm install --save @types/vscode@1.80
 ```
 
 
+
+count lines of code 
+```
+find ./src -type f -print0 | xargs -0 wc -l
+```
+
+
 ---
 ## Release Notes
+#### 3.28 (2024/9/5)
+- 
 #### 3.27 (2024/8/31)
 - 批量检查文本的问题并显示警告
 - 修复批量处理时，选择“所有打开的文件”时范围不正确的bug

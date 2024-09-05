@@ -679,6 +679,9 @@ export namespace cc_view {
             errorWarningNode.children.push(new CommandItem("清除所有警告", async () => {
                 clearAllWarnings();
             }));
+            errorWarningNode.children.push(new CommandItem("清除常用汉字警告白名单", async () => {
+                ContextHolder.setWorkspaceState('escapedCharacters', undefined);
+            }));
 
             this.dataChanged();
         }

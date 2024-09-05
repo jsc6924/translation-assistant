@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.27.0",
+	"version": "3.28.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1129,10 +1129,15 @@
 					"default": true,
 					"description": "外观：显示删行错误"
 				},
-				"dltxt.appearance.warning.enable": {
+				"dltxt.appearance.warning.all": {
 					"type": "boolean",
 					"default": true,
 					"description": "外观：显示警告（必须显示错误时才能显示）"
+				},
+				"dltxt.appearance.warning.checkUnusualCharacters": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：显示非常用汉字警告"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",

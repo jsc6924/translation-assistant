@@ -1,12 +1,54 @@
 import * as vscode from 'vscode';
-import { VSCodeContext, findAllAndProcess, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck } from './utils';
+import { VSCodeContext, findAllAndProcess, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck, ContextHolder } from './utils';
 import { DocumentParser, MatchedGroups } from './parser';
 import { shouldSkipChecking } from './utils';
 import { getTextDelimiter } from './motion';
+import * as iconv from "iconv-lite";
 
 // not used yet, can be used to diagnostic 
 export enum ErrorCode {
     Untranslated = 1,
+    UnusualCharacter = 2,
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    const codeActionProvider = new MyCodeActionProvider();
+    context.subscriptions.push(vscode.languages.registerCodeActionsProvider('dltxt', codeActionProvider));
+    context.subscriptions.push(vscode.commands.registerCommand('dltxt.escapeCharacter', (char: string) => {
+        const escapedList = ContextHolder.getWorkspaceState("escapedCharacters", []) as string[];
+        escapedList.push(char);
+        ContextHolder.setWorkspaceState("escapedCharacters", escapedList);
+        updateErrorDecorations();
+    }));
+}
+
+export class MyCodeActionProvider implements vscode.CodeActionProvider {
+    public provideCodeActions(
+        document: vscode.TextDocument,
+        range: vscode.Range,
+        context: vscode.CodeActionContext,
+        token: vscode.CancellationToken
+    ): vscode.CodeAction[] {
+        const codeActions: vscode.CodeAction[] = [];
+
+        context.diagnostics.forEach(diagnostic => {
+            if (diagnostic.code === ErrorCode.UnusualCharacter) {
+                const fix = new vscode.CodeAction('不再显示这个汉字的警告', vscode.CodeActionKind.QuickFix);
+                //get text of the range
+                const text = document.getText(diagnostic.range);
+                fix.command = {
+                    command: 'dltxt.escapeCharacter',
+                    title: '把这个汉字加入白名单',
+                    arguments: [text]
+                };
+                fix.diagnostics = [diagnostic];
+                fix.isPreferred = true;
+                codeActions.push(fix);
+            }
+        });
+
+        return codeActions;
+    }
 }
 
 export function updateErrorDecorations() {
@@ -32,7 +74,7 @@ export function updateErrorDecorations() {
     if (showError) {
         try {
             const [warningDiagnostics, untranslatedLines] = warningCheck(activeEditor.document);
-            config.get<boolean>('appearance.warning.enable') && diagnostics.push(...warningDiagnostics);
+            config.get<boolean>('appearance.warning.all') && diagnostics.push(...warningDiagnostics);
             DltxtDiagCollectionMissionLine.set(activeEditor.document.uri, filterUntranslatedLines(missingLineDiags, untranslatedLines));
         } catch (e) {
             diagnostics.push(createErrorDiagnostic(`${e}`, 0, 0));
@@ -63,18 +105,26 @@ export function filterUntranslatedLines(missingLineDiags: readonly vscode.Diagno
     return res;
 }
 
+
+
 export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[], number[]] {
     const res = [] as vscode.Diagnostic[];
     let untranslatedLines = [] as number[];
     const config = vscode.workspace.getConfiguration("dltxt");
     const delims = getTextDelimiter();
-    const nameRegex = /na?me/gi;
+    const nameRegex = /na?me/i;
+    const kanaRegex = /[ぁ-んァ-ン]/;
     const skipChecking = (cgrps: MatchedGroups) => {
-        if (nameRegex.test(cgrps.prefix) || shouldSkipChecking(cgrps.white + cgrps.text + cgrps.suffix, delims)) {
+        if (nameRegex.test(cgrps.prefix) || !kanaRegex.test(cgrps.text) || shouldSkipChecking(cgrps.white + cgrps.text + cgrps.suffix, delims)) {
             return true;
         }
         return false;
     }
+
+    const escapedList = ContextHolder.getWorkspaceState("escapedCharacters", []) as string[];
+    const escapedSet = new Set(escapedList);
+
+    const checkUnusualCharacter = config.get<boolean>('appearance.warning.checkUnusualCharacters') as boolean;
 
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
         if (jgrps.text === cgrps.text) {
@@ -116,6 +166,30 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                 res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '标点符号使用不规范', c_index, pre + m.index, m[0].length));
                 return false;
             });
+        }
+
+        if (checkUnusualCharacter) {
+            try {
+                const content = cgrps.text;
+                for (let i = 0; i < content.length; i++) {
+                    const buf = iconv.encode(content[i], 'gb2312');
+                    if (buf.length < 2) {
+                        continue;
+                    }
+                    if (buf[0] < 0xA1 || buf[0] > 0xF7 || buf[1] < 0xA1 || buf[1] > 0xFE) {
+                        if (escapedSet.has(content[i])) {
+                            continue;
+                        }
+                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '非常用汉字', c_index, cgrps.prefix.length + cgrps.white.length + i, 1);
+                        d.code = ErrorCode.UnusualCharacter;
+                        res.push(d);
+                    }
+                }
+                
+
+            } catch (e) {
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '可能包含非常用汉字', c_index, cgrps.prefix.length + cgrps.white.length, cgrps.text.length));
+            }
         }
 
     });
