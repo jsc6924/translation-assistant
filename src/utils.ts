@@ -204,6 +204,17 @@ export function isAsciiOnly(str: string): boolean {
   return true;
 }
 
+export function escapeHtml(text: string): string {
+  const map = new Map<string, string>([
+    ['&', '&amp;'],
+    ['<', '&lt;'],
+    ['>', '&gt;'],
+    ['"', '&quot;'],
+    ["'", '&#039;']
+]);
+  return text.replace(/[&<>"']/g, function(m: string) { return map.get(m) as string; });
+}
+
 export function isFunctionalCharsOnly(text: string): boolean {
   return /^[…。，、！？「」『』【】（）～~♪]+$/.test(text);
 }

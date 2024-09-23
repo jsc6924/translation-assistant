@@ -7,7 +7,7 @@ import * as iconv from "iconv-lite";
 
 // not used yet, can be used to diagnostic 
 export enum ErrorCode {
-    Untranslated = 1,
+    Untranslated =  1,
     UnusualCharacter = 2,
 }
 

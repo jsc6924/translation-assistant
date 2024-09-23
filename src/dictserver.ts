@@ -88,7 +88,7 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
 export async function downloadDefaultServer(context: vscode.ExtensionContext): Promise<string> {
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
     let executablePath = '';
-    const executableDir = path.join(context.globalStoragePath, "dict-server");
+    const executableDir = path.join(context.globalStorageUri.fsPath, "dict-server");
     fs.mkdirSync(executableDir, {recursive: true});
     executablePath = path.join(executableDir, 'dict-server.exe');
     const downloadURLs = [

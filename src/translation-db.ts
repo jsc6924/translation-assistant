@@ -147,8 +147,8 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         }
         TRDBCriticalSection(context, async () => {
             const fsPath = saveUri.fsPath;
-            const searchIndexPath = path.join(context.globalStoragePath, "SearchIndex");
-            const trdbPath = path.join(context.globalStoragePath, "trdb");
+            const searchIndexPath = path.join(context.globalStorageUri.fsPath, "SearchIndex");
+            const trdbPath = path.join(context.globalStorageUri.fsPath, "trdb");
             channel.appendLine('------导出数据库-----');
             vscode.window.showInformationMessage('正在导出，请耐心等待...');
             await compressFoldersToZip([searchIndexPath, trdbPath], fsPath);
@@ -175,14 +175,14 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         if (fileUris && fileUris.length > 0) {
             TRDBCriticalSection(context, async () => {
                 const filePath = fileUris[0].fsPath;
-                const tempPath = path.join(context.globalStoragePath, "trdb-import-temp");
+                const tempPath = path.join(context.globalStorageUri.fsPath, "trdb-import-temp");
                 channel.show();
                 channel.appendLine('------导入数据库-----');
                 channel.appendLine('正在解压...');
                 await unzipFile(filePath, tempPath);
                 channel.appendLine('正在删除原数据库...');
-                const searchIndexPath = path.join(context.globalStoragePath, "SearchIndex");
-                const trdbPath = path.join(context.globalStoragePath, "trdb");
+                const searchIndexPath = path.join(context.globalStorageUri.fsPath, "SearchIndex");
+                const trdbPath = path.join(context.globalStorageUri.fsPath, "trdb");
                 fsextra.removeSync(searchIndexPath);
                 fsextra.removeSync(trdbPath);
                 channel.appendLine('正在导入新数据库...');
@@ -269,7 +269,7 @@ interface SingleResult {
 
 function showSearchResults(context: vscode.ExtensionContext, query: string, matchedFiles: string[]) {
     const memoryIndex = createFlexSearchIndex();
-    const databasePath = path.join(context.globalStoragePath, 'trdb');
+    const databasePath = path.join(context.globalStorageUri.fsPath, 'trdb');
     const rawTextsPath = path.join(databasePath, 'raw');
     const trTextPath   = path.join(databasePath, 'tr');
     let totalRawLines = [''];
@@ -391,7 +391,7 @@ async function addDocumentPath(context: vscode.ExtensionContext, fsPath: string)
 export function findBlocksForVirtualDocument(context: vscode.ExtensionContext, 
     folder: string, documentFilename: string): string[] 
 {
-    const databasePath = path.join(context.globalStoragePath, 'trdb');
+    const databasePath = path.join(context.globalStorageUri.fsPath, 'trdb');
     fs.mkdirSync(path.join(databasePath, 'raw', folder), {recursive: true});
     fs.mkdirSync(path.join(databasePath, 'tr', folder), {recursive: true});
     const indexedFilenamePrefix = `${documentFilename}`;
@@ -404,7 +404,7 @@ export function findBlocksForVirtualDocument(context: vscode.ExtensionContext,
     return files;
 }
 function deleteDocument(context: vscode.ExtensionContext, folder: string, documentFilename: string) {
-    const databasePath = path.join(context.globalStoragePath, 'trdb');
+    const databasePath = path.join(context.globalStorageUri.fsPath, 'trdb');
     const files = findBlocksForVirtualDocument(context, folder, documentFilename);
     for(const file of files) {
         fs.unlinkSync(path.join(databasePath, 'raw', folder, file));
@@ -457,7 +457,7 @@ async function addDocument(context: vscode.ExtensionContext, documentFilename: s
     lines.push('');
     clines.push('');
     
-    const databasePath = path.join(context.globalStoragePath, 'trdb');
+    const databasePath = path.join(context.globalStorageUri.fsPath, 'trdb');
     fs.mkdirSync(path.join(databasePath, 'raw', GameTitle), {recursive: true});
     fs.mkdirSync(path.join(databasePath, 'tr', GameTitle), {recursive: true});
 
@@ -519,7 +519,7 @@ function createFlexSearchIndex(): Index<IndexedDocument>{
 }
 
 function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
-    const lockFilePath = path.join(context.globalStoragePath, "trdb-lock.json")
+    const lockFilePath = path.join(context.globalStorageUri.fsPath, "trdb-lock.json")
     const writeObj = { workspace: getCurrentWorkspaceFolder() }
     try {
         // Attempt to create the lock file exclusively
@@ -542,7 +542,7 @@ function lockTRDBIndex(context: vscode.ExtensionContext): boolean {
 }
 
 function unlockTRDBIndex(context: vscode.ExtensionContext, forced: boolean = false) {
-    const lockFilePath = path.join(context.globalStoragePath, "trdb-lock.json")
+    const lockFilePath = path.join(context.globalStorageUri.fsPath, "trdb-lock.json")
     try {
         fs.unlinkSync(lockFilePath);
     } catch (error) {
@@ -626,7 +626,7 @@ export class SearchIndex {
     save(context: vscode.ExtensionContext) {
         this.version++;
         let savedObj: any = {};
-        const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
+        const SearchIndexPath = path.join(context.globalStorageUri.fsPath, 'SearchIndex');
         fs.mkdirSync(SearchIndexPath, { recursive: true });
 
         const indexContent = this.index.export()
@@ -644,7 +644,7 @@ export class SearchIndex {
     }
 
     load(context: vscode.ExtensionContext, treeview: trdb_view.TRDBTreeView, forced: boolean = false): boolean {
-        const SearchIndexPath = path.join(context.globalStoragePath, 'SearchIndex');
+        const SearchIndexPath = path.join(context.globalStorageUri.fsPath, 'SearchIndex');
         const SearchIndexJsonPath = path.join(SearchIndexPath, 'SearchIndex.json');
         const IndexPath = path.join(SearchIndexPath, 'Index.json');
 
@@ -741,9 +741,9 @@ export class Tokenizer {
     static tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | undefined;
     static async getAsync(context: vscode.ExtensionContext): Promise<Tokenizer> {
         if (!Tokenizer.tokenizer) {
-            const dictPath = path.join(context.globalStoragePath, "dict");
-            if (!fs.existsSync(path.join(context.globalStoragePath, "dict", "base.dat.gz"))) {
-                const zipPath = path.join(context.globalStoragePath, "dict.zip");
+            const dictPath = path.join(context.globalStorageUri.fsPath, "dict");
+            if (!fs.existsSync(path.join(context.globalStorageUri.fsPath, "dict", "base.dat.gz"))) {
+                const zipPath = path.join(context.globalStorageUri.fsPath, "dict.zip");
                 if (fs.existsSync(zipPath)) {
                     channel.show();
                     channel.appendLine(`检测到目录下存在dict.zip，等待解压...`);

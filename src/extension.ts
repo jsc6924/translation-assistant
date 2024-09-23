@@ -37,8 +37,8 @@ export function activate(context: vscode.ExtensionContext) {
 	ContextHolder.set(context);
 	parser.activate(context);
 
-	if (!fs.existsSync(context.globalStoragePath)) {
-		fs.mkdirSync(context.globalStoragePath, { recursive: true });
+	if (!fs.existsSync(context.globalStorageUri.fsPath)) {
+		fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });
 	}
 
 	let timeout: NodeJS.Timer | undefined = undefined;

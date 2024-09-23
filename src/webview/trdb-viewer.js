@@ -30,8 +30,19 @@ function createSentencePairDiv(jp, tr) {
     pairDiv.classList.add('sentence-pair'); 
     pairDiv.classList.add('dict-widget'); 
 
-    pairDiv.innerHTML = jp + '<br>' + tr;
+    pairDiv.innerHTML = escapeHtml(jp) + '<br>' + escapeHtml(tr);
     return pairDiv;
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

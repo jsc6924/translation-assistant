@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck, escapeHtml } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
@@ -561,7 +561,7 @@ export namespace trdb_view {
             registerCommand(context, "Extension.dltxt.trdb.openVirtualFile", (args) => {
                 const folder = args.folder;
                 const filename = args.filename;
-                const databasePath = path.join(context.globalStoragePath, 'trdb');
+                const databasePath = path.join(context.globalStorageUri.fsPath, 'trdb');
                 const files = findBlocksForVirtualDocument(context, folder, filename);
                 files.sort((a, b) => {
                     return a.localeCompare(b);
@@ -585,8 +585,8 @@ export namespace trdb_view {
                 const lines = [];
                 for(let i = 0; i < rlines.length; i++) {
                     const tag = `${(i+1).toString().padStart(6, '0')}`;
-                    lines.push(`[${tag}]` + rlines[i].replace(/\s+/g, ''));
-                    lines.push(`;[${tag}]` + tlines[i]);
+                    lines.push(`[${tag}]` + escapeHtml(rlines[i].replace(/\s+/g, '')));
+                    lines.push(`;[${tag}]` + escapeHtml(tlines[i]));
                     lines.push('');
                 }
                 showOutputText(`${folder}/${filename}`, lines.join('<br>'));
