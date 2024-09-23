@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ContextHolder, downloadFile, getWebviewContent, registerCommand, showOutputText, sleep } from './utils';
+import { ContextHolder, downloadFile, getWebviewContent, registerCommand, sleep } from './utils';
 import { resolve } from 'url';
 import { channel } from './dlbuild';
 import { spawn } from 'child_process';

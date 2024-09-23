@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
 import { StopWordsSet } from './stopwords-jp';
-import { registerCommand, showOutputText, downloadFile, unzipFile, getCurrentWorkspaceFolder } from './utils';
+import { registerCommand, downloadFile, unzipFile, getCurrentWorkspaceFolder } from './utils';
 import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
 import { trdb_view } from './treeview';
