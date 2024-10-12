@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.29.0",
+	"version": "3.29.1",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -446,7 +446,7 @@
 		],
 		"keybindings": [
 			{
-				"command": "Extension.dltxt.cursorToNextLine",
+				"command": "Extension.dltxt.cursorToNextLineNested",
 				"key": "alt+enter",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
