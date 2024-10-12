@@ -8,7 +8,8 @@ import { DecorationMemoryStorage } from './simpletm';
 export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
 	registerCommand(context, 'Extension.dltxt.cursorToLineEnd', cursorToLineEnd);
-  registerCommand(context, 'Extension.dltxt.cursorToNextLine', cursorToNextLine);
+  registerCommand(context, 'Extension.dltxt.cursorToNextLine', () => cursorToNextLine(false));
+  registerCommand(context, 'Extension.dltxt.cursorToNextLineNested', () => cursorToNextLine(true));
 	registerCommand(context, 'Extension.dltxt.cursorToPrevLine', cursorToPrevLine);
 	registerCommand(context, 'Extension.dltxt.cursorToNextWord', cursorToNextWord);
 	registerCommand(context, 'Extension.dltxt.cursorToPrevWord', cursorToPrevWord);
@@ -96,8 +97,27 @@ function cursorToLineEnd() {
   }
 }
 
-function cursorToNextLine() {
+function cursorToNextLine(nested: boolean) {
   const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+  const config = vscode.workspace.getConfiguration("dltxt");
+  if (nested && !!config.get('motion.nestedLine.token')) {
+    const c = editor.selection.start;
+    const text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
+      
+    const token = config.get('motion.nestedLine.token') as string;
+    const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`);
+    const match = tokenRegex.exec(text);
+    if (match) {
+      const dx = match.index + match[0].length;
+      utils.setCursorAndScroll(editor, 0, c.character + dx);
+      return;
+    }
+  }
+
   const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
   if (editor?.selection?.active && ok && nextLine && g) {
     let m = g.prefix.length + g.white.length;

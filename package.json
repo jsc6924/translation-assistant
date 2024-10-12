@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.28.1",
+	"version": "3.29.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -466,7 +466,7 @@
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{
-				"command": "Extension.dltxt.cursorToNextLine",
+				"command": "Extension.dltxt.cursorToNextLineNested",
 				"key": "ctrl+enter",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
@@ -1244,6 +1244,12 @@
 					"default": true,
 					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
 				},
+				"dltxt.motion.nestedLine.token": {
+					"type": "string",
+					"default": "\r\n",
+					"description": "快捷键：设定跨行移动时考虑行内的换行符"
+				},
+
 				"dltxt.y.searchWord.dictserver.displayCount": {
 					"type": "number",
 					"default": 5,
