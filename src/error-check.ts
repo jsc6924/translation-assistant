@@ -164,6 +164,11 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             return false;
         });
 
+        findAllAndProcess(/[っ]/g, cgrps.text, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '日语没删', c_index, pre + m.index, m[0].length));
+            return false;
+        });
+
         {
             let snake = config.get("formatter.a.wave.specify") as string;
             const regStr = `(……?|——?|${snake})[。、，]`;
