@@ -159,6 +159,11 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             return false;
         });
 
+        findAllAndProcess(/[,.?!]+/g, cgrps.text, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '半角标点', c_index, pre + m.index, m[0].length));
+            return false;
+        });
+
         {
             let snake = config.get("formatter.a.wave.specify") as string;
             const regStr = `(……?|——?|${snake})[。、，]`;
@@ -180,7 +185,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                         if (escapedSet.has(content[i])) {
                             continue;
                         }
-                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '非常用汉字', c_index, cgrps.prefix.length + cgrps.white.length + i, 1);
+                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '疑似非常用汉字', c_index, cgrps.prefix.length + cgrps.white.length + i, 1);
                         d.code = ErrorCode.UnusualCharacter;
                         res.push(d);
                     }

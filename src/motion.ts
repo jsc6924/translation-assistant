@@ -10,7 +10,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToLineEnd', cursorToLineEnd);
   registerCommand(context, 'Extension.dltxt.cursorToNextLine', () => cursorToNextLine(false));
   registerCommand(context, 'Extension.dltxt.cursorToNextLineNested', () => cursorToNextLine(true));
-	registerCommand(context, 'Extension.dltxt.cursorToPrevLine', cursorToPrevLine);
+	registerCommand(context, 'Extension.dltxt.cursorToPrevLine', () => cursorToPrevLine(false));
+	registerCommand(context, 'Extension.dltxt.cursorToPrevLineNested', () => cursorToPrevLine(true));
 	registerCommand(context, 'Extension.dltxt.cursorToNextWord', cursorToNextWord);
 	registerCommand(context, 'Extension.dltxt.cursorToPrevWord', cursorToPrevWord);
   registerCommand(context, 'Extension.dltxt.cursorToSublineHead', () => {
@@ -125,8 +126,53 @@ function cursorToNextLine(nested: boolean) {
   }
 }
 
-function cursorToPrevLine() {
+function getNewLineTokenMatches(text: string): RegExpMatchArray[] {
+  const config = vscode.workspace.getConfiguration("dltxt");
+  const token = config.get('motion.nestedLine.token') as string;
+  const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`, "g");
+  
+  const matches = [];
+  do {
+    const match = tokenRegex.exec(text);
+    if (match) {
+      matches.push(match);
+      tokenRegex.lastIndex = match.index + match[0].length;
+    } else {
+      break;
+    }
+  } while (true);
+
+  return matches;
+}
+
+function cursorToPrevLine(nested: boolean) {
   const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+
+  const config = vscode.workspace.getConfiguration("dltxt");
+  if (nested && !!config.get('motion.nestedLine.token')) {
+    const c = editor.selection.start;
+    const [ok, line, groups] = DocumentParser.getCurrentTranslationLine(editor);
+    if (!ok || !line || !groups) {
+      return;
+    }
+    const base = groups?.prefix.length + groups?.white.length;
+    const text = groups?.text.substring(0, c.character - base);
+    
+    const matches = getNewLineTokenMatches(text);
+
+    if (matches.length > 1) {
+      const match = matches[matches.length - 2];
+      match.index && utils.setCursorAndScroll(editor, 0, base + match.index + match[0].length);
+      return;
+    } else if (matches.length === 1) {
+      utils.setCursorAndScroll(editor, 0, base);
+      return;
+    }
+  }
   const [ok, prevLine, g] = DocumentParser.getPrevTranslationLine(editor);
   if (editor?.selection?.active && ok && prevLine && g) {
     let m = g.prefix.length + g.white.length;
@@ -241,7 +287,36 @@ function moveToNextLine() {
     return;
   }
   const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
-  if (editor?.selection?.active && ok && nextLine && g) {
+  if (!editor.selection?.active || !ok || !g) {
+    return;
+  }
+  
+  const config = vscode.workspace.getConfiguration("dltxt");
+  if (!!config.get('motion.nestedLine.token')) {
+    const c = editor.selection.start;
+    const text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
+      
+    const token = config.get('motion.nestedLine.token') as string;
+    const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`);
+    const match = tokenRegex.exec(text);
+    if (match) {
+      const toEdit = new vscode.Range(
+        c.with(c.line, c.character),
+        c.with(c.line, c.character + match.index + match[0].length));
+      const text = editor.document.getText(toEdit);
+      const edited = text.substring(match.index) + text.substring(0, match.index);
+      editor.edit((editbuilder) => {
+        editbuilder.replace(toEdit, edited);
+      });
+      if (config.get('motion.moveToNextLine.moveCursor') as boolean) {
+        utils.setCursorAndScroll(editor, 0, c.character + edited.length);
+      }
+    }
+    return;
+  }
+
+  if (nextLine) {
     const position = editor.selection.active;
     let m = g.prefix.length + g.white.length;
     let n = nextLine.lineNumber - position.line;
@@ -267,28 +342,61 @@ function moveToPrevLine() {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
-  if (editor?.selection?.active && ok && nextLine && g) {
-    const position = editor.selection.active;
-    let m = g.prefix.length + g.white.length;
-    let n = nextLine.lineNumber - position.line;
-    const [ok2, curLine, curg] = DocumentParser.getCurrentTranslationLine(editor);
-    if (!ok2 || !curLine || !curg) {
+
+  const config = vscode.workspace.getConfiguration("dltxt");
+  if (!!config.get('motion.nestedLine.token')) {
+    const [ok, curLine, g] = DocumentParser.getCurrentTranslationLine(editor);
+    if (!ok || !curLine || !g) {
       return;
     }
-    const t = curg.prefix.length + curg.white.length;
-    const toMove = new vscode.Range(
-      position.with(position.line, t),
-      position.with(position.line, position.character))
-    const toInsert = new vscode.Position(
-      position.line - n, INT_MAX
-    );
-    let sline = editor.document.getText(toMove);
-    editor.edit((editbuilder) => {
-      editbuilder.delete(toMove);
-      editbuilder.insert(toInsert, sline);
-    });
+    const c = editor.selection.start;
+    const base = g.prefix.length + g.white.length;
+    const text = g.text.substring(0, c.character - base);
+      
+    const matches = getNewLineTokenMatches(text);
+
+    if (matches.length > 0) {
+      const match = matches[matches.length - 1];
+      if (!match.index) {
+        return;
+      }
+      const toEdit = new vscode.Range(
+        c.with(c.line, base + match.index),
+        c.with(c.line, c.character));
+      const text = editor.document.getText(toEdit);
+      const edited = text.substring(match[0].length) + text.substring(0, match[0].length);
+      editor.edit((editbuilder) => {
+        editbuilder.replace(toEdit, edited);
+      });
+    }
+    return;
   }
+
+  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
+  if (!editor.selection?.active || !ok || !g || !nextLine) {
+    return;
+  }
+
+  const position = editor.selection.active;
+  let m = g.prefix.length + g.white.length;
+  let n = nextLine.lineNumber - position.line;
+  const [ok2, curLine, curg] = DocumentParser.getCurrentTranslationLine(editor);
+  if (!ok2 || !curLine || !curg) {
+    return;
+  }
+  
+  const t = curg.prefix.length + curg.white.length;
+  const toMove = new vscode.Range(
+    position.with(position.line, t),
+    position.with(position.line, position.character))
+  const toInsert = new vscode.Position(
+    position.line - n, INT_MAX
+  );
+  let sline = editor.document.getText(toMove);
+  editor.edit((editbuilder) => {
+    editbuilder.delete(toMove);
+    editbuilder.insert(toInsert, sline);
+  });
 }
 
 function nextPuncInText(del: boolean) {

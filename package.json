@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.29.1",
+	"version": "3.29.2",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -456,7 +456,7 @@
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{
-				"command": "Extension.dltxt.cursorToPrevLine",
+				"command": "Extension.dltxt.cursorToPrevLineNested",
 				"key": "alt+\\",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
@@ -471,7 +471,7 @@
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
-				"command": "Extension.dltxt.cursorToPrevLine",
+				"command": "Extension.dltxt.cursorToPrevLineNested",
 				"key": "ctrl+\\",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
