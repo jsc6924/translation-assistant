@@ -286,10 +286,6 @@ function moveToNextLine() {
   if (!curIsTranslation) {
     return;
   }
-  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
-  if (!editor.selection?.active || !ok || !g) {
-    return;
-  }
   
   const config = vscode.workspace.getConfiguration("dltxt");
   if (!!config.get('motion.nestedLine.token')) {
@@ -315,26 +311,27 @@ function moveToNextLine() {
     }
     return;
   }
-
-  if (nextLine) {
-    const position = editor.selection.active;
-    let m = g.prefix.length + g.white.length;
-    let n = nextLine.lineNumber - position.line;
-    const toMove = new vscode.Range(
-      position.with(position.line, position.character),
-      position.with(position.line, INT_MAX));
-    const toInsert = new vscode.Position(
-      position.line + n, m
-    );
-    let sline = editor.document.getText(toMove);
-    editor.edit((editbuilder) => {
-      editbuilder.delete(toMove);
-      editbuilder.insert(toInsert, sline);
-    });
-    const config = vscode.workspace.getConfiguration("dltxt");
-    if (config.get('motion.moveToNextLine.moveCursor') as boolean) {
-      utils.setCursorAndScroll(editor, n, m + sline.length);
-    }
+  
+  const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
+  if (!editor.selection?.active || !ok || !g || !nextLine) {
+    return;
+  }
+  const position = editor.selection.active;
+  let m = g.prefix.length + g.white.length;
+  let n = nextLine.lineNumber - position.line;
+  const toMove = new vscode.Range(
+    position.with(position.line, position.character),
+    position.with(position.line, INT_MAX));
+  const toInsert = new vscode.Position(
+    position.line + n, m
+  );
+  let sline = editor.document.getText(toMove);
+  editor.edit((editbuilder) => {
+    editbuilder.delete(toMove);
+    editbuilder.insert(toInsert, sline);
+  });
+  if (config.get('motion.moveToNextLine.moveCursor') as boolean) {
+    utils.setCursorAndScroll(editor, n, m + sline.length);
   }
 }
 
