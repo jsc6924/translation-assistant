@@ -343,6 +343,13 @@ export function writeAtomic(filePath: string, data: string): void {
   }
 }
 
+export function normalPdf(x: number, mean: number, stddev: number): number {
+  const variance = stddev * stddev;
+  const denominator = Math.sqrt(2 * Math.PI * variance);
+  const exponent = -((x - mean) * (x - mean)) / (2 * variance);
+  return (1 / denominator) * Math.exp(exponent);
+}
+
 export function compareVersions(version1: string, version2: string) {
   const [major1, minor1, patch1] = version1.split('.').map(Number);
   const [major2, minor2, patch2] = version2.split('.').map(Number);

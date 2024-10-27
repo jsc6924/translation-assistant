@@ -8,7 +8,7 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand } from './batch';
+import { batchCheckCommand, batchInsertNewline } from './batch';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -682,6 +682,15 @@ export namespace cc_view {
             errorWarningNode.children.push(new CommandItem("清除常用汉字警告白名单", async () => {
                 ContextHolder.setWorkspaceState('escapedCharacters', undefined);
             }));
+
+        
+            const otherCommands = new CCDirectory(this, "其他命令", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(otherCommands);
+            otherCommands.children.push(new CommandItem("自动插入换行符", async () => {
+                await batchInsertNewline();
+            }));
+
+
 
             this.dataChanged();
         }

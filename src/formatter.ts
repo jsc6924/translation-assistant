@@ -271,5 +271,3 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   editBuilder.replace(curLine.range, newLine);
 
 }
-
-

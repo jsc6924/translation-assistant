@@ -104,11 +104,11 @@ function cursorToNextLine(nested: boolean) {
     return;
   }
   const config = vscode.workspace.getConfiguration("dltxt");
-  if (nested && !!config.get('motion.nestedLine.token')) {
+  if (nested && !!config.get('nestedLine.token')) {
     const c = editor.selection.start;
     const text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
       
-    const token = config.get('motion.nestedLine.token') as string;
+    const token = config.get('nestedLine.token') as string;
     const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`);
     const match = tokenRegex.exec(text);
@@ -128,7 +128,7 @@ function cursorToNextLine(nested: boolean) {
 
 function getNewLineTokenMatches(text: string): RegExpMatchArray[] {
   const config = vscode.workspace.getConfiguration("dltxt");
-  const token = config.get('motion.nestedLine.token') as string;
+  const token = config.get('nestedLine.token') as string;
   const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`, "g");
   
@@ -153,7 +153,7 @@ function cursorToPrevLine(nested: boolean) {
   }
 
   const config = vscode.workspace.getConfiguration("dltxt");
-  if (nested && !!config.get('motion.nestedLine.token')) {
+  if (nested && !!config.get('nestedLine.token')) {
     const c = editor.selection.start;
     const [ok, line, groups] = DocumentParser.getCurrentTranslationLine(editor);
     if (!ok || !line || !groups) {
@@ -288,11 +288,11 @@ function moveToNextLine() {
   }
   
   const config = vscode.workspace.getConfiguration("dltxt");
-  if (!!config.get('motion.nestedLine.token')) {
+  if (!!config.get('nestedLine.token')) {
     const c = editor.selection.start;
     const text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
       
-    const token = config.get('motion.nestedLine.token') as string;
+    const token = config.get('nestedLine.token') as string;
     const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`);
     const match = tokenRegex.exec(text);
@@ -311,7 +311,7 @@ function moveToNextLine() {
     }
     return;
   }
-  
+
   const [ok, nextLine, g] = DocumentParser.getNextTranslationLine(editor);
   if (!editor.selection?.active || !ok || !g || !nextLine) {
     return;
@@ -341,7 +341,7 @@ function moveToPrevLine() {
     return;
 
   const config = vscode.workspace.getConfiguration("dltxt");
-  if (!!config.get('motion.nestedLine.token')) {
+  if (!!config.get('nestedLine.token')) {
     const [ok, curLine, g] = DocumentParser.getCurrentTranslationLine(editor);
     if (!ok || !curLine || !g) {
       return;

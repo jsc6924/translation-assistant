@@ -190,7 +190,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                         if (escapedSet.has(content[i])) {
                             continue;
                         }
-                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '疑似非常用汉字', c_index, cgrps.prefix.length + cgrps.white.length + i, 1);
+                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '疑似不常用的汉字', c_index, cgrps.prefix.length + cgrps.white.length + i, 1);
                         d.code = ErrorCode.UnusualCharacter;
                         res.push(d);
                     }
@@ -198,7 +198,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                 
 
             } catch (e) {
-                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '可能包含非常用汉字', c_index, cgrps.prefix.length + cgrps.white.length, cgrps.text.length));
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '可能包含不常用的汉字', c_index, cgrps.prefix.length + cgrps.white.length, cgrps.text.length));
             }
         }
 

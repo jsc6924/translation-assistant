@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.29.4",
+	"version": "3.30.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1244,12 +1244,16 @@
 					"default": true,
 					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
 				},
-				"dltxt.motion.nestedLine.token": {
+				"dltxt.nestedLine.token": {
 					"type": "string",
 					"default": "\r\n",
-					"description": "快捷键：设定跨行移动时考虑行内的换行符"
+					"description": "文本内的换行符"
 				},
-
+				"dltxt.nestedLine.maxLen": {
+					"type": "number",
+					"default": 28,
+					"description": "每行文本的最大全角字数（默认28）"
+				},
 				"dltxt.y.searchWord.dictserver.displayCount": {
 					"type": "number",
 					"default": 5,
@@ -1316,6 +1320,7 @@
 		"flexsearch": "^0.6.32",
 		"fs-extra": "^11.1.1",
 		"iconv-lite": "^0.6.3",
+		"is-fullwidth-code-point": "^5.0.0",
 		"js-yaml": "^4.1.0",
 		"kuromoji": "^0.1.2",
 		"open": "^7.4.2",
