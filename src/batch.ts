@@ -202,8 +202,13 @@ function widthArr(text: string): number[] {
     const arr = new Array(text.length).fill(0);
     let width = 0;
     for (let i = 0; i < text.length; i++) {
+        if (text[i] === '—' || text[i] === '…') {
+            width += 2;
+            arr[i] = width;
+            continue;
+        }        
         const c = text.charCodeAt(i);
-        // if c is a fullwidth character
+        // if c is a fullwidth character   
         if (isFullwidthCodePoint(c)) {
             width += 2;
         } else {
@@ -260,26 +265,36 @@ function split_to_lines(text: string, widths: number[], maxLen: number, maxline:
         return [true, [text]];
     }
     const strength = new Array(n-1).fill(0.0);
+    const alphanum = /[a-zA-Z0-9]/;
     const puncs = /[。？！，、—…」』]/;
     const periodPuncs = /[。？！—…]/;
+
     const isPunc = new Array(n).fill(0.0).map((_, i) => puncs.test(text[i]));
     for (let i = 0; i < n - 1; i++) {
         if (isPunc[i]) {
             if (isPunc[i+1]) {
                 strength[i] += 1.0; // p -> p
             } else {
-                // p -> a
+                // p -> a/n
                 if(periodPuncs.test(text[i])) {
                     strength[i] -= 1.0;
                 } else {
                     strength[i] -= 0.75;
                 }
             }
+        } else if (alphanum.test(text[i])) {
+            if (alphanum.test(text[i+1])) {
+                strength[i] += 3.0;// n -> n
+            } else if (isPunc[i+1]) {
+                strength[i] += 1.0; // n -> p
+            } else {
+                // n -> a
+            }
         } else {
             if (isPunc[i+1]) {
                 strength[i] += 1.0; // a -> p
             } else {
-                // a -> a
+                // a -> a/n
             }
         }
     }
