@@ -8,7 +8,7 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand, batchInsertNewline } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline } from './batch';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -686,6 +686,9 @@ export namespace cc_view {
         
             const otherCommands = new CCDirectory(this, "其他命令", vscode.TreeItemCollapsibleState.Collapsed);
             this.roots.push(otherCommands);
+            otherCommands.children.push(new CommandItem("删除换行符", async () => {
+                await batchRemoveNewline();
+            }));
             otherCommands.children.push(new CommandItem("自动插入换行符", async () => {
                 await batchInsertNewline();
             }));

@@ -165,6 +165,39 @@ async function batch_insert_newline(documentUris: vscode.Uri[]) {
     vscode.window.showInformationMessage(`已处理 ${file_processed}/${total_file} 个文件`);
 }
 
+async function batch_reomve_newline(documentUris: vscode.Uri[]) {
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const newline = config.get<string>('nestedLine.token');
+    if (!newline) {
+        vscode.window.showErrorMessage('请先设置换行符');
+        return;
+    }
+
+    const escapedNewline = newline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const deleteNewlineRegex = new RegExp(`${escapedNewline}[\\s　]*`, 'g');
+
+    const workspaceEdit = new vscode.WorkspaceEdit();
+    const total_file = documentUris.length;
+    let file_processed = 0;
+    await batchProcess(documentUris, doc => {
+        DocumentParser.processTranslatedLines(doc, (groups, i) => {
+            const target = groups.white + groups.text + groups.suffix;
+            const insertNewline = newline + utils.repeatStr('　', groups.white.length, false);
+            deleteNewlineRegex.lastIndex = 0;
+            const replaced = target.replace(deleteNewlineRegex, '');
+            if (replaced != target) {
+                const line = doc.lineAt(i);  
+                const start = line.range.start.with({ character: groups.prefix.length });
+                const end = line.range.end;
+                workspaceEdit.replace(doc.uri, new vscode.Range(start, end), replaced);
+            }
+        });
+        file_processed++;
+    });
+    await vscode.workspace.applyEdit(workspaceEdit);
+    vscode.window.showInformationMessage(`已处理 ${file_processed}/${total_file} 个文件`);
+}
+
 function widthArr(text: string): number[] {
     const arr = new Array(text.length).fill(0);
     let width = 0;
@@ -188,7 +221,7 @@ function insert_newline_for_line(text: string, insertNewline: string, deleteNewl
     text = text.replace(/(?<=[？！])[\s　]/g, '');
 
     const MAX_LINE = 3;
-    const wantedMaxLen = Math.min(maxlen, 22);
+    const wantedMaxLen = Math.min(maxlen, 24);
     const widths = widthArr(text);
 
     // no need to split
@@ -199,11 +232,6 @@ function insert_newline_for_line(text: string, insertNewline: string, deleteNewl
     const [valid, lines] = split_to_lines(text, widths, wantedMaxLen, MAX_LINE, [0.6]);
     if (valid) {
         return assembleLines(lines, insertNewline);
-    }
-
-    const [valid2, lines2] = split_to_lines(text, widths, Math.min(maxlen, 25), MAX_LINE, [0.6]);
-    if (valid2) {
-        return assembleLines(lines2, insertNewline);
     }
 
     const [valid3, lines3] = split_to_lines(text, widths, maxlen, MAX_LINE, [0.6, 0.4, 0.1, 0]);
@@ -336,6 +364,14 @@ export async function batchInsertNewline() {
         return;
     }
     await batch_insert_newline(documentUris);
+}
+
+export async function batchRemoveNewline() {
+    const documentUris = await selectBatchRange(true, '{txt,TXT}');
+    if (!documentUris) {
+        return;
+    }
+    await batch_reomve_newline(documentUris);
 }
 
 
