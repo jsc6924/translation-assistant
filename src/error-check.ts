@@ -9,6 +9,13 @@ import * as iconv from "iconv-lite";
 export enum ErrorCode {
     Untranslated =  1,
     UnusualCharacter = 2,
+    EndWithPeriod = 3,
+    WrongEcllipsis = 4,
+    WrongWave = 5,
+    WrongHorizontalLine = 6,
+    FoundH2fPunc = 7,
+    WrongPuncComb = 8,
+    FoundKana = 9,
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -18,6 +25,12 @@ export function activate(context: vscode.ExtensionContext) {
         const escapedList = ContextHolder.getWorkspaceState("escapedCharacters", []) as string[];
         escapedList.push(char);
         ContextHolder.setWorkspaceState("escapedCharacters", escapedList);
+        updateErrorDecorations();
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('dltxt.disableWarning', async (setting: string) => {
+        const config = vscode.workspace.getConfiguration("dltxt");
+        await config.update(setting, false, vscode.ConfigurationTarget.Workspace);
         updateErrorDecorations();
     }));
 }
@@ -32,18 +45,100 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
         const codeActions: vscode.CodeAction[] = [];
 
         context.diagnostics.forEach(diagnostic => {
-            if (diagnostic.code === ErrorCode.UnusualCharacter) {
-                const fix = new vscode.CodeAction('不再显示这个汉字的警告', vscode.CodeActionKind.QuickFix);
-                //get text of the range
-                const text = document.getText(diagnostic.range);
-                fix.command = {
-                    command: 'dltxt.escapeCharacter',
-                    title: '把这个汉字加入白名单',
-                    arguments: [text]
-                };
-                fix.diagnostics = [diagnostic];
-                fix.isPreferred = true;
-                codeActions.push(fix);
+            switch (diagnostic.code) {
+                case ErrorCode.UnusualCharacter: {
+                    const fix = new vscode.CodeAction('不再显示这个汉字的警告', vscode.CodeActionKind.QuickFix);
+                    //get text of the range
+                    const text = document.getText(diagnostic.range);
+                    fix.command = {
+                        command: 'dltxt.escapeCharacter',
+                        title: '把这个汉字加入白名单',
+                        arguments: [text]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
+                case ErrorCode.EndWithPeriod: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["formatter.c.omitPeriod"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
+                case ErrorCode.WrongEcllipsis: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["formatter.a.ellipsis.enable"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
+                case ErrorCode.WrongWave: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["formatter.a.wave.enable"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
+                case ErrorCode.WrongHorizontalLine: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["formatter.a.horizontalLine.enable"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
+                case ErrorCode.FoundH2fPunc: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["formatter.b.h2fPunc"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
+                case ErrorCode.WrongPuncComb: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["appearance.warning.checkPuncCombination"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
+                break;
+
             }
         });
 
@@ -126,6 +221,18 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
 
     const checkUnusualCharacter = config.get<boolean>('appearance.warning.checkUnusualCharacters') as boolean;
 
+    const checkEllipsis = config.get<boolean>('formatter.a.ellipsis.enable') as boolean;
+    const checkOmitPeriod = config.get<boolean>('formatter.c.omitPeriod') as boolean;
+
+    const waveTarget = config.get("formatter.a.wave.specify") as string;
+    const waveRegStr = `[~∼〜～]`.replace(new RegExp(waveTarget, 'g'), '');
+    const checkWave = config.get<boolean>('formatter.a.wave.enable') as boolean && waveRegStr.length > 0;
+
+    const checkHorizontalLine = config.get<boolean>('formatter.a.horizontalLine.enable') as boolean;
+
+    const checkH2fPunc = config.get<boolean>('formatter.b.h2fPunc') as boolean;
+    const checkPuncComb = config.get<boolean>('appearance.warning.checkPuncCombination') as boolean;
+
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
         if (jgrps.text === cgrps.text) {
             if (!skipChecking(cgrps)) {
@@ -135,45 +242,43 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         }
         const pre = cgrps.prefix.length + cgrps.white.length;
 
-        findAllAndProcess( /(\.{2,})|(。{2,})/g, cgrps.text, (m) => {
-            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的省略号', c_index, pre + m.index, m[0].length));
+        checkEllipsis && findAllAndProcess( /(\.{2,})|(。{2,})/g, cgrps.text, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的省略号', c_index, pre + m.index, m[0].length, ErrorCode.WrongEcllipsis));
             return false;
         });
 
-        {
-            let target = config.get("formatter.a.wave.specify") as string;
-            const regStr = `[~∼〜～]`.replace(new RegExp(target, 'g'), '');
-            findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
-                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的波浪号', c_index, pre + m.index, m[0].length));
+        if (checkWave) {
+            findAllAndProcess(new RegExp(waveRegStr, 'g'), cgrps.text, (m) => {
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的波浪号', c_index, pre + m.index, m[0].length, ErrorCode.WrongWave));
                 return false;
             });
         }
         
-        findAllAndProcess(/[―ー－]+/g, cgrps.text, (m) => {
-            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的破折号', c_index, pre + m.index, m[0].length));
+        checkHorizontalLine && findAllAndProcess(/[―ー－]+/g, cgrps.text, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的破折号', c_index, pre + m.index, m[0].length, ErrorCode.WrongHorizontalLine));
             return false;
         });
 
-        findAllAndProcess(/。[」』]/g, cgrps.text + cgrps.suffix, (m) => {
-            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '引号中的句尾应省略句号', c_index, pre + m.index, m[0].length));
+        checkOmitPeriod && findAllAndProcess(/。[」』]/g, cgrps.text + cgrps.suffix, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '引号中的句尾应省略句号', c_index, pre + m.index, m[0].length, ErrorCode.EndWithPeriod));
             return false;
         });
 
-        findAllAndProcess(/[,.?!]+/g, cgrps.text, (m) => {
-            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '半角标点', c_index, pre + m.index, m[0].length));
+        checkH2fPunc && findAllAndProcess(/[,.?!]+/g, cgrps.text, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '半角标点', c_index, pre + m.index, m[0].length, ErrorCode.FoundH2fPunc));
             return false;
         });
 
         findAllAndProcess(/[っ]/g, cgrps.text, (m) => {
-            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '日语没删', c_index, pre + m.index, m[0].length));
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '日语没删', c_index, pre + m.index, m[0].length, ErrorCode.FoundKana));
             return false;
         });
 
-        {
+        if (checkPuncComb) {
             let snake = config.get("formatter.a.wave.specify") as string;
             const regStr = `(……?|——?|${snake})[。、，]`;
             findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
-                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '标点符号使用不规范', c_index, pre + m.index, m[0].length));
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '标点符号使用不规范', c_index, pre + m.index, m[0].length, ErrorCode.WrongPuncComb));
                 return false;
             });
         }
@@ -206,13 +311,16 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     return [res, untranslatedLines];
 }
 
-export function createDiagnostic(level: vscode.DiagnosticSeverity, message: string, lineNumber: number, start: number, length: number) {
+export function createDiagnostic(level: vscode.DiagnosticSeverity, message: string, lineNumber: number, start: number, length: number, code?: number) {
     const range = new vscode.Range(lineNumber, start, lineNumber, start + length);
     const diagnostic = new vscode.Diagnostic(
         range,
         message,
         level
     );
+    if (code) {
+        diagnostic.code = code;
+    }
     return diagnostic;
 }
 
