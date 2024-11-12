@@ -833,6 +833,14 @@ npm install --save @types/vscode@1.80
 
 ```
 
+update pat
+
+login into https://dev.azure.com/
+create a PAT
+```
+vsce login jsc723
+```
+
 
 
 count lines of code 
