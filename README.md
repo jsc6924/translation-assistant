@@ -659,6 +659,8 @@ wordcount:
 #### 自定义文本操作（dltransform.transform）
 可以实现文字的批量替换、删除等。（不能改变文件行数，不过可以新建文件）
 有两种方法：第一种是在yaml配置文件中编写简单脚本，完成简单操作；第二种是编写JavsScript脚本，在yaml中制定脚本名和函数名
+
+output可省略
 #### yaml中嵌入脚本
 ```yaml
 transform:
@@ -851,6 +853,8 @@ find ./src -type f -print0 | xargs -0 wc -l
 
 ---
 ## Release Notes
+#### 3.31 (2024/11/16)
+- dltransform.transform可以省略output
 #### 3.30 (2024/10/27)
 - 支持自动添加换行符
 - 支持删除所有换行符

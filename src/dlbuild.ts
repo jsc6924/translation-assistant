@@ -496,8 +496,9 @@ async function transform(context: vscode.ExtensionContext) {
     const funcNode = yamlData.transform;
     
     const inputPath = path.join(rootDir, funcNode.input.path);
-    const outputPath = path.join(rootDir, funcNode.output.path);
-    const dstEncoding = funcNode.output.encoding;
+    const hasOutput = !!funcNode.output?.path;
+    const outputPath = hasOutput ? path.join(rootDir, funcNode.output.path) : '';
+    const dstEncoding = funcNode.output?.encoding;
     const onGlobalBegin = funcNode['on-global-begin'];
     const onGlobalEnd = funcNode['on-global-end'];
     const onFileBegin = funcNode['on-file-begin'];
@@ -547,11 +548,14 @@ async function transform(context: vscode.ExtensionContext) {
             if (onFileEnd) {
                 e.execScript(onFileEnd, {lines});
             }
+
+            if (hasOutput) {
+                const outputFilePath = path.join(outputPath, relativeDir, file)
+                fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
+                const encodedLabelledBuffer = encodeWithBom(resultString, dstEncoding);
+                fs.writeFileSync(outputFilePath, encodedLabelledBuffer);
+            }
     
-            const outputFilePath = path.join(outputPath, relativeDir, file)
-            fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
-            const encodedLabelledBuffer = encodeWithBom(resultString, dstEncoding);
-            fs.writeFileSync(outputFilePath, encodedLabelledBuffer);
         }, undefined);
 
         if (onGlobalEnd) {
