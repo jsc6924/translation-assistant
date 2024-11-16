@@ -463,6 +463,16 @@ export namespace dict_view
             return undefined;
         }
 
+        getConnectedDicts(): string[] {
+            const result = [];
+            for(const node of this.roots as DictRootItem[]) {
+                if (node.connected) {
+                    result.push(node.dictName);
+                }
+            }
+            return result;
+        }
+
         refresh(element?: DictItem) {
             if (!element) {
                 this.roots = [];

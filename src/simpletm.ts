@@ -469,7 +469,8 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
-		const dictNames = DictSettings.getAllDictNames();
+		const dictNames = dictTree ? dictTree.getConnectedDicts() : [];
+		
 		if (dictNames.length == 0) {
 			vscode.window.showInformationMessage('需要先连接术语库');
 			return;
@@ -629,7 +630,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!rawText) {
 			return;
 		}
-		const dictNames = DictSettings.getAllDictNames();
+		const dictNames = dictTree ? dictTree.getConnectedDicts() : [];
 		if (dictNames.length == 0) {
 			vscode.window.showInformationMessage('需要先连接术语库');
 			return;
