@@ -206,6 +206,13 @@ export namespace dict_view
             }
             return undefined;
         }
+        forEach(cb: (k: string, v: string) => void) {
+            if (this.contentNode) {
+                for(const child of this.contentNode.children) {
+                    cb(child.key, child.value);
+                }
+            }
+        }
         setConnectionStatus(connected: boolean) {
             this.connected = connected;
             if (connected) {

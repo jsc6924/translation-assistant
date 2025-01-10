@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.31.0",
+	"version": "3.32.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -144,6 +144,11 @@
 						"description": "line number"
 					}
 				]
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"title": "获取关键字翻译",
+				"category": "DLTXT"
 			},
 			{
 				"command": "Extension.dltxt.sync_all_database",
@@ -777,6 +782,54 @@
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Normal'",
 				"args": {
 					"arg": "Translate"
+				}
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"key": "ctrl+1",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"index": "0"
+				}
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"key": "ctrl+2",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"index": "1"
+				}
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"key": "ctrl+3",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"index": "2"
+				}
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"key": "ctrl+4",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"index": "3"
+				}
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"key": "ctrl+5",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"index": "4"
+				}
+			},
+			{
+				"command": "Extension.dltxt.writeKeyword",
+				"key": "ctrl+6",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"index": "5"
 				}
 			}
 		],

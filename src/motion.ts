@@ -4,7 +4,6 @@ import { DocumentParser } from './parser';
 import { DictSettings, registerCommand, repeatStr } from './utils';
 import { DecorationMemoryStorage } from './simpletm';
 
-
 export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
 	registerCommand(context, 'Extension.dltxt.cursorToLineEnd', cursorToLineEnd);

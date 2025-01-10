@@ -3,12 +3,13 @@ import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder, DictType } from './utils';
+import { editorWriteString } from './motion';
 const AhoCorasick = require('ahocorasick');
 
 
 export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com/";
 
-let dictTree: dict_view.DictTreeView | undefined = undefined; 
+export let dictTree: dict_view.DictTreeView | undefined = undefined; 
 
 export function activate(context: vscode.ExtensionContext) {
 	const configInit = vscode.workspace.getConfiguration("dltxt");
@@ -650,12 +651,53 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		vscode.commands.executeCommand('Extension.dltxt.dict_update', name, rawText);
 	});
-
+	registerCommand(context, `Extension.dltxt.writeKeyword`, async　function (args) {
+		let index = args.index;
+		writeKeywordTranslation(index);
+	});
 	vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
+}
+
+async function writeKeywordTranslation(index: number) {
+  let activeEditor = vscode.window.activeTextEditor;
+  if (!dictTree || !activeEditor || !activeEditor.selection.active) {
+	return;
+  }
+  const currentLineNumber = activeEditor.selection.active.line;
+  const decos = getDecorationsOnLine(activeEditor.document.uri, currentLineNumber - 1); // TODO: now assuming jp is one line above zh
+  if (index >= decos.length) {
+	vscode.window.showErrorMessage('索引越界');
+	return;
+  }
+  const deco = decos[index];
+  editorWriteString(deco.__dltxt.new_text);
 }
 
 
 export const DecorationMemoryStorage: Map<string, any> = new Map();
+
+export function getDecorationsOnLine(uri: vscode.Uri, line: number): any[] {
+	if (!dictTree) {
+		return [];
+	}
+	const result = [];
+	const dictNames = dictTree.getConnectedDicts();
+	for (const dictName of dictNames) {
+		const decoID = `${uri.fsPath}::${dictName}`;
+		const decos = DecorationMemoryStorage.get(decoID);
+		if (!decos) {
+			continue;
+		}
+		for (const deco of decos) {
+			if (deco.range.start.line == line) {
+				result.push(deco);
+			}
+		}
+	}
+	return result.sort((a, b) => {
+		return a.range.start.character - b.range.start.character;
+	});
+}
 
 
 export function updateKeywordDecorations() {
