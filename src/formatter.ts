@@ -87,6 +87,12 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   if (config.get("formatter.a.horizontalLine.enable"))
     ops.push(horizontalLine);
 
+  const fixExcliamationQuestion = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    cgrps.text = cgrps.text.replace(/！？/g, '？！');
+  }
+  if (config.get("formatter.a.fixExcliamationQuestion"))
+    ops.push(fixExcliamationQuestion);
+
   function fixReversedQuote(qStart: string, qEnd: string, qAlter?: string) {
     return (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
       let text: string = cgrps.text as string;

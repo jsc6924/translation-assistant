@@ -1174,6 +1174,11 @@
 					"default": true,
 					"description": "格式化文本：统一破折号"
 				},
+				"dltxt.formatter.a.fixExcliamationQuestion": {
+					"type": "boolean",
+					"default": true,
+					"description": "格式化文本：统一？！"
+				},
 				"dltxt.formatter.b.fixReversedQuote": {
 					"type": "boolean",
 					"default": true,

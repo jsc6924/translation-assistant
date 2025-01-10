@@ -16,6 +16,7 @@ export enum ErrorCode {
     FoundH2fPunc = 7,
     WrongPuncComb = 8,
     FoundKana = 9,
+    ExclamationQuestion = 10,
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -137,6 +138,18 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
+
+                case ErrorCode.ExclamationQuestion: {
+                    const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.disableWarning',
+                        title: '关闭警告',
+                        arguments: ["formatter.a.fixExcliamationQuestion"]
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
                 break;
 
             }
@@ -232,6 +245,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
 
     const checkH2fPunc = config.get<boolean>('formatter.b.h2fPunc') as boolean;
     const checkPuncComb = config.get<boolean>('appearance.warning.checkPuncCombination') as boolean;
+    const checkExclamationQuestion = config.get<boolean>('formatter.a.fixExcliamationQuestion') as boolean;
 
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
         if (jgrps.text === cgrps.text) {
@@ -271,6 +285,11 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
 
         findAllAndProcess(/[っ]/g, cgrps.text, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '日语没删', c_index, pre + m.index, m[0].length, ErrorCode.FoundKana));
+            return false;
+        });
+
+        checkExclamationQuestion && findAllAndProcess(/！？/g, cgrps.text, (m) => {
+            res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '应改成？！', c_index, pre + m.index, m[0].length, ErrorCode.ExclamationQuestion));
             return false;
         });
 
