@@ -3,16 +3,19 @@ import { registerCommand } from './utils';
 import * as utils from './utils';
 import * as fs from "fs"; 
 import * as path from "path";
-import { DocumentParser } from './parser';
+import { DocumentParser, MatchedGroups } from './parser';
 import { channel } from './dlbuild';
 import { performance } from 'perf_hooks';
 import { createDiagnostic, ErrorCode, filterUntranslatedLines, warningCheck } from './error-check';
 import { insert_newline_for_line } from './newline';
+import { Pair } from './utils';
 
 
-async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument) => void) {
+async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true) {
     const total_file = documentUris.length;
-    channel.show();
+    if (show) {
+        channel.show();
+    }
     channel.appendLine(`已处理 0/${total_file}\n`);
     const startTime = performance.now();
 
@@ -24,7 +27,7 @@ async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDoc
             const uri = documentUris[i + j];
             const task = vscode.workspace.openTextDocument(uri).then((doc) => {
                 try {
-                    cb(doc);
+                    cb(doc, i + j);
                 } catch (e) {
                     channel.appendLine(`Error processing ${uri.fsPath}: ${e}`);
                 }
@@ -224,6 +227,91 @@ export async function batchRemoveNewline() {
     await batch_reomve_newline(documentUris);
 }
 
+class TextLocation {
+    constructor(public uriIndex: number, public line: number, public ctext: string) { }
+}
+
+function textNormalize(key: string) {
+    return key;
+}
+
+export async function checkSimilarText() {
+    const documentUris = await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined)
+    if (!documentUris) {
+        return;
+    }
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        return;
+    }
+    const textCounter = new Map<string, TextLocation[]>();
+    await batchProcess(documentUris, (doc, i) => {
+        DocumentParser.processPairedLines(doc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
+            const jtext = textNormalize(jgrps.text);
+            const ctext = cgrps.text;
+            const refs = textCounter.get(jtext) || [];
+            refs.push(new TextLocation(i, j_index, ctext));
+            textCounter.set(jtext, refs);
+        });
+    }, false);
+
+    const currentDoc = activeEditor.document;
+    let modeFinder: number[] = []; // ref count, num of text that has this count
+    const lineNumberAndRefs: Pair<number, TextLocation[]>[] = [];
+    DocumentParser.processPairedLines(currentDoc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {   
+        const jtext = textNormalize(jgrps.text);
+        let refs = textCounter.get(jtext);
+        if (!refs) {
+            return;
+        }
+        refs = refs.filter(r => !(documentUris[r.uriIndex].fsPath === currentDoc.uri.fsPath && r.line == j_index));
+        lineNumberAndRefs.push([j_index, refs]);
+        const count = modeFinder[refs.length] ?? 0;
+        modeFinder[refs.length] = count + 1;
+    });
+
+    let maxCount = 0, lenWithMaxCount = 0;
+    for(let i = 0; i < modeFinder.length; i++) {
+        if (modeFinder[i] !== undefined && modeFinder[i] > maxCount) {
+            maxCount = modeFinder[i];
+            lenWithMaxCount = i;
+        }
+    }
+    const minNoticableLen = lenWithMaxCount + 1; // without this number of similar text, it will not be shown
+    let obj = {
+          isWholeLine: true,
+          borderStyle: 'none',
+          overviewRulerLane: vscode.OverviewRulerLane.Center,
+          light: {
+              // this color will be used in light color themes
+              overviewRulerColor: 'rgb(183, 178, 239)',
+              backgroundColor: 'rgb(183, 178, 239)'
+          },
+          dark: {
+              // this color will be used in dark color themes
+              overviewRulerColor: 'rgb(72, 71, 104)',
+              backgroundColor: 'rgb(72, 71, 104)'
+        }
+    };
+        
+    const decoStyle = vscode.window.createTextEditorDecorationType(obj);
+    const lineDecos = [] as vscode.DecorationOptions[];
+    for (const [line, refs] of lineNumberAndRefs) {
+        if (refs.length >= minNoticableLen && refs.length <= 10) {
+            const lineRange = new vscode.Range(line, 0, line, 1000);
+            refs.sort((a, b) => a.uriIndex - b.uriIndex);
+            const msg = new vscode.MarkdownString(refs.map(r => {
+                const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.ctext)}"})`;
+                return `${documentUris[r.uriIndex].path}:${r.line}=>${r.ctext} ${copyCommand}`
+            }).join('\n\n'))
+            msg.isTrusted = true;
+            const deco = { range: lineRange, hoverMessage: msg };
+            lineDecos.push(deco);
+        }
+    }
+    activeEditor.setDecorations(decoStyle, lineDecos);
+}
+
 
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, 'Extension.dltxt.batch_replace', async () => {
@@ -286,5 +374,16 @@ export function activate(context: vscode.ExtensionContext) {
 		await batch_check(documentUris);
 	});
 
+
+
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+        const config = vscode.workspace.getConfiguration("dltxt");
+        const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
+        if (enable && editor) {
+            checkSimilarText();
+        }
+    });
+    const config = vscode.workspace.getConfiguration("dltxt");
+    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText();
 
 }

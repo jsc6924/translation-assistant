@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.32.0",
+	"version": "3.33.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1196,6 +1196,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "外观：显示标点符号使用不规范警告"
+				},
+				"dltxt.appearance.z.checkSimilarTextOnSwitchTab": {
+					"type": "boolean",
+					"default": true,
+					"description": "外观：在切换标签页时检查相似文本"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",

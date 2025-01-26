@@ -8,7 +8,7 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand, batchInsertNewline, batchRemoveNewline } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, checkSimilarText } from './batch';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -708,6 +708,9 @@ export namespace cc_view {
             }));
             otherCommands.children.push(new CommandItem("自动插入换行符", async () => {
                 await batchInsertNewline();
+            }));
+            otherCommands.children.push(new CommandItem("检查相似的文本", async () => {
+                await checkSimilarText();
             }));
 
 

@@ -5,6 +5,8 @@ const decompress = require("decompress");
 import { HttpClient } from "typed-rest-client/HttpClient";
 const archiver = require("archiver");
 
+export type Pair<T1, T2> = [T1, T2];
+
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
   if (pattern.flags.indexOf('g') == -1) {
     vscode.window.showErrorMessage('pattern must have a "g" flag in findLastMatchIndex');
