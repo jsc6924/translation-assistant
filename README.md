@@ -653,6 +653,49 @@ concat:
     encoding: 'utf16le-bom'
 ```
 
+#### 合并文本（dltransform.merge）
+
+使用这个功能前需要用dltxt识别格式
+
+```yaml
+merge:
+  input1: 
+    path: './data_text'
+    encoding: 'utf16le-bom'
+  input2: 
+    path: './chs_text'
+    encoding: 'utf16le-bom'
+  output:
+    path: './merge-output'
+    encoding: 'utf16le-bom'
+```
+假如input1中的文本是
+```
+[001a] 1a
+[001b] 1b
+
+[002a] 2a
+[002b] 2b
+```
+input2中的文本是
+```
+[001a] 1A
+[001b] 1B
+
+[002a] 2A
+[002b] 2B
+```
+合并后output中生成
+```
+[001a] 1a
+[001b] 1B
+
+[002a] 2a
+[002b] 2B
+```
+也就是将input2中的翻译移入input1
+
+
 #### 字数统计（dltransform.wordcount）
 左侧explorer右键菜单中可找到
 配置格式：
@@ -861,6 +904,7 @@ find ./src -type f -print0 | xargs -0 wc -l
 ## Release Notes
 #### 3.33 （2025/01/26）
 - 在当前目录中寻找重复出现的句子
+- 合并文本
 #### 3.32 (2025/01/11)
 - 添加快捷键ctrl+1/2/3/4/5/6 => 输入当前行中的第n个术语的翻译
 #### 3.31 (2024/11/16)

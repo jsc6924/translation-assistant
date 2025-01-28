@@ -9,6 +9,17 @@ concat:
     path: './concated'
     encoding: 'utf16le-bom'
 
+merge:
+  input1: 
+    path: './data_text'
+    encoding: 'utf16le-bom'
+  input2: 
+    path: './chs_text'
+    encoding: 'utf16le-bom'
+  output:
+    path: './merge-output'
+    encoding: 'utf16le-bom'
+
 wordcount:
   input: 
     path: './input-folder'
@@ -47,16 +58,3 @@ transform:
 #       path: './translation'
 #       encoding: 'utf8'
 
-# merge:
-#   input:
-#     raw:
-#       path: './raw'
-#       encoding: 'utf8'
-#     translation:
-#       path: './translation'
-#       encoding: 'utf8'
-#   output: 
-#     digits: 5
-#     tag: 'txt'
-#     path: './input'
-#     encoding: 'utf8'

@@ -44,6 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
 		concat(context);
 	});
 
+    registerCommand(context, 'Extension.dltxt.dltransform.merge', () => {
+        merge(context);
+    })
+
     registerCommand(context, 'Extension.dltxt.dltransform.wordcount', () => {
 		wordcount(context);
 	});
@@ -441,6 +445,88 @@ async function processConcat(yamlData: any, inputPath: string, outContents: stri
     const srcEncoding: string = await getInputEncoding(yamlData.concat.input.encoding, contentBuf);
     const content = iconv.decode(contentBuf, srcEncoding);
     outContents.push(content);
+    return true;
+}
+
+async function merge(context: vscode.ExtensionContext) {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
+
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    const input1Path = path.join(rootDir, yamlData.merge.input1.path);
+    const input2Path = path.join(rootDir, yamlData.merge.input2.path);
+    const outputPath = path.join(rootDir, yamlData.merge.output.path);
+
+    let total = 0;
+    let success = 0;
+    await readFolderRecursively(input1Path, [], undefined, async (folderName, files, relativeDir) => {
+        
+        fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
+        const outContents :string[] = [];
+        for (const file of files) {
+            const outContents :string[] = [];
+            const input1FilePath = path.join(input1Path, relativeDir, file);
+            const input2FilePath = path.join(input2Path, relativeDir, file);
+            const outputFilePath = path.join(outputPath, relativeDir, file);
+            const fileStats = fs.statSync(input1FilePath);
+            if (!fileStats.isFile()) {
+                continue;
+            }
+            try{
+                total++;
+                if(await processMerge(yamlData, input1FilePath, input2FilePath, outContents)) {
+                    success++;
+                }
+                const concatedContent = outContents.join("\r\n");
+                const encodedBuf = encodeWithBom(concatedContent, yamlData.concat.output.encoding);
+                fs.writeFileSync(outputFilePath, encodedBuf);
+            } 
+            catch(e) {
+                channel.appendLine(`合并${file}时出错: ${e}`);
+            }
+        }
+    });
+    vscode.window.showInformationMessage(`合并完成：共${total}个文件，成功${success}个文件`);
+    if (success !== total) {
+        channel.show(true);
+    }
+}
+async function processMerge(yamlData: any, input1Path: string, input2Path: string, outContents: string[]): Promise<boolean> {
+    const contentBuf = fs.readFileSync(input1Path);
+    const srcEncoding: string = await getInputEncoding(yamlData.merge.input1.encoding, contentBuf);
+    const content1 = iconv.decode(contentBuf, srcEncoding);
+    const contentBuf2 = fs.readFileSync(input2Path);
+    const srcEncoding2: string = await getInputEncoding(yamlData.merge.input2.encoding, contentBuf2);
+    const content2 = iconv.decode(contentBuf2, srcEncoding2);
+
+    const firstLines: string[] = [];
+    DocumentParser.processPairedLines(content1, (jgrps, cgrps) => {
+        firstLines.push(`${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
+    });
+
+    const secondLines: string[] = [];
+    DocumentParser.processPairedLines(content2, (jgrps, cgrps) => {
+        secondLines.push(`${cgrps.prefix}${cgrps.white}${cgrps.text}${cgrps.suffix}`);
+    });
+
+    if (firstLines.length !== secondLines.length) {
+        throw new Error('文件行数不匹配');
+    }
+
+    for (let i = 0; i < firstLines.length; i++) {
+        outContents.push(firstLines[i]);
+        outContents.push(secondLines[i]);
+        outContents.push('');
+    }
     return true;
 }
 
