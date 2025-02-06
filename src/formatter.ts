@@ -88,7 +88,10 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     ops.push(horizontalLine);
 
   const fixExcliamationQuestion = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    cgrps.text = cgrps.text.replace(/！？/g, '？！');
+    cgrps.text = cgrps.text.replace(/！+？/g, (s) => {
+      const m = s.match(/！+/g);
+      return m ? '？' + '！'.repeat(m[0].length) : s;
+    });
   }
   if (config.get("formatter.a.fixExcliamationQuestion"))
     ops.push(fixExcliamationQuestion);
