@@ -198,6 +198,9 @@ export function updateErrorDecorations() {
 
 export function updateNewlineDecorations() {
     const config = vscode.workspace.getConfiguration("dltxt");
+    if (!config.get<boolean>('nestedLine.displayTokenAsSymbol')) {
+        return;
+    }
     const activeEditor = vscode.window.activeTextEditor;
     if (!activeEditor) {
         return;

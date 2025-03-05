@@ -1342,7 +1342,7 @@
 					"description": "每行文本的最大全角字数（默认28）"
 				},
 				"dltxt.nestedLine.displayTokenAsSymbol": {
-					"type": "bool",
+					"type": "boolean",
 					"default": true,
 					"description": "将换行符显示为回车符号（不会改变文本内容）"
 				},
