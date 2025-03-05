@@ -583,6 +583,34 @@ export class DictSettings {
     return {deco: newDeco, oldDeco, changed: true}
   }
 
+  static getNewlineDecorationType(token: string): {deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined} {
+    const key = `__dltxt_newline_decoration`;
+    let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
+    if (DictSettings.decoRepo.has(key)) {
+      const {_, deco} = DictSettings.decoRepo.get(key) as any;
+      oldDeco = deco;
+    }
+    const x = token.length;
+    const spacing = x <= 3 ? 0 : -Math.fround(1.0 - 3 / x);
+    const deco = vscode.window.createTextEditorDecorationType({
+      letterSpacing: `${spacing}ch`,
+      borderWidth: "1px",
+      borderStyle: "solid",
+      borderRadius: "5px",
+      color: 'transparent',
+      after: {
+        contentText: "⏎", 
+        color: "gray", 
+        fontWeight: "bold",
+        margin: "0 1.5ch 0 -2.3ch"
+      }
+    });
+    DictSettings.decoRepo.set(key, {version: '', deco: deco});
+    return {deco, oldDeco};
+  }
+
+
+
   //--------------connection settings------------------//
   static getGameTitle(name: string)  : string | undefined {
       return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.gameTitle`) as string;

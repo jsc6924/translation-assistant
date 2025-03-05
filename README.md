@@ -311,6 +311,10 @@ DLTXT默认支持以下格式（用横线隔开）
 
 其中`\r\n`是换行符。想让以上部分快捷键支持换行符，需要在设置`dltxt.nestedLine.Token`中填写换行符。换行符后面的空格不需要添加。
 
+换行符在文本编辑器中会被显示为回车符号。
+
+![newline](https://github.com/jsc6924/translation-assistant/blob/master/imgs/newline.png?raw=true)
+
 #### 剪贴板
 
 插件自带了6个剪贴板，可以自由复制黏贴。
@@ -905,6 +909,7 @@ find ./src -type f -print0 | xargs -0 wc -l
 ---
 ## Release Notes
 #### 3.34  (2025/03/05)
+- 可以将换行符显示为回车符号
 - 在感叹号、问号之后添加或删除空格
 - 修改了一些格式化文本的默认值
 - 增强日语没删的检测

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.34.0",
+	"version": "3.34.1",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1340,6 +1340,11 @@
 					"type": "number",
 					"default": 28,
 					"description": "每行文本的最大全角字数（默认28）"
+				},
+				"dltxt.nestedLine.displayTokenAsSymbol": {
+					"type": "bool",
+					"default": true,
+					"description": "将换行符显示为回车符号（不会改变文本内容）"
 				},
 				"dltxt.y.searchWord.dictserver.displayCount": {
 					"type": "number",

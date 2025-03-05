@@ -783,6 +783,7 @@ export function updateKeywordDecorations() {
 		activeEditor.setDecorations(deco, keywordsDecos);
 		const decoID = `${activeEditor.document.uri.fsPath}::${dictName}`;
 		DecorationMemoryStorage.set(decoID, keywordsDecos);
+
 	}
     
 }

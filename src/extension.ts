@@ -11,7 +11,7 @@ import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
 import * as dlbuild from './dlbuild';
 import { trdb_view, cc_view } from './treeview';
 import { spellCheck, clearSpellCheck } from './spellcheck';
-import { updateErrorDecorations } from './error-check';
+import { updateErrorDecorations, updateNewlineDecorations } from './error-check';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
 import * as trdb from './translation-db';
@@ -78,6 +78,7 @@ export function activate(context: vscode.ExtensionContext) {
 		timeout = setTimeout(() => {
 			simpletm.updateKeywordDecorations();
 			updateErrorDecorations();
+			updateNewlineDecorations();
 		}, 200);
 	}
 
