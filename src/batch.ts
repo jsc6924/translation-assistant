@@ -6,7 +6,7 @@ import * as path from "path";
 import { DocumentParser, MatchedGroups } from './parser';
 import { channel } from './dlbuild';
 import { performance } from 'perf_hooks';
-import { createDiagnostic, ErrorCode, filterUntranslatedLines, warningCheck } from './error-check';
+import { createDiagnostic, ErrorCode, filterUntranslatedLines, updateNewlineDecorations, warningCheck } from './error-check';
 import { insert_newline_for_line } from './newline';
 import { Pair } from './utils';
 
@@ -235,7 +235,9 @@ function textNormalize(key: string) {
     return key;
 }
 
-export async function checkSimilarText() {
+const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
+
+export async function checkSimilarText(delay: number = 0) {
     const documentUris = await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined)
     if (!documentUris) {
         return;
@@ -244,6 +246,17 @@ export async function checkSimilarText() {
     if (!activeEditor) {
         return;
     }
+    const decoStyle = createSimilarTextDecorationType();
+
+    const currentDoc = activeEditor.document;
+    if (similarTextCache.has(currentDoc.uri.fsPath)) {
+        activeEditor.setDecorations(decoStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
+        return;
+    }
+
+    // delay to avoid blocking the UI
+    await new Promise(resolve => setTimeout(resolve, delay));
+
     const textCounter = new Map<string, TextLocation[]>();
     await batchProcess(documentUris, (doc, i) => {
         DocumentParser.processPairedLines(doc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
@@ -255,7 +268,6 @@ export async function checkSimilarText() {
         });
     }, false);
 
-    const currentDoc = activeEditor.document;
     let modeFinder: number[] = []; // ref count, num of text that has this count
     const lineNumberAndRefs: Pair<number, TextLocation[]>[] = [];
     DocumentParser.processPairedLines(currentDoc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {   
@@ -278,23 +290,7 @@ export async function checkSimilarText() {
         }
     }
     const minNoticableLen = lenWithMaxCount + 1; // without this number of similar text, it will not be shown
-    let obj = {
-          isWholeLine: true,
-          borderStyle: 'none',
-          overviewRulerLane: vscode.OverviewRulerLane.Center,
-          light: {
-              // this color will be used in light color themes
-              overviewRulerColor: 'rgb(183, 178, 239)',
-              backgroundColor: 'rgb(183, 178, 239)'
-          },
-          dark: {
-              // this color will be used in dark color themes
-              overviewRulerColor: 'rgb(72, 71, 104)',
-              backgroundColor: 'rgb(72, 71, 104)'
-        }
-    };
-        
-    const decoStyle = vscode.window.createTextEditorDecorationType(obj);
+
     const lineDecos = [] as vscode.DecorationOptions[];
     for (const [line, refs] of lineNumberAndRefs) {
         if (refs.length >= minNoticableLen && refs.length <= 10) {
@@ -310,6 +306,27 @@ export async function checkSimilarText() {
         }
     }
     activeEditor.setDecorations(decoStyle, lineDecos);
+    similarTextCache.set(currentDoc.uri.fsPath, lineDecos);
+}
+
+function createSimilarTextDecorationType() {
+    let obj = {
+        isWholeLine: true,
+        borderStyle: 'none',
+        overviewRulerLane: vscode.OverviewRulerLane.Center,
+        light: {
+            // this color will be used in light color themes
+            overviewRulerColor: 'rgb(183, 178, 239)',
+            backgroundColor: 'rgb(183, 178, 239)'
+        },
+        dark: {
+            // this color will be used in dark color themes
+            overviewRulerColor: 'rgb(72, 71, 104)',
+            backgroundColor: 'rgb(72, 71, 104)'
+      }
+  };
+      
+  return vscode.window.createTextEditorDecorationType(obj);
 }
 
 
@@ -377,15 +394,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 
     vscode.window.onDidChangeActiveTextEditor(editor => {
+        console.log("onDidChangeActiveTextEditor", editor);
         const config = vscode.workspace.getConfiguration("dltxt");
         const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
         if (enable && editor) {
-            setTimeout(() => {
-                checkSimilarText();
-            }, 2000);
+            checkSimilarText(2000);
         }
     });
+    vscode.workspace.onDidCloseTextDocument(doc => {
+        similarTextCache.delete(doc.uri.fsPath);
+    });
     const config = vscode.workspace.getConfiguration("dltxt");
-    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText();
+    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText(2000);
 
 }
