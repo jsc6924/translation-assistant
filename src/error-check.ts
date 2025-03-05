@@ -229,6 +229,9 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         return false;
     }
 
+    // get active selection
+    const curLine = vscode.window.activeTextEditor?.selection.active.line ?? -1;
+
     const escapedList = ContextHolder.getWorkspaceState("escapedCharacters", []) as string[];
     const escapedSet = new Set(escapedList);
 
@@ -273,17 +276,17 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             return false;
         });
 
-        checkOmitPeriod && findAllAndProcess(/。[」』]/g, cgrps.text + cgrps.suffix, (m) => {
+        checkOmitPeriod && findAllAndProcess(/。[」』）]/g, cgrps.text + cgrps.suffix, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '引号中的句尾应省略句号', c_index, pre + m.index, m[0].length, ErrorCode.EndWithPeriod));
             return false;
         });
 
-        checkH2fPunc && findAllAndProcess(/[,.?!]+/g, cgrps.text, (m) => {
+        checkH2fPunc && findAllAndProcess(/[,.?!'"]+/g, cgrps.text, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '半角标点', c_index, pre + m.index, m[0].length, ErrorCode.FoundH2fPunc));
             return false;
         });
 
-        findAllAndProcess(/[っ]/g, cgrps.text, (m) => {
+        c_index != curLine && findAllAndProcess(/[ぁ-んァ-ン]/g, cgrps.text, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '日语没删', c_index, pre + m.index, m[0].length, ErrorCode.FoundKana));
             return false;
         });

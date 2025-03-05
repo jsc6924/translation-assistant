@@ -1148,22 +1148,22 @@
 				},
 				"dltxt.core.x.originalTextWhite": {
 					"type": "string",
-					"default": "\\s*[「]?",
+					"default": "\\s*[「『（]?",
 					"description": "原文每行的前缀"
 				},
 				"dltxt.core.x.translatedTextWhite": {
 					"type": "string",
-					"default": "\\s*[「]?",
+					"default": "\\s*[「『（]?",
 					"description": "译文每行的前缀"
 				},
 				"dltxt.core.y.originalTextSuffix": {
 					"type": "string",
-					"default": "[」]?",
+					"default": "[」』）]?",
 					"description": "原文每行的后缀"
 				},
 				"dltxt.core.y.translatedTextSuffix": {
 					"type": "string",
-					"default": "[」]?",
+					"default": "[」』）]?",
 					"description": "译文每行的后缀"
 				},
 				"dltxt.core.z.textDelimiter": {
