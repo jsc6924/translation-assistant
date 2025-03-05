@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.33.2",
+	"version": "3.34.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1213,7 +1213,7 @@
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"description": "格式化文本：统一缩进与对话外的单括号（「」）"
 				},
 				"dltxt.formatter.a.ellipsis.enable": {
@@ -1295,6 +1295,16 @@
 					"default": false,
 					"description": "格式化文本：把……？/……！改成？/！"
 				},
+				"dltxt.formatter.c.addSpaceAfterQE": {
+					"type": "string",
+					"enum": [
+						"无效",
+						"添加空格",
+						"删除空格"
+					],
+					"default": "无效",
+					"description": "格式化文本：在问号、感叹号后添加空格"
+				},
 				"dltxt.formatter.d.customMapping": {
 					"type": "object",
 					"default": {},
@@ -1323,7 +1333,7 @@
 				},
 				"dltxt.nestedLine.token": {
 					"type": "string",
-					"default": "\r\n",
+					"default": "\\r\\n",
 					"description": "文本内的换行符"
 				},
 				"dltxt.nestedLine.maxLen": {
