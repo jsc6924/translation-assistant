@@ -215,6 +215,25 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
   if (config.get("formatter.c.removeEllipsisQE"))
     ops.push(removeEllipsisQE);
 
+
+  const nestedLineToken = config.get("nestedLine.token") as string;
+  const addSpaceAfterQE = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    let texts = cgrps.text.split(nestedLineToken);
+    texts = texts.map(text => {
+      return text.replace(/([？！])([ 　]*)/g, '$1').replace(/([？！])(?![？！—。，、「」『』（）【】]|$)/g, '$1　');
+    });
+    cgrps.text = texts.join(nestedLineToken);
+  }
+  const removeSpaceAfterQE = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    cgrps.text = cgrps.text.replace(/([？！])([ 　]*)/g, '$1');
+  };
+  const spaceAfterQEOption = config.get("formatter.c.addSpaceAfterQE")
+  if (spaceAfterQEOption == '添加空格')
+    ops.push(addSpaceAfterQE);
+  else if (spaceAfterQEOption == '删除空格')
+    ops.push(removeSpaceAfterQE);
+
+
   const customMappingFunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     const nameMapping = config.get("formatter.d.customMapping") as object
     if (cgrps?.text) {
