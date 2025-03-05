@@ -380,7 +380,9 @@ export function activate(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration("dltxt");
         const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
         if (enable && editor) {
-            checkSimilarText();
+            setTimeout(() => {
+                checkSimilarText();
+            }, 2000);
         }
     });
     const config = vscode.workspace.getConfiguration("dltxt");

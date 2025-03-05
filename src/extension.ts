@@ -76,9 +76,9 @@ export function activate(context: vscode.ExtensionContext) {
 			timeout = undefined;
 		}
 		timeout = setTimeout(() => {
-			simpletm.updateKeywordDecorations();
-			updateErrorDecorations();
 			updateNewlineDecorations();
+			updateErrorDecorations();
+			simpletm.updateKeywordDecorations();
 		}, 200);
 	}
 
