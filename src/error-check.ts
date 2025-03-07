@@ -266,7 +266,9 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     // get active selection
     const curLine = vscode.window.activeTextEditor?.selection.active.line ?? -1;
 
-    const escapedList = ContextHolder.getWorkspaceState("escapedCharacters", []) as string[];
+    const escapedList = (ContextHolder.getWorkspaceState("escapedCharacters", []) as string[]).concat([
+        '啰', 
+    ]) ;
     const escapedSet = new Set(escapedList);
 
     const checkUnusualCharacter = config.get<boolean>('appearance.warning.checkUnusualCharacters') as boolean;
@@ -342,6 +344,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         if (checkUnusualCharacter) {
             try {
                 const content = cgrps.text;
+                
                 for (let i = 0; i < content.length; i++) {
                     const buf = iconv.encode(content[i], 'gb2312');
                     if (buf.length < 2) {
