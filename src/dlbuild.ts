@@ -10,7 +10,7 @@ import { isAscii, regEscape, registerCommand } from './utils';
 
 
 import * as userScriptAPI from './user-script-api';
-import { DocumentParser, getRegex } from './parser';
+import { DocumentParser, getRegex, MatchedGroups } from './parser';
 
 
 export const channel = vscode.window.createOutputChannel("DLTXT");
@@ -589,7 +589,9 @@ async function transform(context: vscode.ExtensionContext) {
     const onGlobalEnd = funcNode['on-global-end'];
     const onFileBegin = funcNode['on-file-begin'];
     const onFileEnd = funcNode['on-file-end'];
+    const onTextBlock = funcNode['on-text-block'];
     const operations = funcNode.operations ?? [];
+    const opMode = funcNode.mode ?? 'line';
     
     let total = 0;
     let success = 0;
@@ -620,17 +622,22 @@ async function transform(context: vscode.ExtensionContext) {
             
             let resultString = '';
             
-
             if (onFileBegin) {
                 e.execScript(onFileBegin, {lines});
             }
-    
-            for (let i = 0; i < lines.length; i++) {
-                lines[i] = lines[i].trim();
-                lines[i] = e.execOperations(operations, {line: lines[i], lines, index: i});
-                resultString += addNewLine(lines[i]);
-            }
 
+            if (opMode === 'line') {
+                for (let i = 0; i < lines.length; i++) {
+                    lines[i] = lines[i].trim();
+                    lines[i] = e.execOperations(operations, {line: lines[i], lines, index: i});
+                    resultString += addNewLine(lines[i]);
+                }
+            } else if (opMode === 'block') {
+                DocumentParser.processPairedLines(content, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
+                    resultString += e.execScript(onTextBlock, {jgrps, cgrps, j_index, c_index});
+                });
+            }
+    
             if (onFileEnd) {
                 e.execScript(onFileEnd, {lines});
             }
@@ -694,7 +701,7 @@ class Executor {
         this.currentFilePath = filePath;
     }
     public execScript(functionName: string, context: any) {
-        this.scriptContext[functionName](context);
+        return this.scriptContext[functionName](context);
     }
     public execOperations(op: any, context: any): string {
         return this.execBlock(op, context);

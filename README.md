@@ -763,6 +763,7 @@ new RegExp(`^(?<prefix>${jPreStr})(?<white>\\s*[「]?)(?<text>.*?)(?<suffix>[」
 要使用在整个执行期间都有效的全局变量，需要使用`vars`（看后面）
 ```yaml
 transform:
+  mode: line # block
   input: 
     path: './test'
   output:
@@ -778,6 +779,8 @@ transform:
   on-global-end: 'onGlobalEnd'
   on-file-begin: 'onFileBegin'
   on-file-end: 'onFileEnd'
+  on-text-block: 'onTextBlock'
+  
 ```
 
 举例
@@ -914,6 +917,7 @@ find ./src -type f -print0 | xargs -0 wc -l
 - 修改了一些格式化文本的默认值
 - 增强日语没删的检测
 - 优化“寻找重复出现的句子”的执行速度
+- 文本批量处理支持block模式
 #### 3.33 （2025/01/26）
 - 在当前目录中寻找重复出现的句子
 - 合并文本

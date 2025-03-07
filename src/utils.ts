@@ -584,11 +584,12 @@ export class DictSettings {
   }
 
   static getNewlineDecorationType(token: string): {deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined} {
-    const key = `__dltxt_newline_decoration`;
+    const key = `__dltxt_newline_decoration_${token}`;
     let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
     if (DictSettings.decoRepo.has(key)) {
       const {_, deco} = DictSettings.decoRepo.get(key) as any;
       oldDeco = deco;
+      return {deco, oldDeco};
     }
     const x = token.length;
     const spacing = x <= 3 ? 0 : -Math.fround(1.0 - 3 / x);

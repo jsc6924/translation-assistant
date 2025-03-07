@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.34.2",
+	"version": "3.34.4",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1343,7 +1343,7 @@
 				},
 				"dltxt.nestedLine.displayTokenAsSymbol": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"description": "将换行符显示为回车符号（不会改变文本内容）"
 				},
 				"dltxt.y.searchWord.dictserver.displayCount": {
