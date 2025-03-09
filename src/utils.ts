@@ -653,7 +653,7 @@ export class DictSettings {
   static setSimpleTMDictKeys(name: string, game: string, value: any) {
       return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`, value);
   }
-  static getLocalDictKeys(name: string, ) {
+  static getLocalDictKeys(name: string) {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey`) as Array<any>;
     if (!v) {
       return [];

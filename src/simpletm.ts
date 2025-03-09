@@ -748,9 +748,14 @@ export function updateKeywordDecorations() {
 			continue;
 		}
 		let dict = new Map<String, string>();
+		const comments = new Map<String, string>();
 		keywords.forEach(v => {
 			dict.set(v['raw'], v['translate']);
+			if (v['comment']) {
+				comments.set(v['raw'], v['comment']);
+			}
 		});
+
 		const text = activeEditor.document.getText();
 
 		const ac = new AhoCorasick(testArray);
@@ -766,7 +771,8 @@ export function updateKeywordDecorations() {
 				const originalWord = keyword.replace(/"/g, '') as string;
 				const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word)}"})`;
 				const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}","line":${startPos.line}})`;
-				const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}`);
+				const comment = comments.has(originalWord) ? ` 备注：${comments.get(originalWord)}` : '';
+				const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}${comment}`);
 				hoverMarkdown.isTrusted = true;
 				const decoration = {
 					range: new vscode.Range(startPos, endPos),
