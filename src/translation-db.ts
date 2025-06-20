@@ -14,11 +14,12 @@ const fsextra = require('fs-extra');
 
 
 export async function activate(context: vscode.ExtensionContext, treeView: trdb_view.TRDBTreeView) {
-    index.load(context, treeView, true);
+    index.bind(treeView);
+    index.load(context, true);
 
     registerCommand(context, "Extension.dltxt.trdb.context.addDoc", async (arg) => {
         TRDBCriticalSection(context, async () => {
-            index.load(context, treeView);
+            index.load(context);
             try {
                 await addDocumentPath(context, arg.fsPath)
                 treeView.refresh(context);
@@ -34,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
 
     registerCommand(context, "Extension.dltxt.trdb.context.addFolder", async (arg) => {
         TRDBCriticalSection(context, async() => {
-            index.load(context, treeView);
+            index.load(context);
             const folderPath = arg.fsPath;
             if (!fs.statSync(folderPath).isDirectory()){
                 vscode.window.showInformationMessage('请选中一个文件夹');
@@ -75,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
             return;
         }
         TRDBCriticalSection(context, async () => {
-            index.load(context, treeView);
+            index.load(context);
             if(deleteDocument(context, folder, filename)) {
                 saveIndex(context);
                 treeView.refresh(context);
@@ -91,7 +92,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
             return;
         }
         TRDBCriticalSection(context, async () => {
-            index.load(context, treeView);
+            index.load(context);
             const files = index.virtualDirectory.get(folder);
             if (!files) {
                 vscode.window.showErrorMessage(`翻译数据库中找不到项目${folder}`);
@@ -119,7 +120,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
     });
 
     registerCommand(context, "Extension.dltxt.trdb.treeview.loadDB", async () => {
-        index.load(context, treeView, true);
+        index.load(context, true);
         vscode.window.showInformationMessage(`已重新加载翻译数据库`);
     });
 
@@ -157,10 +158,18 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
     });
 
     registerCommand(context, "Extension.dltxt.trdb.treeview.import", async () => {
-        if (await vscode.window.showWarningMessage(`导入的数据库将替换现在的数据库。是否继续？`,
-            "是", "否") != "是") {
+        const ImportOptions = [
+            '与现有数据库合并（文件名冲突时用新文件覆盖）',
+            '与现有数据库合并（文件名冲突时保留旧文件）',
+            '替换现有数据库'
+        ]
+        const method = await vscode.window.showQuickPick(ImportOptions, {
+            placeHolder: '请选择导入方式',
+        })
+        if (!method) {
             return;
         }
+
         const options: vscode.OpenDialogOptions = {
             canSelectFiles: true,
             canSelectFolders: false,
@@ -170,36 +179,66 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
               'All Files': ['*']
             }
           };
-        
-        const fileUris = await vscode.window.showOpenDialog(options);
-        if (fileUris && fileUris.length > 0) {
-            TRDBCriticalSection(context, async () => {
-                const filePath = fileUris[0].fsPath;
-                const tempPath = path.join(context.globalStorageUri.fsPath, "trdb-import-temp");
-                channel.show();
-                channel.appendLine('------导入数据库-----');
-                channel.appendLine('正在解压...');
-                await unzipFile(filePath, tempPath);
-                channel.appendLine('正在删除原数据库...');
-                const searchIndexPath = path.join(context.globalStorageUri.fsPath, "SearchIndex");
-                const trdbPath = path.join(context.globalStorageUri.fsPath, "trdb");
-                fsextra.removeSync(searchIndexPath);
-                fsextra.removeSync(trdbPath);
-                channel.appendLine('正在导入新数据库...');
-                const tempSearchIndexPath = path.join(tempPath, "SearchIndex");
-                const tempTrdbPath = path.join(tempPath, "trdb");
-                fsextra.moveSync(tempSearchIndexPath, searchIndexPath);
-                fsextra.moveSync(tempTrdbPath, trdbPath);
-                fsextra.removeSync(tempPath);
-                const oldVersion = index.version;
-                index.load(context, treeView, true);
-                if (index.version < oldVersion) {
-                    index.version = oldVersion;
-                }
-                index.save(context); //save as oldVersion + 1
-                channel.appendLine('导入成功');
-            });
-        }
+
+        if (method === ImportOptions[0] || method === ImportOptions[1]) {
+            const fileUris = await vscode.window.showOpenDialog(options);
+            if (fileUris && fileUris.length > 0) {
+                const replaceOnConflict = method === ImportOptions[0];
+                TRDBCriticalSection(context, async () => {
+                    const filePath = fileUris[0].fsPath;
+                    const tempPath = path.join(context.globalStorageUri.fsPath, "trdb-import-temp");
+                    channel.show();
+                    channel.appendLine('------导入数据库-----');
+                    channel.appendLine('正在解压...');
+                    await unzipFile(filePath, tempPath);
+                    channel.appendLine('正在导入新数据库...');
+                    const tempSearchIndexPath = path.join(tempPath, "SearchIndex");
+                    const tempTrdbPath = path.join(tempPath, "trdb");
+                    const tempSearchIndex = new SearchIndex();
+                    tempSearchIndex.load(context, true, tempSearchIndexPath);
+                    tempSearchIndex.listFiles((folder, files) => {
+                        channel.appendLine(`正在导入文件夹 ${folder} 中的 ${files.length} 个文件`);
+                        for(const file of files) {
+                            importDocument(context, tempTrdbPath, folder, file, replaceOnConflict);
+                        }
+                    });
+                    fsextra.removeSync(tempPath);
+                    treeView.refresh(context);
+                    index.save(context); //save as oldVersion + 1
+                    channel.appendLine('导入成功');
+                });
+            }
+        } else if (method === ImportOptions[2]) {//replace
+            const fileUris = await vscode.window.showOpenDialog(options);
+            if (fileUris && fileUris.length > 0) {
+                TRDBCriticalSection(context, async () => {
+                    const filePath = fileUris[0].fsPath;
+                    const tempPath = path.join(context.globalStorageUri.fsPath, "trdb-import-temp");
+                    channel.show();
+                    channel.appendLine('------导入数据库-----');
+                    channel.appendLine('正在解压...');
+                    await unzipFile(filePath, tempPath);
+                    channel.appendLine('正在删除原数据库...');
+                    const searchIndexPath = path.join(context.globalStorageUri.fsPath, "SearchIndex");
+                    const trdbPath = path.join(context.globalStorageUri.fsPath, "trdb");
+                    fsextra.removeSync(searchIndexPath);
+                    fsextra.removeSync(trdbPath);
+                    channel.appendLine('正在导入新数据库...');
+                    const tempSearchIndexPath = path.join(tempPath, "SearchIndex");
+                    const tempTrdbPath = path.join(tempPath, "trdb");
+                    fsextra.moveSync(tempSearchIndexPath, searchIndexPath);
+                    fsextra.moveSync(tempTrdbPath, trdbPath);
+                    fsextra.removeSync(tempPath);
+                    const oldVersion = index.version;
+                    index.load(context, true);
+                    if (index.version < oldVersion) {
+                        index.version = oldVersion;
+                    }
+                    index.save(context); //save as oldVersion + 1
+                    channel.appendLine('导入成功');
+                });
+            }
+        } 
     });
 
 
@@ -209,7 +248,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         if (editor && !editor.selection.isEmpty) {
             text = editor.document.getText(editor.selection);
         }
-        index.load(context, treeView);
+        index.load(context);
         let query = await vscode.window.showInputBox({
             prompt: '输入要搜索的内容',
             value: text
@@ -233,7 +272,7 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         if (editor && !editor.selection.isEmpty) {
             text = editor.document.getText(editor.selection);
         }
-        index.load(context, treeView);
+        index.load(context);
         let query = await vscode.window.showInputBox({
             prompt: '输入要搜索的内容',
             value: text
@@ -478,6 +517,44 @@ async function addDocument(context: vscode.ExtensionContext, documentFilename: s
     }
 }
 
+async function importDocument(context: vscode.ExtensionContext, docTrdbPath: string, docFolder: string, docFileName: string, replaceOnConflict: boolean): Promise<void> {
+    const databasePath = path.join(context.globalStorageUri.fsPath, 'trdb');
+    fs.mkdirSync(path.join(databasePath, 'raw', docFolder), {recursive: true});
+    fs.mkdirSync(path.join(databasePath, 'tr', docFolder), {recursive: true});
+    const firstIndexedFilename = `${databasePath}/${docFileName}.1.txt`;
+    if (index.filenameToId.has(firstIndexedFilename)) {
+        if (!replaceOnConflict) {
+            return; // already indexed
+        } else {
+            index.remove(firstIndexedFilename);
+            for (let k = 2; ; k++) {
+                const indexedFilename = `${docFolder}/${docFileName}.${k}.txt`;
+                if (!index.filenameToId.has(indexedFilename)) {
+                    break; // no more files
+                }
+                index.remove(indexedFilename);
+                fs.unlinkSync(path.join(databasePath, 'raw', indexedFilename));
+                fs.unlinkSync(path.join(databasePath, 'tr', indexedFilename));
+            }
+        }
+    }
+
+    for (let k = 1; ; k++) {
+        const indexedFilename = `${docFolder}/${docFileName}.${k}.txt`;
+        const rawFilePath = path.join(docTrdbPath, 'raw', indexedFilename);
+        const trFilePath = path.join(docTrdbPath, 'tr', indexedFilename);
+        if (!fs.existsSync(rawFilePath) || !fs.existsSync(trFilePath)) {
+            break; // no more files
+        }
+        const rawContent = fs.readFileSync(rawFilePath, { encoding: 'utf8' });
+        const trContent = fs.readFileSync(trFilePath, { encoding: 'utf8' });
+
+        index.add(indexedFilename, rawContent);
+        fs.writeFileSync(path.join(databasePath, 'raw', indexedFilename), rawContent, { encoding: 'utf8'});
+        fs.writeFileSync(path.join(databasePath, 'tr', indexedFilename), trContent, { encoding: 'utf8'});
+    }
+}
+
 function filterLines(rawLines: string[], trLines: string[], filterRegStr: string): [string[], string[]] {
     const frlines: string[] = [];
     const ftlines: string[] = [];
@@ -578,6 +655,7 @@ export class SearchIndex {
     virtualDirectory: Map<string, Set<string>> = new Map();
     nextId: number = 0;
     version: number = -1;
+    treeview: trdb_view.TRDBTreeView | undefined;
     constructor() {
         this.index = createFlexSearchIndex();
     }
@@ -587,7 +665,7 @@ export class SearchIndex {
     {
         if (this.filenameToId.has(filename)) {
             const id = this.filenameToId.get(filename) as number;
-            this.index.update(id, content);
+            this.index.update(id, content as any);
             return false;
         }
         const id = this.nextId;
@@ -643,8 +721,8 @@ export class SearchIndex {
         writeAtomic(savePath, jsonString);
     }
 
-    load(context: vscode.ExtensionContext, treeview: trdb_view.TRDBTreeView, forced: boolean = false): boolean {
-        const SearchIndexPath = path.join(context.globalStorageUri.fsPath, 'SearchIndex');
+    load(context: vscode.ExtensionContext, forced: boolean = false, searchIndexPath: string = ''): boolean {
+        const SearchIndexPath = searchIndexPath == '' ? path.join(context.globalStorageUri.fsPath, 'SearchIndex') : searchIndexPath;
         const SearchIndexJsonPath = path.join(SearchIndexPath, 'SearchIndex.json');
         const IndexPath = path.join(SearchIndexPath, 'Index.json');
 
@@ -675,11 +753,37 @@ export class SearchIndex {
         });
 
         this.refreshVirtualDirectory();
-        treeview.refresh(context);
+
+        if (this.treeview) {
+            this.treeview.refresh(context);
+        }
 
         const IndexContent = fs.readFileSync(IndexPath, 'utf8');
         this.index.import(IndexContent);
         return true;
+    }
+
+    bind(treeview: trdb_view.TRDBTreeView) {
+        this.treeview = treeview;
+    }
+
+    listFiles(cb: (folder: string, filenames: string[]) => void) {
+        const folders = new Map<string, Set<string>>();
+        for(const file of this.filenameToId.keys()) {
+            const [folder, filename] = this.parseFilename(file);
+            if (folders.has(folder)) {
+                folders.get(folder)?.add(filename);
+            } else {
+                folders.set(folder, new Set([filename]));
+            }
+        }
+        for(const [folder, files] of folders.entries()) {
+            if (files.size > 0) {
+                cb(folder, Array.from(files));
+            } else {
+                cb(folder, []);
+            }
+        }
     }
 
     filenamePattern = /(.*)\/(.*)(\.\d+)(\.txt)/;

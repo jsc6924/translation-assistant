@@ -579,8 +579,10 @@ dltxt默认辞典服务器的端口号为9285，如果需要更改端口号，�
 
 ![trdb-import](https://github.com/jsc6924/translation-assistant/blob/master/imgs/trdb-import.png?raw=true)
 
-点击上图所示图标可导入、导出翻译数据库。导出的数据库被保存为一个zip文件。导入时读取zip文件，替换当前数据库。
-
+点击上图所示图标可导入、导出翻译数据库。导出的数据库被保存为一个zip文件。导入时读取zip文件，可以选择以下的导入方式：
+- 与现有数据库合并（文件名冲突时用新文件覆盖）
+- 与现有数据库合并（文件名冲突时保留旧文件）
+- 替换现有数据库
 
 ## 编程批量操作
 
@@ -877,9 +879,9 @@ vars.get(string): any;
 ## 开发
 ```
 npm run compile && npm run esbuild
-vsce login <username of dev.azure.com>
-vsce package
-vsce publish
+npx @vscode/vsce login <username of dev.azure.com>
+npx @vscode/vsce package
+npx @vscode/vsce publish
 ```
 
 upgrade vscode api version
@@ -895,10 +897,10 @@ npm install --save @types/vscode@1.80
 
 update pat
 
-login into https://dev.azure.com/
+login into https://dev.azure.com/{username}
 create a PAT
 ```
-vsce login jsc723
+npx @vscode/vsce login jsc723
 ```
 
 
@@ -911,6 +913,8 @@ find ./src -type f -print0 | xargs -0 wc -l
 
 ---
 ## Release Notes
+#### 3.35 （2025/06/20）
+- 导入翻译数据库时可以与当前数据库合并
 #### 3.34  (2025/03/05)
 - 可以将换行符显示为回车符号
 - 在感叹号、问号之后添加或删除空格
