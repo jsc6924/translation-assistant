@@ -896,7 +896,8 @@ export class MemoryCrossrefIndex {
     private idAllocator: IdALlocator = new IdALlocator();
     constructor() {
         this.index = FlexSearch.create({
-            profile: 'score',
+            profile: 'balance',
+            threshold: 0,
             tokenize: 'strict',
             encode: "icase",
             split: /\s+/,

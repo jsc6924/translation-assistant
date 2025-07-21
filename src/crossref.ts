@@ -40,7 +40,11 @@ class ProjectIdx {
     public async search(context: vscode.ExtensionContext, query: string, limit: number = 100): Promise<[LineInfo[], number]> {
         const tokenizer = await Tokenizer.getAsync(context);
         const queryTokens = tokenizer.tokenize(query);
-        return this.searchIndex.search(queryTokens, limit);
+        return this.searchIndex.search(queryTokens, {
+            limit,
+            suggest: true,
+            threshold: 9,
+        } as any);
     }
 }
 export const InMemProjectIndex = new ProjectIdx();
@@ -50,9 +54,11 @@ function textNormalize(key: string) {
 }
 
 
-//const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
+const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
+const exactMatchCache = new Map<string, vscode.DecorationOptions[]>();
+let lastCheckTime = 0;
 
-export async function checkSimilarText(context: vscode.ExtensionContext, delay: number = 0) {
+export async function checkSimilarText(context: vscode.ExtensionContext) {
     const documentUris = await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined)
     if (!documentUris) {
         return;
@@ -62,20 +68,21 @@ export async function checkSimilarText(context: vscode.ExtensionContext, delay: 
     if (!activeEditor) {
         return;
     }
-    // delay to avoid blocking the UI
-    await new Promise(resolve => setTimeout(resolve, delay));
 
-    await InMemProjectIndex.update(context, documentUris);
 
     const exactMatchStyle = DecoManager.getExactMatchDecorationType();
     const similarTextStyle = DecoManager.getSimilarTextDecorationType();
     activeEditor.setDecorations(exactMatchStyle, []);
     activeEditor.setDecorations(similarTextStyle, []);
     const currentDoc = activeEditor.document;
-    // if (similarTextCache.has(currentDoc.uri.fsPath)) {
-    //     activeEditor.setDecorations(decoStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
-    //     return;
-    // }
+    const currentTime = Date.now();
+    if ((currentTime - lastCheckTime < 600000) && similarTextCache.has(currentDoc.uri.fsPath) && exactMatchCache.has(currentDoc.uri.fsPath)) {
+        activeEditor.setDecorations(similarTextStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
+        activeEditor.setDecorations(exactMatchStyle, exactMatchCache.get(currentDoc.uri.fsPath)!);
+        return;
+    }
+
+    await InMemProjectIndex.update(context, documentUris);
 
     const tokenizer = await Tokenizer.getAsync(context);
     const jtexts: string[] = [];
@@ -90,7 +97,7 @@ export async function checkSimilarText(context: vscode.ExtensionContext, delay: 
     let modeFinder: number[] = []; // ref count, num of text that has this count
     const lineNumberAndRefs: Tuple3<number, LineInfo[], number>[] = [];
     for (let i = 0; i < jtexts.length; i++) {
-        let [similarLines, refCount] = await InMemProjectIndex.search(context, jtexts[i], 100);
+        let [similarLines, refCount] = await InMemProjectIndex.search(context, jtexts[i], 10);
         similarLines = similarLines.filter(l => l.fileName !== currentDoc.uri.fsPath || l.lineNumber !== jLineNumbers[i]);
         lineNumberAndRefs.push([jLineNumbers[i], similarLines, refCount]);
         modeFinder[refCount] = (modeFinder[refCount] ?? 0) + 1;
@@ -140,9 +147,11 @@ export async function checkSimilarText(context: vscode.ExtensionContext, delay: 
             similarTextDecos.push(deco);
         }
     }
+    lastCheckTime = Date.now();
     activeEditor.setDecorations(exactMatchStyle, exactMatchDecos);
     activeEditor.setDecorations(similarTextStyle, similarTextDecos);
-    // similarTextCache.set(currentDoc.uri.fsPath, lineDecos);
+    exactMatchCache.set(currentDoc.uri.fsPath, exactMatchDecos);
+    similarTextCache.set(currentDoc.uri.fsPath, similarTextDecos);
 }
 
 class DecoManager {
@@ -207,13 +216,15 @@ export function activate(context: vscode.ExtensionContext) {
             const config = vscode.workspace.getConfiguration("dltxt");
             const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
             if (enable && editor) {
-                checkSimilarText(context, 0);
+                checkSimilarText(context);
             }
         });
-    // vscode.workspace.onDidCloseTextDocument(doc => {
-    //     similarTextCache.delete(doc.uri.fsPath);
-    // });
+
+    vscode.workspace.onDidCloseTextDocument(doc => {
+        similarTextCache.delete(doc.uri.fsPath);
+        exactMatchCache.delete(doc.uri.fsPath);
+    });
     const config = vscode.workspace.getConfiguration("dltxt");
-    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText(context, 0);
+    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText(context);
 
 }
