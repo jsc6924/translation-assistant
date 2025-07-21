@@ -11,7 +11,7 @@ import { insert_newline_for_line } from './newline';
 import { Pair } from './utils';
 
 
-async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true) {
+export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true) {
     const total_file = documentUris.length;
     if (show) {
         channel.show();
@@ -227,108 +227,6 @@ export async function batchRemoveNewline() {
     await batch_reomve_newline(documentUris);
 }
 
-class TextLocation {
-    constructor(public uriIndex: number, public line: number, public ctext: string) { }
-}
-
-function textNormalize(key: string) {
-    return key;
-}
-
-const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
-
-export async function checkSimilarText(delay: number = 0) {
-    const documentUris = await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined)
-    if (!documentUris) {
-        return;
-    }
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-        return;
-    }
-    const decoStyle = createSimilarTextDecorationType();
-
-    const currentDoc = activeEditor.document;
-    if (similarTextCache.has(currentDoc.uri.fsPath)) {
-        activeEditor.setDecorations(decoStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
-        return;
-    }
-
-    // delay to avoid blocking the UI
-    await new Promise(resolve => setTimeout(resolve, delay));
-
-    const textCounter = new Map<string, TextLocation[]>();
-    await batchProcess(documentUris, (doc, i) => {
-        DocumentParser.processPairedLines(doc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
-            const jtext = textNormalize(jgrps.text);
-            const ctext = cgrps.text;
-            const refs = textCounter.get(jtext) || [];
-            refs.push(new TextLocation(i, j_index, ctext));
-            textCounter.set(jtext, refs);
-        });
-    }, false);
-
-    let modeFinder: number[] = []; // ref count, num of text that has this count
-    const lineNumberAndRefs: Pair<number, TextLocation[]>[] = [];
-    DocumentParser.processPairedLines(currentDoc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {   
-        const jtext = textNormalize(jgrps.text);
-        let refs = textCounter.get(jtext);
-        if (!refs) {
-            return;
-        }
-        refs = refs.filter(r => !(documentUris[r.uriIndex].fsPath === currentDoc.uri.fsPath && r.line == j_index));
-        lineNumberAndRefs.push([j_index, refs]);
-        const count = modeFinder[refs.length] ?? 0;
-        modeFinder[refs.length] = count + 1;
-    });
-
-    let maxCount = 0, lenWithMaxCount = 0;
-    for(let i = 0; i < modeFinder.length; i++) {
-        if (modeFinder[i] !== undefined && modeFinder[i] > maxCount) {
-            maxCount = modeFinder[i];
-            lenWithMaxCount = i;
-        }
-    }
-    const minNoticableLen = lenWithMaxCount + 1; // without this number of similar text, it will not be shown
-
-    const lineDecos = [] as vscode.DecorationOptions[];
-    for (const [line, refs] of lineNumberAndRefs) {
-        if (refs.length >= minNoticableLen && refs.length <= 10) {
-            const lineRange = new vscode.Range(line, 0, line, 1000);
-            refs.sort((a, b) => a.uriIndex - b.uriIndex);
-            const msg = new vscode.MarkdownString(refs.map(r => {
-                const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.ctext)}"})`;
-                return `${documentUris[r.uriIndex].path}:${r.line}=>${r.ctext} ${copyCommand}`
-            }).join('\n\n'))
-            msg.isTrusted = true;
-            const deco = { range: lineRange, hoverMessage: msg };
-            lineDecos.push(deco);
-        }
-    }
-    activeEditor.setDecorations(decoStyle, lineDecos);
-    similarTextCache.set(currentDoc.uri.fsPath, lineDecos);
-}
-
-function createSimilarTextDecorationType() {
-    let obj = {
-        isWholeLine: true,
-        borderStyle: 'none',
-        overviewRulerLane: vscode.OverviewRulerLane.Center,
-        light: {
-            // this color will be used in light color themes
-            overviewRulerColor: 'rgb(183, 178, 239)',
-            backgroundColor: 'rgb(183, 178, 239)'
-        },
-        dark: {
-            // this color will be used in dark color themes
-            overviewRulerColor: 'rgb(72, 71, 104)',
-            backgroundColor: 'rgb(72, 71, 104)'
-      }
-  };
-      
-  return vscode.window.createTextEditorDecorationType(obj);
-}
-
 
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, 'Extension.dltxt.batch_replace', async () => {
@@ -390,21 +288,5 @@ export function activate(context: vscode.ExtensionContext) {
         const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
 		await batch_check(documentUris);
 	});
-
-
-
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-        console.log("onDidChangeActiveTextEditor", editor);
-        const config = vscode.workspace.getConfiguration("dltxt");
-        const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
-        if (enable && editor) {
-            checkSimilarText(2000);
-        }
-    });
-    vscode.workspace.onDidCloseTextDocument(doc => {
-        similarTextCache.delete(doc.uri.fsPath);
-    });
-    const config = vscode.workspace.getConfiguration("dltxt");
-    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText(2000);
 
 }

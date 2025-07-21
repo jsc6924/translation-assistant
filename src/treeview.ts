@@ -8,7 +8,8 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, checkSimilarText } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline } from './batch';
+import { checkSimilarText } from './crossref';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -710,7 +711,7 @@ export namespace cc_view {
                 await batchInsertNewline();
             }));
             otherCommands.children.push(new CommandItem("检查相似的文本", async () => {
-                await checkSimilarText();
+                await checkSimilarText(context);
             }));
 
 

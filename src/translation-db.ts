@@ -10,6 +10,7 @@ import * as iconv from "iconv-lite";
 import { channel } from './dlbuild';
 import { trdb_view } from './treeview';
 import { DocumentParser } from './parser';
+import { Semaphore } from 'async-mutex';
 const fsextra = require('fs-extra');
 
 
@@ -580,7 +581,7 @@ interface IndexedDocument {
     context: string;
 }
 
-function createFlexSearchIndex(): Index<IndexedDocument>{
+export function createFlexSearchIndex(): Index<IndexedDocument>{
     return FlexSearch.create({
         tokenize: 'forward',
         encode: "icase",
@@ -840,10 +841,139 @@ export class SearchIndex {
     }
 }
 
+export class LineInfo {
+    constructor(
+        public fileName: string,
+        public lineNumber: number,
+        public jpLine: string,
+        public trLine: string
+    ) {}
+
+    // define == operator for LineInfo
+    public equals(other: LineInfo): boolean {
+        return this.fileName === other.fileName &&
+               this.lineNumber === other.lineNumber &&
+               this.jpLine === other.jpLine &&
+               this.trLine === other.trLine;
+    }
+
+    public urlString(): string {
+        return `${this.fileName}:${this.lineNumber}`;
+    }
+
+    public toString(): string {
+        return `${this.fileName}:${this.lineNumber} - ${this.jpLine} / ${this.trLine}`;
+    }
+}
+
+class IdALlocator {
+    private nestId: number = 0;
+    private recycledIds: Set<number> = new Set();
+    allocate(): number {
+        if (this.recycledIds.size > 0) {
+            const id = this.recycledIds.values().next().value;
+            if (id !== undefined) {
+                this.recycledIds.delete(id);
+                return id;
+            }
+        }
+        return this.nestId++;
+    }
+    recycle(id: number): void {
+        this.recycledIds.add(id);
+    }
+}
+
+export class MemoryCrossrefIndex {
+    private index: Index<IndexedDocument>;
+    idToLine: Map<number, LineInfo> = new Map();
+    lineToId: Map<string, number> = new Map(); // filename:lineNumber => id
+    fileUpdatedTime: Map<string, number> = new Map(); // filename => last modified time
+    fileIds: Map<string, Set<number>> = new Map(); // filename => set of ids of lines in that file
+
+    idAllocator: IdALlocator = new IdALlocator();
+    constructor() {
+        this.index = FlexSearch.create({
+            profile: 'score',
+            tokenize: 'strict',
+            encode: "icase",
+            split: /\s+/,
+            async: false,
+            filter: function (value) {
+                return !StopWordsSet.has(value);
+            }
+        });
+    }
+
+    update(filename: string, getContent: () => [string[], number[], string[]]): boolean
+    {
+        const stat = fs.statSync(filename)
+        if (this.fileUpdatedTime.has(filename)) {
+            const lastModified = stat.mtimeMs;
+            if (this.fileUpdatedTime.get(filename) === lastModified) {
+                // no change, skip
+                return false;
+            }
+        }
+        this.fileUpdatedTime.set(filename, stat.mtimeMs);
+        if (this.fileIds.has(filename)) {
+            // remove old lines
+            const ids = this.fileIds.get(filename) as Set<number>;
+            for(const id of ids) {
+                this.index.remove(id);
+                this.idToLine.delete(id);
+                this.lineToId.delete(`${filename}:${this.idToLine.get(id)?.lineNumber}`);
+                this.idAllocator.recycle(id);
+            }
+        } else {
+            this.fileIds.set(filename, new Set());
+        }
+        const thisFileIds = this.fileIds.get(filename) as Set<number>;
+        const [jpLines, jpLineNumbers, trLines] = getContent();
+        if (jpLines.length != trLines.length) {
+            throw new Error(`文件 ${filename} 的日文和翻译行数不匹配`);
+        }
+        
+        for(let i = 0; i < jpLines.length; i++) {
+            const lineNumber = jpLineNumbers[i];
+            const id = this.idAllocator.allocate();
+            const lineInfo = new LineInfo(filename, lineNumber, jpLines[i], trLines[i]);
+            this.idToLine.set(id, lineInfo);
+            this.lineToId.set(`${filename}:${lineNumber}`, id);
+            thisFileIds.add(id);
+            this.index.add(id, jpLines[i]);
+        }
+        return true;
+    }
+
+    search(query: string, options?: number | SearchOptions): LineInfo[] {
+        const res = this.index.search(query, options) as any as number[];
+        const r: LineInfo[] = [];
+        for (let i = 0; i < res.length; i++) {
+            const lineInfo = this.idToLine.get(res[i]);
+            if (lineInfo) {
+                r.push(lineInfo);
+            }
+        }
+        return r;
+    }
+
+}
+
 export class Tokenizer {
     static downloadURL = 'https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip'
     static tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | undefined;
+    static lock = new Semaphore(1);
     static async getAsync(context: vscode.ExtensionContext): Promise<Tokenizer> {
+        await Tokenizer.lock.acquire();
+        try {
+            return await Tokenizer.init(context);
+        } finally {
+            Tokenizer.lock.release();
+        }
+    }
+
+    static async init(context: vscode.ExtensionContext): Promise<Tokenizer> {
         if (!Tokenizer.tokenizer) {
             const dictPath = path.join(context.globalStorageUri.fsPath, "dict");
             if (!fs.existsSync(path.join(context.globalStorageUri.fsPath, "dict", "base.dat.gz"))) {

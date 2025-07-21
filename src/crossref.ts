@@ -1,0 +1,228 @@
+import * as vscode from 'vscode'
+import { DocumentParser, MatchedGroups } from './parser';
+import { Pair, Tuple3 } from './utils';
+import { batchProcess } from './batch';
+import { LineInfo, MemoryCrossrefIndex, SearchIndex, Tokenizer } from './translation-db';
+import { path } from './user-script-api';
+
+class TextLocation {
+    constructor(public uriIndex: number, public line: number, public ctext: string) { }
+}
+
+class ProjectIdx {
+    private searchIndex: MemoryCrossrefIndex;
+    constructor() {
+        this.searchIndex = new MemoryCrossrefIndex();
+    }
+
+    public async update(context: vscode.ExtensionContext, documentUris?: vscode.Uri[]) {
+        const uris = documentUris || await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined);
+        if (!uris) {
+            return;
+        }
+        const tokenizer = await Tokenizer.getAsync(context);
+        await batchProcess(uris, (doc, i) => {
+            this.searchIndex.update(doc.uri.fsPath, () => {
+                const jlines: string[] = [];
+                const jLineNumbers: number[] = [];
+                const clines: string[] = [];
+                DocumentParser.processPairedLines(doc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
+
+                    jlines.push(tokenizer.tokenize(jgrps.text));
+                    jLineNumbers.push(j_index);
+                    clines.push(cgrps.text);
+                });
+                return [jlines, jLineNumbers, clines];
+            })
+        }, false);
+    }
+
+    public async search(context: vscode.ExtensionContext, query: string, limit: number = 100): Promise<LineInfo[]> {
+        const tokenizer = await Tokenizer.getAsync(context);
+        const queryTokens = tokenizer.tokenize(query);
+        return this.searchIndex.search(queryTokens, limit);
+    }
+}
+export const InMemProjectIndex = new ProjectIdx();
+
+function textNormalize(key: string) {
+    return key;
+}
+
+function removeSpace(s: string) {
+    return s.replace(/\s+/g, '').trim();
+}
+
+//const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
+
+export async function checkSimilarText(context: vscode.ExtensionContext, delay: number = 0) {
+    const documentUris = await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined)
+    if (!documentUris) {
+        return;
+    }
+
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        return;
+    }
+    // delay to avoid blocking the UI
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    await InMemProjectIndex.update(context, documentUris);
+
+    const exactMatchStyle = DecoManager.getExactMatchDecorationType();
+    const similarTextStyle = DecoManager.getSimilarTextDecorationType();
+    activeEditor.setDecorations(exactMatchStyle, []);
+    activeEditor.setDecorations(similarTextStyle, []);
+    const currentDoc = activeEditor.document;
+    // if (similarTextCache.has(currentDoc.uri.fsPath)) {
+    //     activeEditor.setDecorations(decoStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
+    //     return;
+    // }
+
+    const tokenizer = await Tokenizer.getAsync(context);
+    const jtexts: string[] = [];
+    const jLineNumbers: number[] = [];
+    DocumentParser.processPairedLines(currentDoc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {   
+        const jtext = tokenizer.tokenize(textNormalize(jgrps.text));
+        jtexts.push(jtext);
+        jLineNumbers.push(j_index);
+        
+    });
+
+    let modeFinder: number[] = []; // ref count, num of text that has this count
+    const lineNumberAndRefs: Tuple3<number, LineInfo[], number>[] = [];
+    for (let i = 0; i < jtexts.length; i++) {
+        let similarLines = await InMemProjectIndex.search(context, jtexts[i], 100);
+        similarLines = similarLines.filter(l => l.fileName !== currentDoc.uri.fsPath || l.lineNumber !== jLineNumbers[i]);
+        let refCount = 0; // num of exact match of this line
+        for (const line of similarLines) {
+            if (removeSpace(line.jpLine) === removeSpace(jtexts[i])) {
+                refCount++;
+            }
+        }
+        lineNumberAndRefs.push([jLineNumbers[i], similarLines, refCount]);
+        modeFinder[refCount] = (modeFinder[refCount] ?? 0) + 1;
+    }
+
+    let maxCount = 0, lenWithMaxCount = 0;
+    for(let i = 0; i < modeFinder.length; i++) {
+        if (modeFinder[i] !== undefined && modeFinder[i] > maxCount) {
+            maxCount = modeFinder[i];
+            lenWithMaxCount = i;
+        }
+    }
+    const minNoticableLen = lenWithMaxCount + 1; // without this number of exact matches, it will not be shown
+
+    const exactMatchDecos = [] as vscode.DecorationOptions[];
+    const similarTextDecos = [] as vscode.DecorationOptions[];
+    const tableHeaders = `#### 相似文本\n\n| 文件 | 原文 | 译文 |`;
+    const tableSeparator = `|---|---|---|`;
+    for (const [line, refs, refCount] of lineNumberAndRefs) {
+        const lineRange = new vscode.Range(line, 0, line, 1000);
+        // Generate all the table rows by mapping over your refs array
+        const tableRows = refs.map(r => {
+            const shortFileName = `${path.basename(r.fileName)}:${r.lineNumber+1}`;
+            const escapedFullPathForTooltip = r.fileName.replace(/"/g, '&quot;');
+            const fileUriWithLine = vscode.Uri.file(r.fileName).with({ 
+    fragment: `L${r.lineNumber + 1}` 
+});
+
+            // This is the content for the first column (File)
+            const fileNameCellContent = `[${shortFileName}](${fileUriWithLine.toString()} "${escapedFullPathForTooltip}")`;
+
+            // Your existing copy command
+            const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.trLine)}"})`;
+
+            // Construct a single table row for the current reference
+            // Each part is a cell, separated by '|'
+            return `| ${fileNameCellContent} | ${removeSpace(r.jpLine)} | ${r.trLine} ${copyCommand} |`;
+        }).join('\n');
+        const fullMarkdown = `${tableHeaders}\n${tableSeparator}\n${tableRows}`;
+        const msg = new vscode.MarkdownString(fullMarkdown);
+        msg.isTrusted = true;
+        const deco = { range: lineRange, hoverMessage: msg };
+
+        if (refCount >= minNoticableLen && refCount <= 10) {
+            exactMatchDecos.push(deco);
+        } else if (refs.length > 0) {
+            similarTextDecos.push(deco);
+        }
+    }
+    activeEditor.setDecorations(exactMatchStyle, exactMatchDecos);
+    activeEditor.setDecorations(similarTextStyle, similarTextDecos);
+    // similarTextCache.set(currentDoc.uri.fsPath, lineDecos);
+}
+
+class DecoManager {
+    private static exactMatchDecorationType: vscode.TextEditorDecorationType | undefined;
+    private static similarTextDecorationType: vscode.TextEditorDecorationType | undefined;
+    public static getExactMatchDecorationType(): vscode.TextEditorDecorationType {
+        if (!this.exactMatchDecorationType) {
+            this.exactMatchDecorationType = createExactMatchTextDecorationType();
+        }
+        return this.exactMatchDecorationType;
+    }
+    public static getSimilarTextDecorationType(): vscode.TextEditorDecorationType {
+        if (!this.similarTextDecorationType) {
+            this.similarTextDecorationType = createSimilarTextDecorationType();
+        }
+        return this.similarTextDecorationType;
+    }
+}
+
+function createExactMatchTextDecorationType() {
+    let obj = {
+        isWholeLine: true,
+        borderStyle: 'none',
+        overviewRulerLane: vscode.OverviewRulerLane.Center,
+        light: {
+            // this color will be used in light color themes
+            overviewRulerColor: 'rgb(183, 178, 239)',
+            backgroundColor: 'rgb(183, 178, 239)'
+        },
+        dark: {
+            // this color will be used in dark color themes
+            overviewRulerColor: 'rgb(72, 71, 104)',
+            backgroundColor: 'rgb(72, 71, 104)'
+        }
+    };
+      
+  return vscode.window.createTextEditorDecorationType(obj);
+}
+
+function createSimilarTextDecorationType() {
+    let obj = {
+        isWholeLine: false,
+        borderStyle: 'none',
+        light: {
+            // this color will be used in light color themes
+            overviewRulerColor: 'rgba(183, 178, 239, 0.3)',
+            backgroundColor: 'rgba(183, 178, 239, 0.3)'
+        },
+        dark: {
+            // this color will be used in dark color themes
+            overviewRulerColor: 'rgba(72, 71, 104, 0.3)',
+            backgroundColor: 'rgba(72, 71, 104, 0.3)'
+      }
+  };
+      
+  return vscode.window.createTextEditorDecorationType(obj);
+}
+
+
+export function activate(context: vscode.ExtensionContext) {
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+            const config = vscode.workspace.getConfiguration("dltxt");
+            const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
+            if (enable && editor) {
+                checkSimilarText(context, 0);
+            }
+        });
+    // vscode.workspace.onDidCloseTextDocument(doc => {
+    //     similarTextCache.delete(doc.uri.fsPath);
+    // });
+    const config = vscode.workspace.getConfiguration("dltxt");
+    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText(context, 0);
+
+}

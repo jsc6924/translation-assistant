@@ -22,6 +22,7 @@ import * as fs from 'fs';
 import * as dictserver from './dictserver';
 import * as parser from './parser';
 import * as batch from './batch';
+import * as crossref from './crossref';
 import * as error_check from './error-check';
 
 
@@ -167,6 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
 	auto_format.activate(context);
 	dictserver.activate(context);
 	batch.activate(context);
+	crossref.activate(context);
 	error_check.activate(context);
 	
 	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {

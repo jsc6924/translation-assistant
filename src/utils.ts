@@ -6,6 +6,7 @@ import { HttpClient } from "typed-rest-client/HttpClient";
 const archiver = require("archiver");
 
 export type Pair<T1, T2> = [T1, T2];
+export type Tuple3<T1, T2, T3> = [T1, T2, T3];
 
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
   if (pattern.flags.indexOf('g') == -1) {
