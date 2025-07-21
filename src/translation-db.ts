@@ -1,6 +1,6 @@
 import * as kuromoji from 'kuromoji';
 import * as vscode from 'vscode';
-import { compressFoldersToZip, getWebviewContent, mapToObject, writeAtomic } from "./utils";
+import { compressFoldersToZip, getWebviewContent, mapToObject, Pair, removeSpace, writeAtomic } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
@@ -886,12 +886,14 @@ class IdALlocator {
 
 export class MemoryCrossrefIndex {
     private index: Index<IndexedDocument>;
-    idToLine: Map<number, LineInfo> = new Map();
-    lineToId: Map<string, number> = new Map(); // filename:lineNumber => id
-    fileUpdatedTime: Map<string, number> = new Map(); // filename => last modified time
-    fileIds: Map<string, Set<number>> = new Map(); // filename => set of ids of lines in that file
+    private idToLine: Map<number, LineInfo> = new Map();
+    private lineToId: Map<string, number> = new Map(); // filename:lineNumber => id
+    private fileUpdatedTime: Map<string, number> = new Map(); // filename => last modified time
+    private fileIds: Map<string, Set<number>> = new Map(); // filename => set of ids of lines in that file
 
-    idAllocator: IdALlocator = new IdALlocator();
+    private exactMatch: Map<string, LineInfo[]> = new Map(); // lineText => LineInfo[]
+
+    private idAllocator: IdALlocator = new IdALlocator();
     constructor() {
         this.index = FlexSearch.create({
             profile: 'score',
@@ -942,20 +944,39 @@ export class MemoryCrossrefIndex {
             this.lineToId.set(`${filename}:${lineNumber}`, id);
             thisFileIds.add(id);
             this.index.add(id, jpLines[i]);
+
+            const nospace = removeSpace(jpLines[i]);
+            let lineRefs = this.exactMatch.get(nospace);
+            if (!lineRefs) {
+                lineRefs = [];
+            }
+            lineRefs = lineRefs.filter((l) => l.fileName !== filename);
+            lineRefs.push(lineInfo);
+            this.exactMatch.set(nospace, lineRefs);
         }
         return true;
     }
 
-    search(query: string, options?: number | SearchOptions): LineInfo[] {
-        const res = this.index.search(query, options) as any as number[];
+    search(query: string, options?: number | SearchOptions): [LineInfo[], number] {
+        const nospace = removeSpace(query);
+        const exactMatches = this.exactMatch.get(nospace);
+        const exactMatchPositions: Set<string> = new Set();
         const r: LineInfo[] = [];
-        for (let i = 0; i < res.length; i++) {
-            const lineInfo = this.idToLine.get(res[i]);
-            if (lineInfo) {
+        if (exactMatches) {
+            for(const lineInfo of exactMatches) {
+                exactMatchPositions.add(`${lineInfo.fileName}:${lineInfo.lineNumber}`);
                 r.push(lineInfo);
             }
         }
-        return r;
+
+        const fuzzy = this.index.search(query, options) as any as number[];
+        for (let i = 0; i < fuzzy.length; i++) {
+            const lineInfo = this.idToLine.get(fuzzy[i]);
+            if (lineInfo && !exactMatchPositions.has(`${lineInfo.fileName}:${lineInfo.lineNumber}`)) {
+                r.push(lineInfo);
+            }
+        }
+        return [r, exactMatches?.length ?? 0];
     }
 
 }

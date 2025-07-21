@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { DocumentParser, MatchedGroups } from './parser';
-import { Pair, Tuple3 } from './utils';
+import { Pair, Tuple3, removeSpace } from './utils';
 import { batchProcess } from './batch';
 import { LineInfo, MemoryCrossrefIndex, SearchIndex, Tokenizer } from './translation-db';
 import { path } from './user-script-api';
@@ -37,7 +37,7 @@ class ProjectIdx {
         }, false);
     }
 
-    public async search(context: vscode.ExtensionContext, query: string, limit: number = 100): Promise<LineInfo[]> {
+    public async search(context: vscode.ExtensionContext, query: string, limit: number = 100): Promise<[LineInfo[], number]> {
         const tokenizer = await Tokenizer.getAsync(context);
         const queryTokens = tokenizer.tokenize(query);
         return this.searchIndex.search(queryTokens, limit);
@@ -49,9 +49,6 @@ function textNormalize(key: string) {
     return key;
 }
 
-function removeSpace(s: string) {
-    return s.replace(/\s+/g, '').trim();
-}
 
 //const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
 
@@ -93,14 +90,8 @@ export async function checkSimilarText(context: vscode.ExtensionContext, delay: 
     let modeFinder: number[] = []; // ref count, num of text that has this count
     const lineNumberAndRefs: Tuple3<number, LineInfo[], number>[] = [];
     for (let i = 0; i < jtexts.length; i++) {
-        let similarLines = await InMemProjectIndex.search(context, jtexts[i], 100);
+        let [similarLines, refCount] = await InMemProjectIndex.search(context, jtexts[i], 100);
         similarLines = similarLines.filter(l => l.fileName !== currentDoc.uri.fsPath || l.lineNumber !== jLineNumbers[i]);
-        let refCount = 0; // num of exact match of this line
-        for (const line of similarLines) {
-            if (removeSpace(line.jpLine) === removeSpace(jtexts[i])) {
-                refCount++;
-            }
-        }
         lineNumberAndRefs.push([jLineNumbers[i], similarLines, refCount]);
         modeFinder[refCount] = (modeFinder[refCount] ?? 0) + 1;
     }

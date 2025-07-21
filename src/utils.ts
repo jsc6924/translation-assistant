@@ -118,6 +118,10 @@ export function isAscii(char: string) {
   return charCode <= 127;
 }
 
+export function removeSpace(text: string): string {
+  return text.replace(/\s+/g, '');
+}
+
 export const DltxtDiagCollection = vscode.languages.createDiagnosticCollection(`dltxt`);
 export const DltxtDiagCollectionSpellcheck = vscode.languages.createDiagnosticCollection(`dltxt-spellcheck`);
 export const DltxtDiagCollectionMissionLine = vscode.languages.createDiagnosticCollection(`dltxt-missingline`);
