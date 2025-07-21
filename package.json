@@ -1416,6 +1416,7 @@
 		"is-fullwidth-code-point": "^5.0.0",
 		"js-yaml": "^4.1.0",
 		"kuromoji": "^0.1.2",
+		"minisearch": "^7.1.2",
 		"open": "^7.4.2",
 		"request": "^2.88.2",
 		"typed-rest-client": "^1.8.11",

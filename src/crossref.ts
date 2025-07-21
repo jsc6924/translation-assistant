@@ -2,8 +2,9 @@ import * as vscode from 'vscode'
 import { DocumentParser, MatchedGroups } from './parser';
 import { Pair, Tuple3, removeSpace } from './utils';
 import { batchProcess } from './batch';
-import { LineInfo, MemoryCrossrefIndex, SearchIndex, Tokenizer } from './translation-db';
+import { LineInfo, LineSearchResult, MemoryCrossrefIndex, SearchIndex, Tokenizer } from './translation-db';
 import { path } from './user-script-api';
+import { Semaphore } from 'async-mutex';
 
 class TextLocation {
     constructor(public uriIndex: number, public line: number, public ctext: string) { }
@@ -11,11 +12,21 @@ class TextLocation {
 
 class ProjectIdx {
     private searchIndex: MemoryCrossrefIndex;
+    static lock = new Semaphore(1);
     constructor() {
         this.searchIndex = new MemoryCrossrefIndex();
     }
 
     public async update(context: vscode.ExtensionContext, documentUris?: vscode.Uri[]) {
+        await ProjectIdx.lock.acquire();
+        try {
+            await this.updateImpl(context, documentUris);
+        } finally {
+            ProjectIdx.lock.release();
+        }
+    }
+
+    private async updateImpl(context: vscode.ExtensionContext, documentUris?: vscode.Uri[]) {
         const uris = documentUris || await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined);
         if (!uris) {
             return;
@@ -37,14 +48,10 @@ class ProjectIdx {
         }, false);
     }
 
-    public async search(context: vscode.ExtensionContext, query: string, limit: number = 100): Promise<[LineInfo[], number]> {
+    public async search(context: vscode.ExtensionContext, query: string): Promise<[LineSearchResult[], number]> {
         const tokenizer = await Tokenizer.getAsync(context);
         const queryTokens = tokenizer.tokenize(query);
-        return this.searchIndex.search(queryTokens, {
-            limit,
-            suggest: true,
-            threshold: 9,
-        } as any);
+        return this.searchIndex.search(queryTokens);
     }
 }
 export const InMemProjectIndex = new ProjectIdx();
@@ -95,16 +102,16 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     });
 
     let modeFinder: number[] = []; // ref count, num of text that has this count
-    const lineNumberAndRefs: Tuple3<number, LineInfo[], number>[] = [];
+    const lineNumberAndRefs: Tuple3<number, LineSearchResult[], number>[] = [];
     for (let i = 0; i < jtexts.length; i++) {
-        let [similarLines, refCount] = await InMemProjectIndex.search(context, jtexts[i], 10);
-        similarLines = similarLines.filter(l => l.fileName !== currentDoc.uri.fsPath || l.lineNumber !== jLineNumbers[i]);
+        let [similarLines, refCount] = await InMemProjectIndex.search(context, jtexts[i]);
+        similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[i]);
         lineNumberAndRefs.push([jLineNumbers[i], similarLines, refCount]);
         modeFinder[refCount] = (modeFinder[refCount] ?? 0) + 1;
     }
 
     let maxCount = 0, lenWithMaxCount = 0;
-    for(let i = 0; i < modeFinder.length; i++) {
+    for(let i = 0; i + 1 < modeFinder.length; i++) {
         if (modeFinder[i] !== undefined && modeFinder[i] > maxCount) {
             maxCount = modeFinder[i];
             lenWithMaxCount = i;
@@ -114,27 +121,27 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
 
     const exactMatchDecos = [] as vscode.DecorationOptions[];
     const similarTextDecos = [] as vscode.DecorationOptions[];
-    const tableHeaders = `#### 相似文本\n\n| 文件 | 原文 | 译文 |`;
-    const tableSeparator = `|---|---|---|`;
+    const tableHeaders = `#### 相似文本\n\n| 文件 | 相似度 | 原文 | 译文 |`;
+    const tableSeparator = `|---|---|---|---|`;
     for (const [line, refs, refCount] of lineNumberAndRefs) {
         const lineRange = new vscode.Range(line, 0, line, 1000);
         // Generate all the table rows by mapping over your refs array
         const tableRows = refs.map(r => {
-            const shortFileName = `${path.basename(r.fileName)}:${r.lineNumber+1}`;
-            const escapedFullPathForTooltip = r.fileName.replace(/"/g, '&quot;');
-            const fileUriWithLine = vscode.Uri.file(r.fileName).with({ 
-    fragment: `L${r.lineNumber + 1}` 
+            const shortFileName = `${path.basename(r.lineInfo.fileName)}:${r.lineInfo.lineNumber+1}`;
+            const escapedFullPathForTooltip = r.lineInfo.fileName.replace(/"/g, '&quot;');
+            const fileUriWithLine = vscode.Uri.file(r.lineInfo.fileName).with({ 
+    fragment: `L${r.lineInfo.lineNumber + 1}` 
 });
 
             // This is the content for the first column (File)
             const fileNameCellContent = `[${shortFileName}](${fileUriWithLine.toString()} "${escapedFullPathForTooltip}")`;
 
             // Your existing copy command
-            const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.trLine)}"})`;
+            const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.lineInfo.trLine)}"})`;
 
             // Construct a single table row for the current reference
             // Each part is a cell, separated by '|'
-            return `| ${fileNameCellContent} | ${removeSpace(r.jpLine)} | ${r.trLine} ${copyCommand} |`;
+            return `| ${fileNameCellContent} | ${r.score.toFixed(3)} | ${removeSpace(r.lineInfo.jpLine)} | ${r.lineInfo.trLine} ${copyCommand} |`;
         }).join('\n');
         const fullMarkdown = `${tableHeaders}\n${tableSeparator}\n${tableRows}`;
         const msg = new vscode.MarkdownString(fullMarkdown);

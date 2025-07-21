@@ -11,6 +11,7 @@ import { channel } from './dlbuild';
 import { trdb_view } from './treeview';
 import { DocumentParser } from './parser';
 import { Semaphore } from 'async-mutex';
+import MiniSearch from 'minisearch'
 const fsextra = require('fs-extra');
 
 
@@ -866,7 +867,18 @@ export class LineInfo {
     }
 }
 
-class IdALlocator {
+export class LineSearchResult {
+    constructor(
+        public lineInfo: LineInfo,
+        public score: number = 0
+    ) {}
+
+    public toString(): string {
+        return `${this.lineInfo.fileName}:${this.lineInfo.lineNumber} - ${this.lineInfo.jpLine} / ${this.lineInfo.trLine} (score: ${this.score})`;
+    }
+}
+
+class IdAllocator {
     private nestId: number = 0;
     private recycledIds: Set<number> = new Set();
     allocate(): number {
@@ -885,7 +897,7 @@ class IdALlocator {
 }
 
 export class MemoryCrossrefIndex {
-    private index: Index<IndexedDocument>;
+    private index: MiniSearch;
     private idToLine: Map<number, LineInfo> = new Map();
     private lineToId: Map<string, number> = new Map(); // filename:lineNumber => id
     private fileUpdatedTime: Map<string, number> = new Map(); // filename => last modified time
@@ -893,19 +905,16 @@ export class MemoryCrossrefIndex {
 
     private exactMatch: Map<string, LineInfo[]> = new Map(); // lineText => LineInfo[]
 
-    private idAllocator: IdALlocator = new IdALlocator();
+    private idAllocator: IdAllocator = new IdAllocator();
     constructor() {
-        this.index = FlexSearch.create({
-            profile: 'balance',
-            threshold: 0,
-            tokenize: 'strict',
-            encode: "icase",
-            split: /\s+/,
-            async: false,
-            filter: function (value) {
-                return !StopWordsSet.has(value);
-            }
-        });
+        this.index = new MiniSearch({
+            fields: ['content'],
+            tokenize: (text) => {
+                return text.split(/\s+/).filter(word => word.length > 0);
+            },
+            processTerm: (term, _fieldName) =>
+            StopWordsSet.has(term) ? null : term
+        })
     }
 
     update(filename: string, getContent: () => [string[], number[], string[]]): boolean
@@ -944,7 +953,10 @@ export class MemoryCrossrefIndex {
             this.idToLine.set(id, lineInfo);
             this.lineToId.set(`${filename}:${lineNumber}`, id);
             thisFileIds.add(id);
-            this.index.add(id, jpLines[i]);
+            this.index.add({
+                id: id,
+                content: jpLines[i],
+            });
 
             const nospace = removeSpace(jpLines[i]);
             let lineRefs = this.exactMatch.get(nospace);
@@ -958,26 +970,35 @@ export class MemoryCrossrefIndex {
         return true;
     }
 
-    search(query: string, options?: number | SearchOptions): [LineInfo[], number] {
+    search(query: string): [LineSearchResult[], number] {
         const nospace = removeSpace(query);
         const exactMatches = this.exactMatch.get(nospace);
         const exactMatchPositions: Set<string> = new Set();
-        const r: LineInfo[] = [];
+        const r: LineSearchResult[] = [];
         if (exactMatches) {
-            for(const lineInfo of exactMatches) {
+            for(const lineInfo of exactMatches.slice(0, 20)) {
                 exactMatchPositions.add(`${lineInfo.fileName}:${lineInfo.lineNumber}`);
-                r.push(lineInfo);
+                r.push(new LineSearchResult(lineInfo, 100)); // exact match gets 100 score
             }
+        }
+        const exactSize = r.length;
+        if (exactSize >= 10) {
+            return [r, exactSize];
         }
 
-        const fuzzy = this.index.search(query, options) as any as number[];
+        let fuzzy = this.index.search(query);
+        fuzzy = fuzzy.slice(0, 10); // limit to 10 results
+        let maxScore = 0.1;
+        if (fuzzy.length > 0) {
+            maxScore = fuzzy[0].score;
+        }
         for (let i = 0; i < fuzzy.length; i++) {
-            const lineInfo = this.idToLine.get(fuzzy[i]);
+            const lineInfo = this.idToLine.get(fuzzy[i].id);
             if (lineInfo && !exactMatchPositions.has(`${lineInfo.fileName}:${lineInfo.lineNumber}`)) {
-                r.push(lineInfo);
+                r.push(new LineSearchResult(lineInfo, fuzzy[i].score / maxScore * 99)); // non-exact match gets score with max 99
             }
         }
-        return [r, exactMatches?.length ?? 0];
+        return [r, exactSize];
     }
 
 }
