@@ -48,10 +48,10 @@ class ProjectIdx {
         }, false);
     }
 
-    public async search(context: vscode.ExtensionContext, query: string): Promise<[LineSearchResult[], number]> {
+    public async search(context: vscode.ExtensionContext, query: string, threshold: number, limit: number): Promise<[LineSearchResult[], number]> {
         const tokenizer = await Tokenizer.getAsync(context);
         const queryTokens = tokenizer.tokenize(query);
-        return this.searchIndex.search(queryTokens);
+        return this.searchIndex.search(queryTokens, threshold, limit);
     }
 }
 export const InMemProjectIndex = new ProjectIdx();
@@ -103,11 +103,14 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
 
     let modeFinder: number[] = []; // ref count, num of text that has this count
     const lineNumberAndRefs: Tuple3<number, LineSearchResult[], number>[] = [];
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
+    const limit = config.get<number>('appearance.z.similarTextLimit', 10);
     for (let i = 0; i < jtexts.length; i++) {
-        let [similarLines, refCount] = await InMemProjectIndex.search(context, jtexts[i]);
+        let [similarLines, exactCount] = await InMemProjectIndex.search(context, jtexts[i], threshold, limit);
         similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[i]);
-        lineNumberAndRefs.push([jLineNumbers[i], similarLines, refCount]);
-        modeFinder[refCount] = (modeFinder[refCount] ?? 0) + 1;
+        lineNumberAndRefs.push([jLineNumbers[i], similarLines, exactCount]);
+        modeFinder[exactCount] = (modeFinder[exactCount] ?? 0) + 1;
     }
 
     let maxCount = 0, lenWithMaxCount = 0;
@@ -123,7 +126,7 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     const similarTextDecos = [] as vscode.DecorationOptions[];
     const tableHeaders = `#### 相似文本\n\n| 文件 | 相似度 | 原文 | 译文 |`;
     const tableSeparator = `|---|---|---|---|`;
-    for (const [line, refs, refCount] of lineNumberAndRefs) {
+    for (const [line, refs, exactCount] of lineNumberAndRefs) {
         const lineRange = new vscode.Range(line, 0, line, 1000);
         // Generate all the table rows by mapping over your refs array
         const tableRows = refs.map(r => {
@@ -148,10 +151,12 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
         msg.isTrusted = true;
         const deco = { range: lineRange, hoverMessage: msg };
 
-        if (refCount >= minNoticableLen && refCount <= 10) {
-            exactMatchDecos.push(deco);
-        } else if (refs.length > 0) {
-            similarTextDecos.push(deco);
+        if (exactCount < limit) {
+            if (exactCount >= minNoticableLen) {
+                exactMatchDecos.push(deco);
+            } else if (refs.length > 0) {
+                similarTextDecos.push(deco);
+            }
         }
     }
     lastCheckTime = Date.now();

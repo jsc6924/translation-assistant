@@ -946,6 +946,7 @@ export class MemoryCrossrefIndex {
             throw new Error(`文件 ${filename} 的日文和翻译行数不匹配`);
         }
         
+        const newLineRefSet = new Map<string, LineInfo[]>();
         for(let i = 0; i < jpLines.length; i++) {
             const lineNumber = jpLineNumbers[i];
             const id = this.idAllocator.allocate();
@@ -959,45 +960,64 @@ export class MemoryCrossrefIndex {
             });
 
             const nospace = removeSpace(jpLines[i]);
-            let lineRefs = this.exactMatch.get(nospace);
+            let lineRefs = newLineRefSet.get(nospace);
             if (!lineRefs) {
                 lineRefs = [];
             }
-            lineRefs = lineRefs.filter((l) => l.fileName !== filename);
             lineRefs.push(lineInfo);
-            this.exactMatch.set(nospace, lineRefs);
+            newLineRefSet.set(nospace, lineRefs);
+        }
+        for (const [nospace, lineRefs] of newLineRefSet.entries()) {
+            if (this.exactMatch.has(nospace)) {
+                const refs = this.exactMatch.get(nospace)!;
+                refs.filter((l) => l.fileName !== filename).push(...lineRefs);
+                this.exactMatch.set(nospace, refs);
+            } else {
+                this.exactMatch.set(nospace, lineRefs);
+            }
         }
         return true;
     }
 
-    search(query: string): [LineSearchResult[], number] {
+    // won't return more than <limit> results
+    search(query: string, threshold: number, limit: number): [LineSearchResult[], number] {
         const nospace = removeSpace(query);
         const exactMatches = this.exactMatch.get(nospace);
         const exactMatchPositions: Set<string> = new Set();
         const r: LineSearchResult[] = [];
+        let exactSize = 0;
         if (exactMatches) {
-            for(const lineInfo of exactMatches.slice(0, 20)) {
+            exactSize = exactMatches.length;
+            for(const lineInfo of exactMatches.slice(0, limit)) {
                 exactMatchPositions.add(`${lineInfo.fileName}:${lineInfo.lineNumber}`);
                 r.push(new LineSearchResult(lineInfo, 100)); // exact match gets 100 score
             }
         }
-        const exactSize = r.length;
-        if (exactSize >= 10) {
+        if (exactSize >= limit) {
             return [r, exactSize];
         }
 
         let fuzzy = this.index.search(query);
-        fuzzy = fuzzy.slice(0, 10); // limit to 10 results
+        fuzzy = fuzzy.slice(0, limit); // limit to <limit> results
         let maxScore = 0.1;
         if (fuzzy.length > 0) {
             maxScore = fuzzy[0].score;
         }
-        for (let i = 0; i < fuzzy.length; i++) {
+        for (let i = 0; i < fuzzy.length && r.length < limit; i++) {
             const lineInfo = this.idToLine.get(fuzzy[i].id);
             if (lineInfo && !exactMatchPositions.has(`${lineInfo.fileName}:${lineInfo.lineNumber}`)) {
-                r.push(new LineSearchResult(lineInfo, fuzzy[i].score / maxScore * 99)); // non-exact match gets score with max 99
+                if (removeSpace(lineInfo.jpLine) === nospace) {
+                    r.push(new LineSearchResult(lineInfo, 100)); // exact match gets 100 score
+                    exactSize++;
+                } else {
+                    const score = fuzzy[i].score / maxScore * 99; // non-exact match gets score with max 99
+                    if (score >= threshold) {
+                        r.push(new LineSearchResult(lineInfo, score));
+                    }
+                }
             }
         }
+        r.sort((a, b) => b.score - a.score); // sort by score descending
         return [r, exactSize];
     }
 

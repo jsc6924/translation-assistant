@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.37.0",
+	"version": "3.37.1",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1210,6 +1210,16 @@
 					"type": "boolean",
 					"default": true,
 					"description": "外观：在切换标签页时检查相似文本"
+				},
+				"dltxt.appearance.z.similarTextThreshold": {
+					"type": "number",
+					"default": 80,
+					"description": "外观：显示相似文本的阈值（百分比）"
+				},
+				"dltxt.appearance.z.similarTextLimit": {
+					"type": "number",
+					"default": 10,
+					"description": "外观：显示相似文本的最大数量"
 				},
 				"dltxt.formatter.a.padding": {
 					"type": "boolean",
