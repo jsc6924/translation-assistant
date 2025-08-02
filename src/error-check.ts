@@ -4,6 +4,7 @@ import { DocumentParser, MatchedGroups } from './parser';
 import { shouldSkipChecking } from './utils';
 import { getTextDelimiter } from './motion';
 import * as iconv from "iconv-lite";
+import { dictTree, getDecorationsOnAllLines } from './simpletm';
 const AhoCorasick = require('ahocorasick');
 
 // not used yet, can be used to diagnostic 
@@ -18,6 +19,7 @@ export enum ErrorCode {
     WrongPuncComb = 8,
     FoundKana = 9,
     ExclamationQuestion = 10,
+    UntranslatedKeyword = 11,
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -272,6 +274,8 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     const escapedSet = new Set(escapedList);
 
     const checkUnusualCharacter = config.get<boolean>('appearance.warning.checkUnusualCharacters') as boolean;
+    const checkUntranslatedKeyword = config.get<boolean>('appearance.warning.checkUntranslatedKeyword') as boolean;
+    const lineDecos = checkUntranslatedKeyword ? getDecorationsOnAllLines(document.uri) : new Map();
 
     const checkEllipsis = config.get<boolean>('formatter.a.ellipsis.enable') as boolean;
     const checkOmitPeriod = config.get<boolean>('formatter.c.omitPeriod') as boolean;
@@ -294,6 +298,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             return;
         }
         const pre = cgrps.prefix.length + cgrps.white.length;
+        const j_pre = jgrps.prefix.length + jgrps.white.length;
 
         checkEllipsis && findAllAndProcess( /(\.{2,})|(。{2,})/g, cgrps.text, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的省略号', c_index, pre + m.index, m[0].length, ErrorCode.WrongEcllipsis));
@@ -354,7 +359,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                         if (escapedSet.has(content[i])) {
                             continue;
                         }
-                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '疑似不常用的汉字', c_index, cgrps.prefix.length + cgrps.white.length + i, 1);
+                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '疑似不常用的汉字', c_index, pre + i, 1);
                         d.code = ErrorCode.UnusualCharacter;
                         res.push(d);
                     }
@@ -362,9 +367,24 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                 
 
             } catch (e) {
-                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '可能包含不常用的汉字', c_index, cgrps.prefix.length + cgrps.white.length, cgrps.text.length));
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '可能包含不常用的汉字', c_index, pre, cgrps.text.length));
             }
         }
+
+        if (checkUntranslatedKeyword) {
+            const decos = lineDecos.get(j_index);
+            if (decos) {
+                for (const deco of decos) {
+                    const original = deco.__dltxt?.old_text;
+                    const expected = deco.__dltxt?.new_text;
+                    if (expected && cgrps.text.indexOf(expected) < 0) {
+                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `术语可能没有按照规范翻译：${original} => ${expected}`, j_index, deco.range.start.character, deco.range.end.character - deco.range.start.character, ErrorCode.UntranslatedKeyword);
+                        res.push(d);
+                    }
+                }
+            }
+        }
+
 
     });
     return [res, untranslatedLines];

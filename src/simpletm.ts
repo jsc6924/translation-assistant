@@ -699,6 +699,28 @@ export function getDecorationsOnLine(uri: vscode.Uri, line: number): any[] {
 	});
 }
 
+export function getDecorationsOnAllLines(uri: vscode.Uri): Map<number, any[]> {
+	const res = new Map<number, any[]>();
+	if (!dictTree) {
+		return res;
+	}
+	const dictNames = dictTree.getConnectedDicts();
+	for (const dictName of dictNames) {
+		const decoID = `${uri.fsPath}::${dictName}`;
+		const decos = DecorationMemoryStorage.get(decoID);
+		if (!decos) {
+			continue;
+		}
+		for (const deco of decos) {
+			const line = deco.range.start.line;
+			if (!res.has(line)) {
+				res.set(line, []);
+			}
+			res.get(line)?.push(deco);
+		}
+	}
+	return res;
+}
 
 export function updateKeywordDecorations() {
 

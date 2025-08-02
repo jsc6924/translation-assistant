@@ -480,7 +480,6 @@ export namespace dict_view
             }
             return result;
         }
-
         refresh(element?: DictItem) {
             if (!element) {
                 this.roots = [];
