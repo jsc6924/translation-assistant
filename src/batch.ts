@@ -12,19 +12,23 @@ import { Pair } from './utils';
 
 
 export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true) {
-    const total_file = documentUris.length;
+    // filter documentUris to exclude files in ExcludedPaths
+    const filteredUris = vscode.workspace.workspaceFolders ? documentUris.filter(uri => {
+        return !ExcludedPaths.some(excludedPath => uri.fsPath.startsWith(excludedPath));
+    }) : documentUris;
+    const total_file = filteredUris.length;
     if (show) {
         channel.show();
     }
     channel.appendLine(`已处理 0/${total_file}\n`);
     const startTime = performance.now();
 
-    for (let i = 0; i < documentUris.length;) {
+    for (let i = 0; i < filteredUris.length;) {
         const tasks = [];
         // batch size = 100时，处理速度比=1时快约4倍
-        const batch_size = Math.min(100, documentUris.length - i);
+        const batch_size = Math.min(100, filteredUris.length - i);
         for(let j = 0; j < batch_size; j++) {
-            const uri = documentUris[i + j];
+            const uri = filteredUris[i + j];
             const task = vscode.workspace.openTextDocument(uri).then((doc) => {
                 try {
                     cb(doc, i + j);
@@ -227,8 +231,22 @@ export async function batchRemoveNewline() {
     await batch_reomve_newline(documentUris);
 }
 
+let ExcludedPaths: string[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
+    // open .gitignore file if exists
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        const gitignorePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gitignore');
+        if (fs.existsSync(gitignorePath)) {
+            const gitignoreContent = fs.readFileSync(gitignorePath, 'utf8');
+            // split by newlines and filter out empty lines
+            const gitignoreLines = gitignoreContent.split(/\r?\n/).filter(line => line.trim() !== '');
+            gitignoreLines.forEach(line => {
+                const relativePath = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, line);
+                ExcludedPaths.push(relativePath);
+            });
+        }
+    }
     registerCommand(context, 'Extension.dltxt.batch_replace', async () => {
 		const document = vscode.window.activeTextEditor?.document;
 		if (!document) return;
