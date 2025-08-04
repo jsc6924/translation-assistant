@@ -250,6 +250,10 @@ export function filterUntranslatedLines(missingLineDiags: readonly vscode.Diagno
 }
 
 
+function normalize(text: string): string {
+    return text.replace(/[○●★☆]/g, '').trim();
+}
+
 
 export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[], number[]] {
     const res = [] as vscode.Diagnostic[];
@@ -291,7 +295,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     const checkExclamationQuestion = config.get<boolean>('formatter.a.fixExcliamationQuestion') as boolean;
 
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
-        if (jgrps.text === cgrps.text) {
+        if (normalize(jgrps.text) === normalize(cgrps.text)) {
             if (!skipChecking(cgrps)) {
                 untranslatedLines.push(c_index);
             }

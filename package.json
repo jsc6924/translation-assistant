@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.39.1",
+	"version": "3.39.2",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1213,7 +1213,7 @@
 				},
 				"dltxt.appearance.warning.checkUntranslatedKeyword": {
 					"type": "boolean",
-					"default": false,
+					"default": true,
 					"description": "外观：显示术语未翻译警告"
 				},
 				"dltxt.appearance.z.similarTextThreshold": {
