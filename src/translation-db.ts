@@ -11,6 +11,7 @@ import { channel } from './dlbuild';
 import { trdb_view } from './treeview';
 import { DocumentParser } from './parser';
 import { Semaphore } from 'async-mutex';
+import { distance } from 'fastest-levenshtein';
 import MiniSearch from 'minisearch'
 const fsextra = require('fs-extra');
 
@@ -903,8 +904,6 @@ export class MemoryCrossrefIndex {
     private fileUpdatedTime: Map<string, number> = new Map(); // filename => last modified time
     private fileIds: Map<string, Set<number>> = new Map(); // filename => set of ids of lines in that file
 
-    private exactMatch: Map<string, LineInfo[]> = new Map(); // lineText => LineInfo[]
-
     private idAllocator: IdAllocator = new IdAllocator();
     constructor() {
         this.index = new MiniSearch({
@@ -967,52 +966,24 @@ export class MemoryCrossrefIndex {
             lineRefs.push(lineInfo);
             newLineRefSet.set(nospace, lineRefs);
         }
-        for (const [nospace, lineRefs] of newLineRefSet.entries()) {
-            if (this.exactMatch.has(nospace)) {
-                const refs = this.exactMatch.get(nospace)!;
-                refs.filter((l) => l.fileName !== filename).push(...lineRefs);
-                this.exactMatch.set(nospace, refs);
-            } else {
-                this.exactMatch.set(nospace, lineRefs);
-            }
-        }
         return true;
     }
 
     // won't return more than <limit> results
     search(query: string, threshold: number, limit: number): [LineSearchResult[], number] {
+        let fuzzy = this.index.search(query);
         const nospace = removeSpace(query);
-        const exactMatches = this.exactMatch.get(nospace);
-        const exactMatchPositions: Set<string> = new Set();
         const r: LineSearchResult[] = [];
         let exactSize = 0;
-        if (exactMatches) {
-            exactSize = exactMatches.length;
-            for(const lineInfo of exactMatches.slice(0, limit)) {
-                exactMatchPositions.add(`${lineInfo.fileName}:${lineInfo.lineNumber}`);
-                r.push(new LineSearchResult(lineInfo, 100)); // exact match gets 100 score
-            }
-        }
-        if (exactSize >= limit) {
-            return [r, exactSize];
-        }
 
-        let fuzzy = this.index.search(query);
-        fuzzy = fuzzy.slice(0, limit); // limit to <limit> results
-        let maxScore = 0.1;
-        if (fuzzy.length > 0) {
-            maxScore = fuzzy[0].score;
-        }
         for (let i = 0; i < fuzzy.length && r.length < limit; i++) {
             const lineInfo = this.idToLine.get(fuzzy[i].id);
-            if (lineInfo && !exactMatchPositions.has(`${lineInfo.fileName}:${lineInfo.lineNumber}`)) {
-                if (removeSpace(lineInfo.jpLine) === nospace) {
-                    r.push(new LineSearchResult(lineInfo, 100)); // exact match gets 100 score
-                    exactSize++;
-                } else {
-                    const score = fuzzy[i].score / maxScore * 99; // non-exact match gets score with max 99
-                    if (score >= threshold) {
-                        r.push(new LineSearchResult(lineInfo, score));
+            if (lineInfo) {
+                let score = computeScore(nospace, lineInfo.jpLine);
+                if (score >= threshold) {
+                    r.push(new LineSearchResult(lineInfo, score));
+                    if (score == 100) {
+                        exactSize++;
                     }
                 }
             }
@@ -1020,7 +991,15 @@ export class MemoryCrossrefIndex {
         r.sort((a, b) => b.score - a.score); // sort by score descending
         return [r, exactSize];
     }
+}
 
+function computeScore(query: string, text: string): number {
+    text = removeSpace(text);
+    const baseScore = 100;
+    const levenshteinDistance = distance(query, text);
+    const totalLen = query.length + text.length;
+    const similarity = 1 - levenshteinDistance / totalLen;
+    return Math.round(baseScore * similarity);
 }
 
 export class Tokenizer {

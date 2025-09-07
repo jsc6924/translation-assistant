@@ -105,7 +105,7 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     const lineNumberAndRefs: Tuple3<number, LineSearchResult[], number>[] = [];
     const config = vscode.workspace.getConfiguration("dltxt");
     const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
-    const limit = config.get<number>('appearance.z.similarTextLimit', 10);
+    const limit = config.get<number>('appearance.z.similarTextLimit', 100);
     for (let i = 0; i < jtexts.length; i++) {
         let [similarLines, exactCount] = await InMemProjectIndex.search(context, jtexts[i], threshold, limit);
         similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[i]);
