@@ -972,6 +972,7 @@ export class MemoryCrossrefIndex {
     // won't return more than <limit> results
     search(query: string, threshold: number, limit: number): [LineSearchResult[], number] {
         let fuzzy = this.index.search(query);
+        fuzzy = fuzzy.slice(0, limit * 2);
         const nospace = removeSpace(query);
         const r: LineSearchResult[] = [];
         let exactSize = 0;
