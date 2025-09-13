@@ -905,10 +905,21 @@ export class MemoryCrossrefIndex {
 
     private idAllocator: IdAllocator = new IdAllocator();
     constructor() {
-        this.index = createFlexSearchIndex();
+        this.index = FlexSearch.create({
+            async: true,
+            tokenize: 'forward',
+            encode: "icase",
+            split: /\s+/,
+            resolution: 9,
+            threshold: 7,
+            depth: 2,
+            filter: function (value) {
+                return !StopWordsSet.has(value);
+            }
+        });
     }
 
-    update(filename: string, getContent: () => [string[], number[], string[]]): boolean
+    async update(filename: string, getContent: () => [string[], number[], string[]]): Promise<boolean>
     {
         const stat = fs.statSync(filename)
         if (this.fileUpdatedTime.has(filename)) {
@@ -939,6 +950,9 @@ export class MemoryCrossrefIndex {
         
         const newLineRefSet = new Map<string, LineInfo[]>();
         for(let i = 0; i < jpLines.length; i++) {
+            if (i > 0 && i % 128 == 0) {
+                await new Promise(resolve => setTimeout(resolve, 0)); // yield to event loop
+            }
             const lineNumber = jpLineNumbers[i];
             const id = this.idAllocator.allocate();
             const lineInfo = new LineInfo(filename, lineNumber, jpLines[i], trLines[i]);
@@ -959,8 +973,8 @@ export class MemoryCrossrefIndex {
     }
 
     // won't return more than <limit> results
-    search(query: string, threshold: number, limit: number): [LineSearchResult[], number] {
-        let fuzzy = this.index.search(query, {
+    async search(query: string, threshold: number, limit: number): Promise<[LineSearchResult[], number]> {
+        let fuzzy = await this.index.search(query, {
             limit: limit * 2,
             suggest: true
         }) as any as number[];

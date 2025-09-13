@@ -33,20 +33,19 @@ class ProjectIdx {
             return;
         }
         const tokenizer = await Tokenizer.getAsync(context);
-        await batchProcess(uris, (doc, i) => {
-            this.searchIndex.update(doc.uri.fsPath, () => {
+        await batchProcess(uris, async (doc, i) => {
+            await this.searchIndex.update(doc.uri.fsPath,() => {
                 const jlines: string[] = [];
                 const jLineNumbers: number[] = [];
                 const clines: string[] = [];
                 DocumentParser.processPairedLines(doc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
-
                     jlines.push(tokenizer.tokenize(jgrps.text));
                     jLineNumbers.push(j_index);
-                    clines.push(cgrps.text);
+                    clines.push(cgrps.text);      
                 });
                 return [jlines, jLineNumbers, clines];
             })
-        }, false);
+        }, false, 16);
     }
 
     public async search(context: vscode.ExtensionContext, query: string, threshold: number, limit: number): Promise<[LineSearchResult[], number]> {
@@ -108,13 +107,20 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
     const limit = config.get<number>('appearance.z.similarTextLimit', 10);
     const t0 = Date.now();
-    for (let i = 0; i < jtexts.length; i++) {
-        let [similarLines, exactCount] = await InMemProjectIndex.search(context, jtexts[i], threshold, limit);
-        similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[i]);
-        lineNumberAndRefs.push([jLineNumbers[i], similarLines, exactCount]);
-        modeFinder[exactCount] = (modeFinder[exactCount] ?? 0) + 1;
+    
+    const blockSize = 64;
+    for (let i = 0; i < jtexts.length; i += blockSize) {
+        const allPromises: Promise<void>[] = [];
+        for (let j = i; j < i + blockSize && j < jtexts.length; j++) {
+            allPromises.push(InMemProjectIndex.search(context, jtexts[j], threshold, limit).then(([similarLines, exactCount]) => {
+                similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[j]);
+                lineNumberAndRefs.push([jLineNumbers[j], similarLines, exactCount]);
+                modeFinder[exactCount] = (modeFinder[exactCount] ?? 0) + 1;
+            }));
+        }
+        await Promise.all(allPromises);
     }
-    channel.appendLine(`search time: ${Date.now() - t0} ms for ${jtexts.length} lines.`);
+    channel.appendLine(`search time: ${Date.now() - t0} ms for ${jtexts.length} lines in total.`);
 
     let maxCount = 0, lenWithMaxCount = 0;
     for(let i = 0; i + 1 < modeFinder.length; i++) {
@@ -129,7 +135,6 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     const similarTextDecos = [] as vscode.DecorationOptions[];
     const tableHeaders = `#### 相似文本\n\n| 文件 | 相似度 | 原文 | 译文 |`;
     const tableSeparator = `|---|---|---|---|`;
-    const t1 = Date.now();
     for (const [line, refs, exactCount] of lineNumberAndRefs) {
         const lineRange = new vscode.Range(line, 0, line, 1000);
         // Generate all the table rows by mapping over your refs array
@@ -163,7 +168,6 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
             }
         }
     }
-    channel.appendLine(`decoration time: ${Date.now() - t1} ms for ${jtexts.length} lines.`);
     lastCheckTime = Date.now();
     activeEditor.setDecorations(exactMatchStyle, exactMatchDecos);
     activeEditor.setDecorations(similarTextStyle, similarTextDecos);

@@ -11,7 +11,7 @@ import { insert_newline_for_line } from './newline';
 import { Pair } from './utils';
 
 
-export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true) {
+export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true, batchSize: number = 64) {
     // filter documentUris to exclude files in ExcludedPaths
     const filteredUris = vscode.workspace.workspaceFolders ? documentUris.filter(uri => {
         return !ExcludedPaths.some(excludedPath => uri.fsPath.startsWith(excludedPath));
@@ -26,12 +26,12 @@ export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.
     for (let i = 0; i < filteredUris.length;) {
         const tasks = [];
         // batch size = 100时，处理速度比=1时快约4倍
-        const batch_size = Math.min(100, filteredUris.length - i);
+        const batch_size = Math.min(batchSize, filteredUris.length - i);
         for(let j = 0; j < batch_size; j++) {
             const uri = filteredUris[i + j];
-            const task = vscode.workspace.openTextDocument(uri).then((doc) => {
+            const task = vscode.workspace.openTextDocument(uri).then(async (doc) => {
                 try {
-                    cb(doc, i + j);
+                    await cb(doc, i + j);
                 } catch (e) {
                     channel.appendLine(`Error processing ${uri.fsPath}: ${e}`);
                 }
