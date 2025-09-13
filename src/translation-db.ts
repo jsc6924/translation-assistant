@@ -12,7 +12,6 @@ import { trdb_view } from './treeview';
 import { DocumentParser } from './parser';
 import { Semaphore } from 'async-mutex';
 import { distance } from 'fastest-levenshtein';
-import MiniSearch from 'minisearch'
 const fsextra = require('fs-extra');
 
 
@@ -898,7 +897,7 @@ class IdAllocator {
 }
 
 export class MemoryCrossrefIndex {
-    private index: MiniSearch;
+    private index: Index<IndexedDocument>;
     private idToLine: Map<number, LineInfo> = new Map();
     private lineToId: Map<string, number> = new Map(); // filename:lineNumber => id
     private fileUpdatedTime: Map<string, number> = new Map(); // filename => last modified time
@@ -906,14 +905,7 @@ export class MemoryCrossrefIndex {
 
     private idAllocator: IdAllocator = new IdAllocator();
     constructor() {
-        this.index = new MiniSearch({
-            fields: ['content'],
-            tokenize: (text) => {
-                return text.split(/\s+/).filter(word => word.length > 0);
-            },
-            processTerm: (term, _fieldName) =>
-            StopWordsSet.has(term) ? null : term
-        })
+        this.index = createFlexSearchIndex();
     }
 
     update(filename: string, getContent: () => [string[], number[], string[]]): boolean
@@ -953,10 +945,7 @@ export class MemoryCrossrefIndex {
             this.idToLine.set(id, lineInfo);
             this.lineToId.set(`${filename}:${lineNumber}`, id);
             thisFileIds.add(id);
-            this.index.add({
-                id: id,
-                content: jpLines[i],
-            });
+            this.index.add(id, jpLines[i]);
 
             const nospace = removeSpace(jpLines[i]);
             let lineRefs = newLineRefSet.get(nospace);
@@ -971,14 +960,16 @@ export class MemoryCrossrefIndex {
 
     // won't return more than <limit> results
     search(query: string, threshold: number, limit: number): [LineSearchResult[], number] {
-        let fuzzy = this.index.search(query);
-        fuzzy = fuzzy.slice(0, limit * 2);
+        let fuzzy = this.index.search(query, {
+            limit: limit * 2,
+            suggest: true
+        }) as any as number[];
         const nospace = removeSpace(query);
         const r: LineSearchResult[] = [];
         let exactSize = 0;
 
         for (let i = 0; i < fuzzy.length && r.length < limit; i++) {
-            const lineInfo = this.idToLine.get(fuzzy[i].id);
+            const lineInfo = this.idToLine.get(fuzzy[i]);
             if (lineInfo) {
                 let score = computeScore(nospace, lineInfo.jpLine);
                 if (score >= threshold) {

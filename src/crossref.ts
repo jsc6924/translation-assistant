@@ -5,6 +5,7 @@ import { batchProcess } from './batch';
 import { LineInfo, LineSearchResult, MemoryCrossrefIndex, SearchIndex, Tokenizer } from './translation-db';
 import { path } from './user-script-api';
 import { Semaphore } from 'async-mutex';
+import { channel } from './dlbuild';
 
 class TextLocation {
     constructor(public uriIndex: number, public line: number, public ctext: string) { }
@@ -106,12 +107,14 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration("dltxt");
     const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
     const limit = config.get<number>('appearance.z.similarTextLimit', 10);
+    const t0 = Date.now();
     for (let i = 0; i < jtexts.length; i++) {
         let [similarLines, exactCount] = await InMemProjectIndex.search(context, jtexts[i], threshold, limit);
         similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[i]);
         lineNumberAndRefs.push([jLineNumbers[i], similarLines, exactCount]);
         modeFinder[exactCount] = (modeFinder[exactCount] ?? 0) + 1;
     }
+    channel.appendLine(`search time: ${Date.now() - t0} ms for ${jtexts.length} lines.`);
 
     let maxCount = 0, lenWithMaxCount = 0;
     for(let i = 0; i + 1 < modeFinder.length; i++) {
@@ -126,6 +129,7 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     const similarTextDecos = [] as vscode.DecorationOptions[];
     const tableHeaders = `#### 相似文本\n\n| 文件 | 相似度 | 原文 | 译文 |`;
     const tableSeparator = `|---|---|---|---|`;
+    const t1 = Date.now();
     for (const [line, refs, exactCount] of lineNumberAndRefs) {
         const lineRange = new vscode.Range(line, 0, line, 1000);
         // Generate all the table rows by mapping over your refs array
@@ -159,6 +163,7 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
             }
         }
     }
+    channel.appendLine(`decoration time: ${Date.now() - t1} ms for ${jtexts.length} lines.`);
     lastCheckTime = Date.now();
     activeEditor.setDecorations(exactMatchStyle, exactMatchDecos);
     activeEditor.setDecorations(similarTextStyle, similarTextDecos);
@@ -225,18 +230,20 @@ function createSimilarTextDecorationType() {
 
 export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor(editor => {
-            const config = vscode.workspace.getConfiguration("dltxt");
-            const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
-            if (enable && editor) {
-                checkSimilarText(context);
-            }
-        });
+        const config = vscode.workspace.getConfiguration("dltxt");
+        const enable = config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab');
+        if (enable && editor) {
+            checkSimilarText(context);
+        }
+    });
 
     vscode.workspace.onDidCloseTextDocument(doc => {
         similarTextCache.delete(doc.uri.fsPath);
         exactMatchCache.delete(doc.uri.fsPath);
     });
     const config = vscode.workspace.getConfiguration("dltxt");
-    config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab') && checkSimilarText(context);
+    if (config.get<boolean>('appearance.z.checkSimilarTextOnSwitchTab')) {
+        checkSimilarText(context);
+    }
 
 }
