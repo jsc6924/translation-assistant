@@ -162,6 +162,8 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
     }
 }
 
+var remindAutoDetectFormat = true;
+
 export function updateErrorDecorations() {
     
     const config = vscode.workspace.getConfiguration("dltxt");
@@ -195,7 +197,35 @@ export function updateErrorDecorations() {
         DltxtDiagCollection.set(activeEditor.document.uri, [
             createDiagnostic(vscode.DiagnosticSeverity.Information, `发现太多错误，没有全部显示。可能没有配置正确，或者这个文本不是双行文本。第一个错误：${diagnostics[0]?.message} Line: ${diagnostics[0]?.range?.start?.line}`, 0, 0, 1)
         ]);
+        if (remindAutoDetectFormat && likelyDltxt(activeEditor.document)) {
+            
+            vscode.window.showInformationMessage('您似乎打开了一个双行文本文件，但没有正确识别格式。是否开始自动识别格式？', '是', '否', '本次不再提示').then(answer => {
+                if (answer === '是') {
+                    vscode.commands.executeCommand('Extension.dltxt.core.context.autoDetectFormat');
+                } else if (answer === '本次不再提示') {
+                    remindAutoDetectFormat = false;
+                }
+            });
+        }
+
     }
+}
+
+function likelyDltxt(doc: vscode.TextDocument): boolean {
+    const text = doc.getText();
+    let lines = text.split(/\r?\n/);
+    lines = lines.map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length < 2) {
+        return false;
+    }
+    // test if any line contains kana
+    const kanaRegex = /[ぁ-んァ-ン]/;
+    for (let i = 0; i < Math.min(lines.length, 20); i++) {
+        if (kanaRegex.test(lines[i])) {
+            return true;
+        }
+    }
+    return false;
 }
 
 export function updateNewlineDecorations() {
