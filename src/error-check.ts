@@ -410,10 +410,20 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             if (decos) {
                 for (const deco of decos) {
                     const original = deco.__dltxt?.old_text;
-                    const expected = deco.__dltxt?.new_text;
-                    if (expected && cgrps.text.indexOf(expected) < 0) {
-                        const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `术语可能没有按照规范翻译：${original} => ${expected}`, j_index, deco.range.start.character, deco.range.end.character - deco.range.start.character, ErrorCode.UntranslatedKeyword);
-                        res.push(d);
+                    let expected = deco.__dltxt?.new_text;
+                    if (expected) {
+                        const expecteds = (expected as string).split('/').map(s => s.trim());
+                        let found = false;
+                        for (const exp of expecteds) {
+                            if (exp && cgrps.text.indexOf(exp) >= 0) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `术语可能没有按照规范翻译：${original} => ${expected}`, j_index, deco.range.start.character, deco.range.end.character - deco.range.start.character, ErrorCode.UntranslatedKeyword);
+                                res.push(d);
+                        }
                     }
                 }
             }
