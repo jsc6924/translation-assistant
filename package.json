@@ -4,13 +4,13 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.41.1",
+	"version": "3.41.2",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
 	"categories": [
 		"Programming Languages"
-	],
+	], 
 	"activationEvents": [
 		"onLanguage:dltxt",
 		"onLanguage:sltxt"

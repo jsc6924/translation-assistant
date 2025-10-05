@@ -555,7 +555,9 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/む[ん]?/g, '姆'],
     [/る/g, '噜'],
     [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
-    [/～、/g, "～"]
+    [/～、/g, "～"],
+    [/嗯呜/g, "嗯"],
+    [/呼呜/g, "呼"],
 ]);
 
 export function translateCurrentLine(
