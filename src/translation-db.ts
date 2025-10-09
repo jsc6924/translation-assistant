@@ -973,28 +973,39 @@ export class MemoryCrossrefIndex {
     }
 
     // won't return more than <limit> results
-    async search(query: string, threshold: number, limit: number): Promise<[LineSearchResult[], number]> {
+    async search(query: string, threshold: number, limit: number, curFilePath: string, curLineNumber: number): Promise<[LineSearchResult[], number]> {
         let fuzzy = await this.index.search(query, {
-            limit: limit * 2,
+            limit: limit * 3,
             suggest: true
         }) as any as number[];
-        const nospace = removeSpace(query);
-        const r: LineSearchResult[] = [];
-        let exactSize = 0;
 
-        for (let i = 0; i < fuzzy.length && r.length < limit; i++) {
+        const nospace = removeSpace(query);
+        let r: LineSearchResult[] = [];
+        let exactSize = 0;
+        console.log(`query "${removeSpace(query)}" got ${fuzzy.length} fuzzy results`);
+        for (let i = 0; i < fuzzy.length; i++) {
             const lineInfo = this.idToLine.get(fuzzy[i]);
             if (lineInfo) {
+                console.log(`fuzzy result: ${lineInfo.toString()}`);
                 let score = computeScore(nospace, lineInfo.jpLine);
-                if (score >= threshold) {
+                if (score >= threshold && 
+                    (
+                        path.basename(lineInfo.fileName) !== path.basename(curFilePath)
+                        ||
+                        lineInfo.fileName === curFilePath && lineInfo.lineNumber !== curLineNumber
+                    )) {
                     r.push(new LineSearchResult(lineInfo, score));
-                    if (score == 100) {
-                        exactSize++;
-                    }
                 }
             }
         }
         r.sort((a, b) => b.score - a.score); // sort by score descending
+        r = r.slice(0, limit);
+        for(const res of r) {
+            if (res.score === 100) {
+                exactSize++;
+            }
+        }
+        console.log(`exact size: ${exactSize}, total returned size: ${r.length}`);
         return [r, exactSize];
     }
 }

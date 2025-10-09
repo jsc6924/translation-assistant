@@ -48,10 +48,10 @@ class ProjectIdx {
         }, false, 16);
     }
 
-    public async search(context: vscode.ExtensionContext, query: string, threshold: number, limit: number): Promise<[LineSearchResult[], number]> {
+    public async search(context: vscode.ExtensionContext, query: string, threshold: number, limit: number, curFilePath: string, curLineNumber  : number): Promise<[LineSearchResult[], number]> {
         const tokenizer = await Tokenizer.getAsync(context);
         const queryTokens = tokenizer.tokenize(query);
-        return this.searchIndex.search(queryTokens, threshold, limit);
+        return this.searchIndex.search(queryTokens, threshold, limit, curFilePath, curLineNumber);
     }
 }
 export const InMemProjectIndex = new ProjectIdx();
@@ -83,7 +83,7 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     activeEditor.setDecorations(similarTextStyle, []);
     const currentDoc = activeEditor.document;
     const currentTime = Date.now();
-    if ((currentTime - lastCheckTime < 600000) && similarTextCache.has(currentDoc.uri.fsPath) && exactMatchCache.has(currentDoc.uri.fsPath)) {
+    if ((currentTime - lastCheckTime < 0) && similarTextCache.has(currentDoc.uri.fsPath) && exactMatchCache.has(currentDoc.uri.fsPath)) {
         activeEditor.setDecorations(similarTextStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
         activeEditor.setDecorations(exactMatchStyle, exactMatchCache.get(currentDoc.uri.fsPath)!);
         return;
@@ -101,7 +101,6 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
         
     });
 
-    let modeFinder: number[] = []; // ref count, num of text that has this count
     const lineNumberAndRefs: Tuple3<number, LineSearchResult[], number>[] = [];
     const config = vscode.workspace.getConfiguration("dltxt");
     const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
@@ -112,24 +111,15 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
     for (let i = 0; i < jtexts.length; i += blockSize) {
         const allPromises: Promise<void>[] = [];
         for (let j = i; j < i + blockSize && j < jtexts.length; j++) {
-            allPromises.push(InMemProjectIndex.search(context, jtexts[j], threshold, limit).then(([similarLines, exactCount]) => {
-                similarLines = similarLines.filter(l => l.lineInfo.fileName !== currentDoc.uri.fsPath || l.lineInfo.lineNumber !== jLineNumbers[j]);
-                lineNumberAndRefs.push([jLineNumbers[j], similarLines, exactCount]);
-                modeFinder[exactCount] = (modeFinder[exactCount] ?? 0) + 1;
+            allPromises.push(InMemProjectIndex.search(context, jtexts[j], threshold, limit, currentDoc.uri.fsPath, jLineNumbers[j]).then(([similarLines, exactCount]) => {
+                if (exactCount < limit && similarLines.length > 0) {
+                    lineNumberAndRefs.push([jLineNumbers[j], similarLines, exactCount]);
+                }
             }));
         }
         await Promise.all(allPromises);
     }
     channel.appendLine(`search time: ${Date.now() - t0} ms for ${jtexts.length} lines in total.`);
-
-    let maxCount = 0, lenWithMaxCount = 0;
-    for(let i = 0; i + 1 < modeFinder.length; i++) {
-        if (modeFinder[i] !== undefined && modeFinder[i] > maxCount) {
-            maxCount = modeFinder[i];
-            lenWithMaxCount = i;
-        }
-    }
-    const minNoticableLen = lenWithMaxCount + 1; // without this number of exact matches, it will not be shown
 
     const exactMatchDecos = [] as vscode.DecorationOptions[];
     const similarTextDecos = [] as vscode.DecorationOptions[];
@@ -160,12 +150,10 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
         msg.isTrusted = true;
         const deco = { range: lineRange, hoverMessage: msg };
 
-        if (exactCount < limit) {
-            if (exactCount >= minNoticableLen) {
-                exactMatchDecos.push(deco);
-            } else if (refs.length > 0) {
-                similarTextDecos.push(deco);
-            }
+        if (exactCount > 0) {
+            exactMatchDecos.push(deco);
+        } else if (refs.length > 0) {
+            similarTextDecos.push(deco);
         }
     }
     lastCheckTime = Date.now();
