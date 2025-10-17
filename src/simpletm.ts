@@ -258,7 +258,7 @@ export function activate(context: vscode.ExtensionContext) {
 					username: username, password: apiToken
 				}
 			}).then(result => {
-				console.log(result);
+				//console.log(result);
 				if (result && gameTitle) {
                     DictSettings.setSimpleTMDictKeys(name, gameTitle, result.data);
 					dictNode?.setConnectionStatus(true);
@@ -407,7 +407,7 @@ export function activate(context: vscode.ExtensionContext) {
 				// Parse the sheet's data into an array of objects
 				const data = XLSX.utils.sheet_to_json(sheet);
 
-				console.log(data); // Print the parsed data
+				//console.log(data); // Print the parsed data
 
 				batchUpdateLocalDictKey(dictName, data);
 				vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);

@@ -263,6 +263,7 @@ export function copyOriginalToTranslation(context: vscode.ExtensionContext, docu
   });
 }
 
+const alphaNumPattern = /[A-Za-z0-9]/;
 export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode.TextEditor, editBuilder: vscode.TextEditorEdit) {
   const cur = editor.selection.start;
   let curChar = cur.character;
@@ -272,9 +273,13 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
     let text: string = cgrps.text as string;
     let textLeft = text.substring(0, curChar - cgrps.prefix.length - cgrps.white.length);
     let i = findLastMatchIndex(delimiterPattern, textLeft);
+
     if (i == -1) {
       i = 0;
     } else {
+      while (i < textLeft.length && alphaNumPattern.test(textLeft[i])) {
+        i++;
+      }
       const match = delimiterPattern.exec(textLeft.substring(i));
       if (!match) {
         return;

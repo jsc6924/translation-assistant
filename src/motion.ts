@@ -61,7 +61,7 @@ export function getTextDelimiter() {
   } catch (e) {
     vscode.window.showErrorMessage(`${e}`);
   }
-  return new RegExp('[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]', 'g');
+  return new RegExp('[，。、？！…—；：“”‘’~～\\\\\\s　「」『』\\[\\]\\(\\)（）【】{}]', 'g');
 }
 const INT_MAX = Number.MAX_SAFE_INTEGER;
 

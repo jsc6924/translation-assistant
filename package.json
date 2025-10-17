@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.42.0",
+	"version": "3.43.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1168,7 +1168,7 @@
 				},
 				"dltxt.core.z.textDelimiter": {
 					"type": "string",
-					"default": "[，。、？！…—；：“”‘’~～\\s　「」『』\\[\\]\\(\\)（）【】]|(\\\\@)",
+					"default": "[，。、？！…—；：“”‘’~～\\\\\\s　「」『』\\[\\]\\(\\)（）【】{}]|(\\\\@)",
 					"description": "分割句段的正则表达式（用于repeatFirstChar/deleteUntilPunc）"
 				},
 				"dltxt.appearance.showKeywordHighlight": {

@@ -229,7 +229,7 @@ function likelyDltxt(doc: vscode.TextDocument): boolean {
 }
 
 export function updateNewlineDecorations() {
-    console.log('updateNewlineDecorations');
+    //console.log('updateNewlineDecorations');
     const config = vscode.workspace.getConfiguration("dltxt");
     if (!config.get<boolean>('nestedLine.displayTokenAsSymbol')) {
         return;

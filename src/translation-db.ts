@@ -982,11 +982,11 @@ export class MemoryCrossrefIndex {
         const nospace = removeSpace(query);
         let r: LineSearchResult[] = [];
         let exactSize = 0;
-        console.log(`query "${removeSpace(query)}" got ${fuzzy.length} fuzzy results`);
+        //console.log(`query "${removeSpace(query)}" got ${fuzzy.length} fuzzy results`);
         for (let i = 0; i < fuzzy.length; i++) {
             const lineInfo = this.idToLine.get(fuzzy[i]);
             if (lineInfo) {
-                console.log(`fuzzy result: ${lineInfo.toString()}`);
+                //console.log(`fuzzy result: ${lineInfo.toString()}`);
                 let score = computeScore(nospace, lineInfo.jpLine);
                 if (score >= threshold && 
                     (
@@ -1005,7 +1005,7 @@ export class MemoryCrossrefIndex {
                 exactSize++;
             }
         }
-        console.log(`exact size: ${exactSize}, total returned size: ${r.length}`);
+        //console.log(`exact size: ${exactSize}, total returned size: ${r.length}`);
         return [r, exactSize];
     }
 }
@@ -1034,9 +1034,9 @@ export class Tokenizer {
 
     static async init(context: vscode.ExtensionContext): Promise<Tokenizer> {
         if (!Tokenizer.tokenizer) {
-            const dictPath = path.join(context.globalStorageUri.fsPath, "dict");
-            if (!fs.existsSync(path.join(context.globalStorageUri.fsPath, "dict", "base.dat.gz"))) {
-                const zipPath = path.join(context.globalStorageUri.fsPath, "dict.zip");
+            const dictPath = path.join(context.extensionPath, "resource", "dict");
+            if (!fs.existsSync(path.join(context.extensionPath, "resource", "dict", "base.dat.gz"))) {
+                const zipPath = path.join(context.extensionPath, "resource", "dict.zip");
                 if (fs.existsSync(zipPath)) {
                     channel.show();
                     channel.appendLine(`检测到目录下存在dict.zip，等待解压...`);
