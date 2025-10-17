@@ -5,6 +5,7 @@ import { shouldSkipChecking } from './utils';
 import { getTextDelimiter } from './motion';
 import * as iconv from "iconv-lite";
 import { dictTree, getDecorationsOnAllLines } from './simpletm';
+import { group } from 'console';
 const AhoCorasick = require('ahocorasick');
 
 // not used yet, can be used to diagnostic 
@@ -220,12 +221,35 @@ function likelyDltxt(doc: vscode.TextDocument): boolean {
     }
     // test if any line contains kana
     const kanaRegex = /[ぁ-んァ-ン]/;
-    for (let i = 0; i < Math.min(lines.length, 20); i++) {
+    let hasKana = false;
+    for (let i = 0; i < Math.min(lines.length, 100); i++) {
         if (kanaRegex.test(lines[i])) {
-            return true;
+            hasKana = true;
+            break;
         }
     }
-    return false;
+    if (!hasKana) {
+        return false;
+    }
+    let x = 0;
+    const groupCounts = Array<number>(10).fill(0);
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].length === 0) {
+            if (x < groupCounts.length) {
+                groupCounts[x]++;
+            }
+            x = 0;
+        } else {
+            x++;
+        }
+    }
+    let diffGroupSize = 0;
+    for (let i = 1; i < groupCounts.length; i++) {
+        if (groupCounts[i] > 0) {
+            diffGroupSize++;
+        }
+    }
+    return diffGroupSize <= 2;
 }
 
 export function updateNewlineDecorations() {
