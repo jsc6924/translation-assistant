@@ -200,7 +200,7 @@ export function updateErrorDecorations() {
         ]);
         if (remindAutoDetectFormat && likelyDltxt(activeEditor.document)) {
             
-            vscode.window.showInformationMessage('您似乎打开了一个双行文本文件，但没有正确识别格式。是否开始自动识别格式？', '是', '否', '本次不再提示').then(answer => {
+            vscode.window.showInformationMessage('您似乎打开了一个双行文本文件，但没有正确识别格式。是否启动自动格式识别向导？', '是', '否', '本次不再提示').then(answer => {
                 if (answer === '是') {
                     vscode.commands.executeCommand('Extension.dltxt.core.context.autoDetectFormat');
                 } else if (answer === '本次不再提示') {
@@ -256,6 +256,12 @@ export function updateNewlineDecorations() {
     //console.log('updateNewlineDecorations');
     const config = vscode.workspace.getConfiguration("dltxt");
     if (!config.get<boolean>('nestedLine.displayTokenAsSymbol')) {
+        const nestedLineToken = config.get("nestedLine.token") as string;
+        const newLineDecoTuple = DictSettings.getNewlineDecorationType(nestedLineToken);
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            newLineDecoTuple.oldDeco && activeEditor.setDecorations(newLineDecoTuple.oldDeco, []);
+        }
         return;
     }
     const activeEditor = vscode.window.activeTextEditor;

@@ -118,7 +118,16 @@ export class StandardParserAutoDetector implements AutoDetector {
             return;
         }
 
-        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}"，是否应用？`, '是', '否');
+        let newlineToken = await vscode.window.showInputBox({
+                "placeHolder": "例：\\r\\n",
+                "prompt": `输入换行符（默认值是\\r\\n）`,
+                "ignoreFocusOut": true
+        });
+        if (!newlineToken) {
+            newlineToken = '\\r\\n';
+        }
+
+        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}"，是否应用？`, '是', '否');
         if (u !== '是') {
             return;
         }
@@ -126,6 +135,7 @@ export class StandardParserAutoDetector implements AutoDetector {
         await config.update('core.originalTextPrefixRegex', rRegStr, false);
         await config.update('core.translatedTextPrefixRegex', tRegStr, false);
         await config.update('core.otherPrefixRegex', oRegStr, false);
+        await config.update('nestedLine.token', newlineToken, false);
         vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
         vscode.window.showInformationMessage(`已应用设置`);
     }
@@ -410,7 +420,17 @@ async function autoDetectFormatContinue() {
         vscode.window.showErrorMessage(`识别失败：${e}`);
         return;
     }
-    const u = await vscode.window.showInformationMessage(`识别成功！段落格式："${template}"，原文开头："${jPreStr}"，原文结尾："${jSuffixStr}"，译文开头："${cPreStr}"，译文结尾："${cSuffixStr}"，是否应用？`, '是', '否');
+
+    let newlineToken = await vscode.window.showInputBox({
+            "placeHolder": "例：\\r\\n",
+            "prompt": `输入换行符（默认值是\\r\\n）`,
+            "ignoreFocusOut": true
+    });
+    if (!newlineToken) {
+        newlineToken = '\\r\\n';
+    }
+
+    const u = await vscode.window.showInformationMessage(`识别成功！段落格式："${template}"，原文开头："${jPreStr}"，原文结尾："${jSuffixStr}"，译文开头："${cPreStr}"，译文结尾："${cSuffixStr}"，换行符："${newlineToken}"，是否应用？`, '是', '否');
     if (u !== '是') {
         return;
     }
@@ -423,6 +443,7 @@ async function autoDetectFormatContinue() {
     await config.update('core.x.textBlock.translatedPrefix', cPreStr, false);
     await config.update('core.y.originalTextSuffix', jSuffixStr, false);
     await config.update('core.y.translatedTextSuffix', cSuffixStr, false);
+    await config.update('nestedLine.token', newlineToken, false);
     vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
     vscode.window.showInformationMessage(`已应用设置`);
 }

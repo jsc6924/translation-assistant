@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.43.1",
+	"version": "3.44.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -836,6 +836,11 @@
 				"args": {
 					"index": "5"
 				}
+			},
+			{
+				"command": "Extension.dltxt.switchNewlineTokenDisplay",
+				"key": "ctrl+alt+n",
+				"when": "editorTextFocus && resourceLangId == dltxt"
 			}
 		],
 		"submenus": [

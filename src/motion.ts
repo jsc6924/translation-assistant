@@ -3,6 +3,7 @@ import * as utils from './utils';
 import { DocumentParser } from './parser';
 import { DictSettings, registerCommand, repeatStr } from './utils';
 import { DecorationMemoryStorage } from './simpletm';
+import { updateNewlineDecorations } from './error-check';
 
 export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
@@ -50,6 +51,14 @@ export function activate(context: vscode.ExtensionContext) {
 	})
 	
 	registerCommand(context, 'Extension.dltxt.translateCurrentLine', translateCurrentLine);
+
+  registerCommand(context, 'Extension.dltxt.switchNewlineTokenDisplay', () => {
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const current = config.get<boolean>('nestedLine.displayTokenAsSymbol');
+    config.update('nestedLine.displayTokenAsSymbol', !current, vscode.ConfigurationTarget.Workspace).then(() => {
+      updateNewlineDecorations();
+    });
+  });
 }
 
 export function getTextDelimiter() {
