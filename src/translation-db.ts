@@ -294,6 +294,10 @@ export async function activate(context: vscode.ExtensionContext, treeView: trdb_
         
     }, false);
 
+    registerCommand(context, "Extension.dltxt.trdb.config", async () => {
+        await configTrdb();
+    });
+
 }
 
 interface SearchResult {
@@ -1089,6 +1093,39 @@ export class Tokenizer {
         }
         return Tokenizer.tokenizer.tokenize(text).map((token) => token.surface_form).join(' ');
     }
+}
+
+export async function configTrdb() {
+    const config = vscode.workspace.getConfiguration('dltxt.trdb');
+    const currentProject = config.get('project') as string;
+    const inputProject = await vscode.window.showInputBox({
+        prompt: '设置当前项目名称',
+        value: currentProject
+    });
+    if (!inputProject) {
+        return;
+    }
+
+    const currentEncoding = config.get('fileEncoding') as string;
+    const inputEncoding = await vscode.window.showQuickPick(
+        [
+            "utf8",
+            "utf16le",
+            "utf16be",
+            "gb2312",
+            "gbk",
+            "shift-jis"
+        ],
+        {
+            placeHolder: '翻译数据库打开文件时的编码',
+        }
+    );
+    if (!inputEncoding) {
+        return;
+    }
+    await config.update('project', inputProject, vscode.ConfigurationTarget.Workspace);
+    await config.update('fileEncoding', inputEncoding, vscode.ConfigurationTarget.Workspace);
+    vscode.window.showInformationMessage(`已设置当前项目为 ${inputProject}，文件编码为 ${inputEncoding}`);
 }
 
 export const TRDBIndex = new SearchIndex;

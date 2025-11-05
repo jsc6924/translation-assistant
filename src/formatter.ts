@@ -304,3 +304,107 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   editBuilder.replace(curLine.range, newLine);
 
 }
+
+export async function configureFormat() {
+   const config = vscode.workspace.getConfiguration("dltxt");
+   const choices = [
+    {
+      label: '统一省略号',
+      configKey: 'formatter.a.ellipsis.enable',
+    },
+    {
+      label: '统一破折号',
+      configKey: 'formatter.a.horizontalLine.enable',
+    },
+    {
+      label: '统一波浪号',
+      configKey: 'formatter.a.wave.enable',
+    },
+    {
+      label: '统一写反的、或半角的单引号、双引号',
+      configKey: 'formatter.b.fixReversedQuote',
+    },
+    {
+      label: '统一双引号',
+      configKey: 'formatter.b.formatQuote.enable',
+      specifyKey: 'formatter.b.formatQuote.specify',
+      specifyOptions: ["“中文双引号”", "『日语双引号』"]
+    },
+    {
+      label: '将？！替换为！？',
+      configKey: 'formatter.a.fixExcliamationQuestion',
+    },
+    {
+      label: '统一缩进与对话外的单括号（「」）',
+      configKey: 'formatter.a.padding',
+    },
+    {
+      label: '半角标点符号统一为全角（半角引号除外）',
+      configKey: 'formatter.b.h2fPunc',
+    },
+    {
+      label: '去除对话句末的句号',
+      configKey: 'formatter.c.omitPeriod',
+    },
+    {
+      label: '把……。改成……',
+      configKey: 'formatter.c.removeEllipsisPeriod',
+    },
+    {
+      label: '把……？/……！改成？/！',
+      configKey: 'formatter.c.removeEllipsisQE',
+    },
+   ];
+   const items: (vscode.QuickPickItem & { configKey: string, specifyKey?: string, specifyOptions?: string[] })[] = choices.map(choice => {
+    return {
+      label: choice.label,
+      configKey: choice.configKey,
+      picked: config.get(choice.configKey) as boolean,
+    };
+   });
+   let res = await vscode.window.showQuickPick(items, {
+    canPickMany: true,
+    placeHolder: '选择需要应用的格式化选项（可多选）'
+   });
+    if (!res) {
+      return;
+    }
+
+    const prevSelected = new Set<string>();
+    for (let item of items) {
+      if (item.picked) {
+        prevSelected.add(item.configKey);
+      }
+    }
+
+    for (let item of res) {
+      if (!prevSelected.has(item.configKey)) {
+        await config.update(item.configKey, true, vscode.ConfigurationTarget.Workspace);
+        if (item.specifyKey) {
+          const specifyOption = await vscode.window.showQuickPick(item.specifyOptions || [], {
+            placeHolder: `"${item.label}"`
+          });
+          if (specifyOption) {
+            await config.update(item.specifyKey, specifyOption, vscode.ConfigurationTarget.Workspace);
+          }
+        }
+      }
+    }
+    for (let item of items) {
+      if (item.picked && !res.find(r => r.configKey === item.configKey)) {
+        await config.update(item.configKey, false, vscode.ConfigurationTarget.Workspace);
+      }
+    }
+
+    let addSpaceAfterQEOption = config.get("formatter.c.addSpaceAfterQE") as string;
+    const chosenSpaceAfterQE = await vscode.window.showQuickPick(
+      ['无效', '添加空格', '删除空格'],
+      {
+        placeHolder: '在问号、感叹号后添加空格'
+      }
+    );
+    if (addSpaceAfterQEOption !== chosenSpaceAfterQE) {
+      await config.update("formatter.c.addSpaceAfterQE", chosenSpaceAfterQE, vscode.ConfigurationTarget.Workspace);
+    }
+    vscode.window.showInformationMessage('格式化选项已更新');
+  }

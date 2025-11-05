@@ -314,72 +314,6 @@ export function activate(context: vscode.ExtensionContext) {
 		let gameTitle = items[4];
 		return {username, apiToken, BASE_URL, gameTitle};
 	}
-	
-	async function insertRemote(dictName: string, connectionGetter: (dictName: string) => Promise<any>, rawTextGetter: () => Promise<string|undefined>) {
-		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(dictName);
-		if (!username || !apiToken) {
-			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
-			return;
-		}
-		if (!gameTitle) {
-			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
-			return;
-		}
-		const rawText = await rawTextGetter();
-		if (!rawText) {
-			return;
-		}
-		const translate = await vscode.window.showInputBox({ placeHolder: '(' + gameTitle + ')输入译文' })
-		var msg = rawText + "->" + translate;
-		const API_Query: string = BASE_URL + "/api/insert";
-		let fullURL = API_Query + "/" + gameTitle + "/" + rawText + "/" + translate;
-		fullURL = encodeURI(fullURL);
-		axios.get(fullURL, {
-			auth: {
-				username: username, password: apiToken
-			}
-		})
-		.then(response => {
-			if (response.data.Result === 'True') {
-				vscode.window.showInformationMessage("词条添加成功!\n" + msg);
-			}
-			else {
-				vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
-			}
-			vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
-		})
-		.catch(error => {
-			vscode.window.showInformationMessage("unexpected error:\n" + error);
-		});
-
-	}
-
-	async function doInsertKVLocal(dictName: string, rawText: string, translate: string | undefined) {
-		let msg = rawText + "->" + translate;
-		try {
-			updateLocalDictKey(dictName, rawText, translate);
-			vscode.window.showInformationMessage("词条添加成功!\n" + msg);
-		} catch (err) {
-			vscode.window.showErrorMessage(`词条添加失败：${err}`);
-		}
-		vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
-	}
-	async function insertLocal(dictName: string) {
-		const translate = await vscode.window.showInputBox({ placeHolder: '输入译文' });
-		let editor = vscode.window.activeTextEditor;
-		if (editor && !editor.selection.isEmpty) {
-			const rawText = editor.document.getText(editor.selection);
-			doInsertKVLocal(dictName, rawText, translate);
-		}
-	}
-	async function insertLocalWithoutKey(dictName: string) {
-		const rawText = await await vscode.window.showInputBox({ placeHolder: '输入原文' });
-		if (!rawText) {
-			return;
-		}
-		const translate = await vscode.window.showInputBox({ placeHolder: '输入译文' });
-		doInsertKVLocal(dictName, rawText, translate);
-	}
 
 	async function batchInsertLocal(dictName: string) {
 		const options: vscode.OpenDialogOptions = {
@@ -442,74 +376,6 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showErrorMessage('not supported');
 	});
 
-	
-
-	registerCommand(context, 'Extension.dltxt.dict_insert', async function(name: string) {
-		const type = DictSettings.getDictType(name);
-		if (type == DictType.Local) {
-			insertLocalWithoutKey(name);
-		} else if (type == DictType.RemoteURL) {
-			await insertRemote(name, 
-				remoteURLConnectionGetter,
-				async () => { 
-					return vscode.window.showInputBox({
-						placeHolder: `输入原文`
-					})
-				}
-			);
-		} else {
-			await insertRemote(name, 
-				remoteUserConnectionGetter,
-				async () => { 
-					return vscode.window.showInputBox({
-						placeHolder: `输入原文`
-					})
-				}
-			);
-		}
-	});
-
-	registerCommand(context, 'Extension.dltxt.context_menu_insert', async function () {
-		const dictNames = dictTree ? dictTree.getConnectedDicts() : [];
-		
-		if (dictNames.length == 0) {
-			vscode.window.showInformationMessage('需要先连接术语库');
-			return;
-		}
-		let name : string | undefined = '';
-		if (dictNames.length == 1) {
-			name = dictNames[0];
-		}
-		else {
-			name = await vscode.window.showQuickPick(dictNames, {
-				'canPickMany': false,
-				'placeHolder': '选择一个术语库插入'
-			});
-			if (!name) {
-				return;
-			}
-		}
-
-		const type = DictSettings.getDictType(name);
-		if (type == DictType.Local) {
-			insertLocal(name);
-			return;
-		} else {
-			const rawTextGetter = async () => {
-				let editor = vscode.window.activeTextEditor;
-				if (editor && !editor.selection.isEmpty) {
-					const rawText = editor.document.getText(editor.selection);
-					return rawText;
-				}
-				return '';
-			};
-			if (type == DictType.RemoteURL) {
-				await insertRemote(name, remoteURLConnectionGetter, rawTextGetter);
-			} else {
-				await insertRemote(name, remoteUserConnectionGetter, rawTextGetter);
-			}
-		} 
-	});
 
 	async function updateDictRemote(name: string, rawText: string, wantDelete: boolean, connectionGetter: (dictName: string) => Promise<any>) {
 		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
@@ -530,40 +396,63 @@ export function activate(context: vscode.ExtensionContext) {
 				return; //cancelled
 			}
 		}
-		const makeRequest = (fullURL: string) => {
-			axios.get(fullURL, {
-				auth: {
-					username: username, password: apiToken
-				}
-			}).then(response => {
-					if (response.data.Result === 'True') {
-						vscode.window.showInformationMessage("词条更新成功!\n" + msg);
-					}
-					else {
-						vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
-					}
-					vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
-				})
-				.catch(error => {
-					vscode.window.showInformationMessage("unexpected error:\n" + error);
-				});
-		};
 
 		let fullURL = "";
 		var msg = "";
 		if (translate) {
 			msg = rawText + "->" + translate;
-			fullURL = BASE_URL + "/api/update/" + gameTitle + "/" + rawText + "/" + translate;
-			fullURL = encodeURI(fullURL);
-			makeRequest(fullURL);
+			fullURL = encodeURI(BASE_URL + "api2/update");
+			console.log(fullURL);
+			axios.post(fullURL, 
+				{
+					game: gameTitle,
+					rawWord: rawText,
+					translate: translate,
+					// TODO comment: comment
+				},
+				{
+					auth: {
+						username: username, password: apiToken
+					}
+				}
+			).then(response => {
+				console.log(response.data);
+				if (response.data.Result === 'True') {
+					vscode.window.showInformationMessage("词条更新成功!\n" + msg);
+				}
+				else {
+					vscode.window.showInformationMessage("unexpected json returned:\n" + response.data.Message);
+					console.log(response.data);
+				}
+				vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
+			})
+			.catch(error => {
+				console.log(error);
+				vscode.window.showInformationMessage("unexpected error:\n" + error);
+			});
 		} else {
 			msg = "deleted: " + rawText;
-			fullURL = BASE_URL + "/api/delete/" + gameTitle + "/" + rawText
-			fullURL = encodeURI(fullURL);
+			fullURL = encodeURI(BASE_URL + "api2/delete");
 			vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否')
 			.then(result => {
 				if (result == '是') {
-					makeRequest(fullURL);
+					axios.post(fullURL, {
+						game: gameTitle,
+						rawWord: rawText,
+					},
+					{
+						auth: {
+							username: username, password: apiToken
+						}
+					})
+					.then(response => {
+						if (response.data.Result === 'True') {
+							vscode.window.showInformationMessage("词条删除成功!\n" + msg);
+						}
+						vscode.commands.executeCommand('Extension.dltxt.sync_database', name);
+					}).catch(error => {
+						vscode.window.showInformationMessage("unexpected error:\n" + error);
+					});
 				}
 			});
 		}
@@ -659,18 +548,42 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function writeKeywordTranslation(index: number) {
-  let activeEditor = vscode.window.activeTextEditor;
-  if (!dictTree || !activeEditor || !activeEditor.selection.active) {
-	return;
-  }
-  const currentLineNumber = activeEditor.selection.active.line;
-  const decos = getDecorationsOnLine(activeEditor.document.uri, currentLineNumber - 1); // TODO: now assuming jp is one line above zh
-  if (index >= decos.length) {
-	vscode.window.showErrorMessage('索引越界');
-	return;
-  }
-  const deco = decos[index];
-  editorWriteString(deco.__dltxt.new_text);
+	let activeEditor = vscode.window.activeTextEditor;
+	if (!dictTree || !activeEditor || !activeEditor.selection.active) {
+		return;
+	}
+	const currentLineNumber = activeEditor.selection.active.line;
+	const decos = getDecorationsOnLine(activeEditor.document.uri, currentLineNumber - 1); // TODO: now assuming jp is one line above zh
+	if (index >= decos.length) {
+		vscode.window.showErrorMessage('索引越界');
+		return;
+	}
+	const deco = decos[index];
+	let s = deco.__dltxt.new_text as string;
+	if (s.includes('/')) {
+		const words = s.split('/');
+		const qp = vscode.window.createQuickPick<vscode.QuickPickItem>();
+		qp.items = words.map(w => ({ label: w }));
+		qp.placeholder = '选择要插入的内容';
+		qp.onDidChangeValue(value => {
+			// Filter items based on input value (case-insensitive)
+			qp.items = words
+				.filter(w => w.toLowerCase().includes(value.toLowerCase()))
+				.map(w => ({ label: w }));
+		});
+		qp.onDidAccept(() => {
+			const selected = qp.selectedItems[0];
+			if (selected) {
+				editorWriteString(selected.label);
+			}
+			qp.hide();
+			qp.dispose();
+		});
+		qp.show();
+
+	} else {
+		editorWriteString(s);
+	}
 }
 
 

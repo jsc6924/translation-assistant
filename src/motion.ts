@@ -60,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
   });
 }
-
+ 
 export function getTextDelimiter() {
   const config = vscode.workspace.getConfiguration("dltxt");
   const textDelimiterStr = config.get('core.z.textDelimiter') as string;

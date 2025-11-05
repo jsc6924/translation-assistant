@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.44.0",
+	"version": "3.45.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -101,7 +101,7 @@
 				},
 				{
 					"id": "dltxt-configs-commands",
-					"name": "设置与命令"
+					"name": "命令与设置"
 				}
 			]
 		},
@@ -160,13 +160,8 @@
 				}
 			},
 			{
-				"command": "Extension.dltxt.context_menu_insert",
-				"title": "添加术语库词条",
-				"category": "DLTXT"
-			},
-			{
 				"command": "Extension.dltxt.context_menu_update",
-				"title": "更新术语库词条",
+				"title": "添加/更新术语库词条",
 				"category": "DLTXT"
 			},
 			{
@@ -185,7 +180,7 @@
 				"category": "DLTXT"
 			},
 			{
-				"command": "Extension.dltxt.batch_replace",
+				"command": "Extension.dltxt.batch_replace_with_select",
 				"title": "批量替换选中的译文",
 				"category": "DLTXT"
 			},
@@ -246,7 +241,7 @@
 			},
 			{
 				"command": "Extension.dltxt.spellCheck",
-				"title": "译文错别字检查",
+				"title": "检查当前文本译文中的错别字",
 				"category": "DLTXT"
 			},
 			{
@@ -342,6 +337,11 @@
 				}
 			},
 			{
+				"command": "Extension.dltxt.treeview.searchItem",
+				"title": "搜索术语词条",
+				"category": "DLTXT"
+			},
+			{
 				"command": "Extension.dltxt.treeview.setClipboardString",
 				"title": "编辑剪贴板",
 				"category": "DLTXT",
@@ -366,6 +366,15 @@
 				"icon": {
 					"light": "icons/light/trash.svg",
 					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.trdb.config",
+				"title": "快速设置翻译数据库",
+				"category": "DLTXT",
+				"icon": {
+					"dark": "icons/dark/gear.svg",
+					"light": "icons/light/gear.svg"
 				}
 			},
 			{
@@ -451,7 +460,7 @@
 			{
 				"command": "Extension.dltxt.detectEncoding",
 				"category": "DLTXT",
-				"title": "自动识别文本编码"
+				"title": "识别文本编码"
 			}
 		],
 		"keybindings": [
@@ -603,6 +612,16 @@
 			{
 				"command": "Extension.dltxt.dictserver.editor.searchWord",
 				"key": "ctrl+alt+m",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.trdb.editor.searchWord",
+				"key": "ctrl+alt+w",
+				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.trdb.editor.searchText",
+				"key": "ctrl+alt+q",
 				"when": "editorTextFocus && resourceLangId == dltxt"
 			},
 			{
@@ -912,18 +931,28 @@
 				},
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.dictserver.editor.searchWord",
+					"group": "dltxt.search@1"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
 					"command": "Extension.dltxt.trdb.editor.searchWord",
-					"group": "dltxt.trdb@1"
+					"group": "dltxt.search@2"
 				},
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
 					"command": "Extension.dltxt.trdb.editor.searchText",
-					"group": "dltxt.trdb@2"
+					"group": "dltxt.search@3"
 				},
 				{
 					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.dictserver.editor.searchWord",
-					"group": "dltxt.dictserver"
+					"command": "Extension.dltxt.batch_replace_with_select",
+					"group": "dltxt.rbatch"
+				},
+				{
+					"when": "editorHasSelection && resourceLangId == dltxt",
+					"command": "Extension.dltxt.context_menu_update",
+					"group": "dltxt.simpleTM"
 				}
 			],
 			"dltxt-editor-submenu": [
@@ -963,11 +992,6 @@
 					"group": "dltxt.edit"
 				},
 				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.batch_replace",
-					"group": "dltxt.rbatch"
-				},
-				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.batch_check",
 					"group": "dltxt.rbatch"
@@ -976,16 +1000,6 @@
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.core.context.autoDetectFormat",
 					"group": "dltxt.other"
-				},
-				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.context_menu_insert",
-					"group": "dltxt.simpleTM.a"
-				},
-				{
-					"when": "editorHasSelection && resourceLangId == dltxt",
-					"command": "Extension.dltxt.context_menu_update",
-					"group": "dltxt.simpleTM.a"
 				}
 			],
 			"view/title": [
@@ -1010,24 +1024,29 @@
 					"group": "navigation@4"
 				},
 				{
-					"command": "Extension.dltxt.trdb.treeview.loadDB",
+					"command": "Extension.dltxt.trdb.config",
 					"when": "view == dltxt-trdb",
 					"group": "navigation@1"
 				},
 				{
-					"command": "Extension.dltxt.trdb.treeview.unlock",
+					"command": "Extension.dltxt.trdb.treeview.loadDB",
 					"when": "view == dltxt-trdb",
 					"group": "navigation@2"
 				},
 				{
-					"command": "Extension.dltxt.trdb.treeview.import",
+					"command": "Extension.dltxt.trdb.treeview.unlock",
 					"when": "view == dltxt-trdb",
 					"group": "navigation@3"
 				},
 				{
-					"command": "Extension.dltxt.trdb.treeview.export",
+					"command": "Extension.dltxt.trdb.treeview.import",
 					"when": "view == dltxt-trdb",
 					"group": "navigation@4"
+				},
+				{
+					"command": "Extension.dltxt.trdb.treeview.export",
+					"when": "view == dltxt-trdb",
+					"group": "navigation@5"
 				}
 			],
 			"view/item/context": [
@@ -1052,10 +1071,21 @@
 					"group": "inline@1"
 				},
 				{
+					"command": "Extension.dltxt.treeview.searchItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-item",
+					"group": "0_@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.editItem",
+					"when": "view == dltxt-dict && viewItem == dict-entry-item",
+					"group": "0_@2"
+				},
+				{
 					"command": "Extension.dltxt.treeview.deleteItem",
 					"when": "view == dltxt-dict && viewItem == dict-entry-item",
-					"group": "inline@2"
+					"group": "0_@3"
 				},
+				
 				{
 					"command": "Extension.dltxt.treeview.writeClipboardString",
 					"when": "view == dltxt-clipboard && viewItem == clipboard-item",
@@ -1101,7 +1131,7 @@
 						"gbk",
 						"shift-jis"
 					],
-					"description": "翻译数据库打开文件时的encoding（建议在Workspace中填写）"
+					"description": "翻译数据库打开文件时的编码（建议在Workspace中填写）"
 				},
 				"dltxt.trdb.filteredLine": {
 					"type": "string",
@@ -1264,7 +1294,7 @@
 				"dltxt.formatter.a.fixExcliamationQuestion": {
 					"type": "boolean",
 					"default": true,
-					"description": "格式化文本：统一？！"
+					"description": "格式化文本：将？！替换为！？"
 				},
 				"dltxt.formatter.b.fixReversedQuote": {
 					"type": "boolean",
@@ -1293,11 +1323,11 @@
 				"dltxt.formatter.b.h2fAlpha": {
 					"type": "string",
 					"enum": [
-						"关闭",
+						"无效",
 						"统一为全角",
 						"统一为半角"
 					],
-					"default": "关闭",
+					"default": "无效",
 					"description": "格式化文本：将英文与数字统一为全角或半角"
 				},
 				"dltxt.formatter.c.omitPeriod": {

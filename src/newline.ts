@@ -1,5 +1,7 @@
+import * as vscode from 'vscode';
 import isFullwidthCodePoint from 'is-fullwidth-code-point';
 import * as utils from './utils';
+import { updateNewlineDecorations } from './error-check';
 
 function widthArr(text: string): number[] {
     const arr = new Array(text.length).fill(0);
@@ -173,3 +175,37 @@ function normalPdf(x: number, mean: number, stddev: number): number {
     const exponent = -((x - mean) * (x - mean)) / (2 * variance);
     return (1 / denominator) * Math.exp(exponent);
 }
+
+
+export async function setNewlineToken(){
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const curToken = config.get<string>('nestedLine.token');
+    let token = await vscode.window.showInputBox({
+      prompt: "设置换行符标记（留空则不修改）",
+      placeHolder: `当前值：${curToken}`,
+    });
+    if (token !== undefined && token.length > 0) {
+      await config.update('nestedLine.token', token, vscode.ConfigurationTarget.Workspace);
+    }
+
+    const curLineMax = config.get<number>('nestedLine.maxLen');
+    const inputLineMax = await vscode.window.showInputBox({
+      prompt: "设置换行符标记最大长度（留空则不修改）",
+      placeHolder: `当前值：${curLineMax}`,
+      validateInput: (value) => {
+        if (value === '') {
+          return null;
+        }
+        const n = Number(value);
+        if (isNaN(n) || n <= 0 || !Number.isInteger(n)) {
+          return "请输入正整数";
+        }
+      }
+    });
+    if (inputLineMax !== undefined && inputLineMax !== '') {
+      const n = Number(inputLineMax);
+      await config.update('nestedLine.maxLen', n, vscode.ConfigurationTarget.Workspace);
+    }
+    vscode.window.showInformationMessage(`换行符设置已更新为：${token}，最大长度：${config.get<number>('nestedLine.maxLen')}`);
+    updateNewlineDecorations();
+};

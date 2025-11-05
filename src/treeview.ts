@@ -8,8 +8,10 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand, batchInsertNewline, batchRemoveNewline } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace } from './batch';
 import { checkSimilarText } from './crossref';
+import { setNewlineToken } from './newline';
+import { configureFormat } from './formatter';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -17,7 +19,7 @@ export class BasicTreeItem extends vscode.TreeItem {
         super(label, state);
     }
 
-    getChildren(): BasicTreeItem[]  {
+    getChildren(): BasicTreeItem[] {
         return [];
     }
 }
@@ -33,13 +35,16 @@ export class TreeItem<T> extends BasicTreeItem {
 
 export class CommandItem extends BasicTreeItem {
     iconPath = new vscode.ThemeIcon('debug-start');
-    constructor(label: string, callback: (() => void) | undefined) {
+    constructor(label: string, callback: (() => void) | undefined, iconPath?: string) {
         super(label, vscode.TreeItemCollapsibleState.None);
+        if (iconPath) {
+            this.iconPath = new vscode.ThemeIcon(iconPath);
+        }
 
         this.command = {
             command: 'Extension.dltxt.executeFunction',
             title: `执行`,
-            arguments: [{callback}]
+            arguments: [{ callback }]
         }
     }
 }
@@ -54,7 +59,7 @@ export class ConfigRootItem<T> extends TreeItem<T> {
     getChildren(): BasicTreeItem[] {
         return this.children;
     }
-    
+
     async configUpdated() {
         //pass
     }
@@ -69,12 +74,12 @@ export class ConfigEntryItem<T> extends TreeItem<T> {
     configRoot: ConfigRootItem<T>;
     treeview: T;
     async callback() {
-        this.updateLabel(); 
+        this.updateLabel();
         await this.configRoot.configUpdated();
         (this.treeview as any).dataChanged();
     }
     constructor(treeview: T, configRoot: ConfigRootItem<T>,
-         label: string, config: string, global: boolean, showFullValue: boolean) {
+        label: string, config: string, global: boolean, showFullValue: boolean) {
         super(treeview, label, vscode.TreeItemCollapsibleState.None);
         this.initLabel = label;
         this.config = config;
@@ -87,7 +92,7 @@ export class ConfigEntryItem<T> extends TreeItem<T> {
         if (config.includes('.localPath')) {
             usePathPicker = true;
         }
-        this.setCommand(global, {config, usePathPicker, callback: () => this.callback()});
+        this.setCommand(global, { config, usePathPicker, callback: () => this.callback() });
     }
 
     setCommand(global: boolean, args: any) {
@@ -139,7 +144,7 @@ export class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
         label: string, config: string, global: boolean, selections: string[], defaultValue: string) {
         super(treeview, configRoot, label, config, global, true);
         this.selections = selections;
-        this.setCommand(global, {config, callback: () => this.callback(), selections: this.selections});
+        this.setCommand(global, { config, callback: () => this.callback(), selections: this.selections });
         if (global) {
             if (ContextHolder.getGlobalState(this.config) === undefined) {
                 ContextHolder.setGlobalState(this.config, defaultValue);
@@ -153,12 +158,11 @@ export class ConfigSelectionEntryItem<T> extends ConfigEntryItem<T> {
     }
 }
 
-export class BasicTreeView<Item extends BasicTreeItem> implements vscode.TreeDataProvider<Item>
-{
+export class BasicTreeView<Item extends BasicTreeItem> implements vscode.TreeDataProvider<Item> {
     // with the vscode.EventEmitter we can refresh our  tree view
     private m_onDidChangeTreeData: vscode.EventEmitter<Item | undefined> = new vscode.EventEmitter<Item | undefined>();
     // and vscode will access the event by using a readonly onDidChangeTreeData (this member has to be named like here, otherwise vscode doesnt update our treeview.
-    readonly onDidChangeTreeData ? : vscode.Event<Item | undefined> = this.m_onDidChangeTreeData.event;
+    readonly onDidChangeTreeData?: vscode.Event<Item | undefined> = this.m_onDidChangeTreeData.event;
 
     roots: Item[] = [];
 
@@ -179,9 +183,8 @@ export class BasicTreeView<Item extends BasicTreeItem> implements vscode.TreeDat
 }
 
 // lets put all in a cwt namespace
-export namespace dict_view
-{
-    class DictItem extends TreeItem<DictTreeView> {};
+export namespace dict_view {
+    class DictItem extends TreeItem<DictTreeView> { };
     export class DictRootItem extends DictItem {
         dictName: string;
         contextValue = 'dict-root-item';
@@ -199,7 +202,7 @@ export namespace dict_view
         }
         findEntryValue(key: string) {
             if (this.contentNode) {
-                for(const child of this.contentNode.children) {
+                for (const child of this.contentNode.children) {
                     if (child.key === key) {
                         return child.value;
                     }
@@ -209,7 +212,7 @@ export namespace dict_view
         }
         forEach(cb: (k: string, v: string) => void) {
             if (this.contentNode) {
-                for(const child of this.contentNode.children) {
+                for (const child of this.contentNode.children) {
                     cb(child.key, child.value);
                 }
             }
@@ -230,9 +233,9 @@ export namespace dict_view
             super(treeview, label, state);
             this.dictName = dictName;
         }
-        
+
         async configUpdated() {
-            for(const child of this.children as DictConfigEntryItem[]) {
+            for (const child of this.children as DictConfigEntryItem[]) {
                 if (!child.getValue()) {
                     const root = this.treeview.getDictByName(this.dictName);
                     root?.setConnectionStatus(false);
@@ -270,13 +273,13 @@ export namespace dict_view
             this.treeview.dataChanged();
         }
     }
-    class DictConfigSelectionEntryItem extends ConfigSelectionEntryItem<DictTreeView>{}
+    class DictConfigSelectionEntryItem extends ConfigSelectionEntryItem<DictTreeView> { }
 
     class DictEntrySetItem extends DictItem {
         contextValue = 'dict-entry-set-item';
         children: DictEntryItem[] = [];
         iconPath = new vscode.ThemeIcon('book');
-        name: string  = '';
+        name: string = '';
         filter: string = '';
         filterEnabled: boolean = false;
         constructor(name: string, treeview: DictTreeView, label: string, state: vscode.TreeItemCollapsibleState) {
@@ -323,27 +326,28 @@ export namespace dict_view
             this.key = key;
             this.value = value;
             this.iconPath = new vscode.ThemeIcon('circle-filled');
-            this.command = { command: 'Extension.dltxt.copyToClipboard', 
-                title : 'copy value',
-                arguments: [{text: this.value}]
+            this.command = {
+                command: 'Extension.dltxt.copyToClipboard',
+                title: 'copy value',
+                arguments: [{ text: this.value }]
             };
         }
     }
 
-    
-    export class DictTreeView extends BasicTreeView<DictItem>
-    {
+
+    export class DictTreeView extends BasicTreeView<DictItem> {
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
-        public constructor()  {
+        public constructor() {
             super();
             vscode.commands.registerCommand('Extension.dltxt.treeview.filter', r => this.filterDict(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.addItem', r => this.addItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.deleteItem', r => this.deleteItem(r));
+            vscode.commands.registerCommand('Extension.dltxt.treeview.searchItem', r => this.searchItem(r));
             this.refresh();
         }
 
-        addRemoteUserDict(name: string, values? : any): boolean {
+        addRemoteUserDict(name: string, values?: any): boolean {
             DictSettings.setDictType(name, DictType.RemoteUser);
             if (values) {
                 DictSettings.setSimpleTMUrl(name, values.url);
@@ -356,7 +360,7 @@ export namespace dict_view
             }
             const simpleTMNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
             const simpleTMConfigNode = new DictConfigRootItem(this, '连接', name, vscode.TreeItemCollapsibleState.Collapsed);
-            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode,  `服务器网址`, `dltxt.dict.${name}.url`, true, true));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `服务器网址`, `dltxt.dict.${name}.url`, true, true));
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `用户名`, `dltxt.dict.${name}.username`, true, true));
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `APIToken`, `dltxt.dict.${name}.api`, true, false));
             simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `项目名`, `dltxt.dict.${name}.gameTitle`, false, true));
@@ -367,7 +371,7 @@ export namespace dict_view
 
             simpleTMNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
             simpleTMNode.children.push(simpleTMNode.contentNode);
-            
+
             this.roots.push(simpleTMNode);
             this.refresh(simpleTMNode);
             return true;
@@ -377,7 +381,7 @@ export namespace dict_view
             DictSettings.setDictType(name, DictType.RemoteURL);
             const simpleTMNode = new DictRootItem(this, name, vscode.TreeItemCollapsibleState.Expanded);
             const simpleTMConfigNode = new DictConfigRootItem(this, '连接', name, vscode.TreeItemCollapsibleState.Collapsed);
-            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode,  `共享URL`, `dltxt.dict.${name}.shared_url`, false, true));
+            simpleTMConfigNode.children.push(new DictConfigEntryItem(this, simpleTMConfigNode, `共享URL`, `dltxt.dict.${name}.shared_url`, false, true));
             simpleTMNode.children.push(simpleTMConfigNode);
 
             const styleNode = this.constructStyleNode(name);
@@ -385,7 +389,7 @@ export namespace dict_view
 
             simpleTMNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
             simpleTMNode.children.push(simpleTMNode.contentNode);
-            
+
             this.roots.push(simpleTMNode);
             this.refresh(simpleTMNode);
             return true;
@@ -433,8 +437,12 @@ export namespace dict_view
             this.dataChanged();
         }
 
-        public addItem(item: DictEntrySetItem) {
-            vscode.commands.executeCommand('Extension.dltxt.dict_insert', item.name)
+        public async addItem(item: DictEntrySetItem) {
+            const rawText = await vscode.window.showInputBox({ placeHolder: '输入原文' });
+            if (!rawText) {
+                return;
+            }
+            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.name, rawText);
         }
 
         public async filterDict(item: DictEntrySetItem) {
@@ -458,12 +466,50 @@ export namespace dict_view
         }
 
         // this is called when we click an item
-        public deleteItem(item: DictEntryItem) {
-            vscode.commands.executeCommand('Extension.dltxt.dict_update', item.name, item.key, true)
+        public async deleteItem(item: DictEntryItem) {
+            await vscode.commands.executeCommand('Extension.dltxt.dict_update', item.name, item.key, true)
         }
 
+        public async searchItem(item: DictEntryItem) {
+            if (!item) {
+                vscode.window.showWarningMessage('No item to search');
+                return;
+            }
+
+            // Derive query from the item
+            const query = (item.key || item.label || '').toString().trim();
+            if (!query) {
+                vscode.window.showInformationMessage('Nothing to search for (empty query).');
+                return;
+            }
+
+            // Build the options object. Tune flags (isRegex, case sensitivity, whole word) as desired.
+            const options: any = {
+                query,
+                triggerSearch: true,               // run search immediately
+                filesToInclude: '',                    // '' means workspace
+                filesToExclude: '',                // optional exclude pattern
+                isRegex: false,
+                isCaseSensitive: false,
+                matchWholeWord: true,              // often useful for exact word matches
+                preserveFocus: false,              // focus the Search view
+                useExcludeSettingsAndIgnoreFiles: true // respect search.exclude/.gitignore
+            };
+
+            try {
+                await vscode.commands.executeCommand('workbench.action.findInFiles', options);
+            } catch (err) {
+                // Fallback: open Search view and prefill query (older VS Code versions might ignore options)
+                await vscode.commands.executeCommand('workbench.view.search');
+                // As a secondary fallback show a message
+                console.error('searchItem: failed to execute findInFiles', err);
+                vscode.window.showErrorMessage('Failed to run search — check developer console for details.');
+            }
+        }
+
+
         getDictByName(name: string) {
-            for(const node of this.roots as DictRootItem[]) {
+            for (const node of this.roots as DictRootItem[]) {
                 if (node.dictName === name) {
                     return node;
                 }
@@ -473,7 +519,7 @@ export namespace dict_view
 
         getConnectedDicts(): string[] {
             const result = [];
-            for(const node of this.roots as DictRootItem[]) {
+            for (const node of this.roots as DictRootItem[]) {
                 if (node.connected) {
                     result.push(node.dictName);
                 }
@@ -484,8 +530,8 @@ export namespace dict_view
             if (!element) {
                 this.roots = [];
                 const dictNames = DictSettings.getAllDictNames();
-                
-                for(const name of dictNames) {
+
+                for (const name of dictNames) {
                     const type = DictSettings.getDictType(name);
                     if (type == DictType.RemoteUser) {
                         this.addRemoteUserDict(name);
@@ -497,15 +543,15 @@ export namespace dict_view
                         this.addLocalDict(name);
                     }
                 }
-                
-            } 
+
+            }
             else if (element.contextValue == 'dict-root-item') {
                 const node = element as DictRootItem;
                 const type = DictSettings.getDictType(node.dictName);
 
                 let keywords: any[] = [];
                 if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
-                    const game : string | undefined = DictSettings.getGameTitle(node.dictName);
+                    const game: string | undefined = DictSettings.getGameTitle(node.dictName);
                     if (!game || !node.connected) {
                         node.contentNode?.clear();
                         return;
@@ -518,7 +564,7 @@ export namespace dict_view
                 const dictEntryItems = [];
                 for (let i = 0; i < keywords.length; i++) {
                     let v = keywords[i];
-                    if(v['raw']) {
+                    if (v['raw']) {
                         dictEntryItems.push(new DictEntryItem(this, node.dictName, v['raw'], v['translate']));
                     }
                 }
@@ -537,7 +583,7 @@ export namespace dict_view
     }
 }
 export namespace trdb_view {
-    class TRDBItem extends BasicTreeItem {}
+    class TRDBItem extends BasicTreeItem { }
 
     export class TRDBFolderItem extends TRDBItem {
         folder: string = '';
@@ -559,16 +605,15 @@ export namespace trdb_view {
             this.folder = folder;
             this.filename = filename;
             this.command = {
-                command: 'Extension.dltxt.trdb.openVirtualFile', 
-                title : 'copy value', 
-                arguments: [{folder: folder, filename: filename}] 
+                command: 'Extension.dltxt.trdb.openVirtualFile',
+                title: 'copy value',
+                arguments: [{ folder: folder, filename: filename }]
             };
         }
     }
 
 
-    export class TRDBTreeView extends BasicTreeView<TRDBItem>
-    {
+    export class TRDBTreeView extends BasicTreeView<TRDBItem> {
         index: SearchIndex;
 
         constructor(context: vscode.ExtensionContext, index: SearchIndex) {
@@ -586,8 +631,8 @@ export namespace trdb_view {
                 const rlines = [];
                 const tlines = [];
                 for (const file of files) {
-                    const rc = fs.readFileSync(path.join(databasePath, 'raw', folder, file), {encoding: 'utf8'});
-                    const tc = fs.readFileSync(path.join(databasePath, 'tr', folder, file), {encoding: 'utf8'});
+                    const rc = fs.readFileSync(path.join(databasePath, 'raw', folder, file), { encoding: 'utf8' });
+                    const tc = fs.readFileSync(path.join(databasePath, 'tr', folder, file), { encoding: 'utf8' });
                     const rawLines = rc.split('\n');
                     const trLines = tc.split('\n');
                     if (rawLines.length != trLines.length) {
@@ -600,8 +645,8 @@ export namespace trdb_view {
                     tlines.push(...tltrimed);
                 }
                 const lines = [];
-                for(let i = 0; i < rlines.length; i++) {
-                    const tag = `${(i+1).toString().padStart(6, '0')}`;
+                for (let i = 0; i < rlines.length; i++) {
+                    const tag = `${(i + 1).toString().padStart(6, '0')}`;
                     lines.push(`[${tag}]` + escapeHtml(rlines[i].replace(/\s+/g, '')));
                     lines.push(`;[${tag}]` + escapeHtml(tlines[i]));
                     lines.push('');
@@ -612,7 +657,7 @@ export namespace trdb_view {
         getTreeItem(item: TRDBItem): vscode.TreeItem {
             return item;
         }
-    
+
         getChildren(element?: TRDBItem): Thenable<TRDBItem[]> {
             if (!element) {
                 return Promise.resolve(this.roots);
@@ -624,7 +669,7 @@ export namespace trdb_view {
                     return Promise.resolve([]);
                 }
                 const items = [];
-                for(const file of files) {
+                for (const file of files) {
                     items.push(new TRDBFileItem(folderItem.folder, file));
                 }
                 items.sort((a, b) => {
@@ -639,7 +684,7 @@ export namespace trdb_view {
             this.roots = [];
             const folders = this.index.virtualDirectory.keys();
             const temp: TRDBFolderItem[] = [];
-            for(const folder of folders) {
+            for (const folder of folders) {
                 temp.push(new TRDBFolderItem(folder));
             }
             temp.sort((a, b) => {
@@ -655,6 +700,13 @@ export namespace cc_view {
     class CCDirectory extends TreeItem<CCTreeView> {
         children: BasicTreeItem[] = [];
         iconPath = new vscode.ThemeIcon('debug-collapse-all');
+        constructor(treeview: CCTreeView, label: string, state: vscode.TreeItemCollapsibleState, iconPath?: string) {
+            super(treeview, label, state);
+            if (iconPath) {
+                this.iconPath = new vscode.ThemeIcon(iconPath);
+            }
+        }
+
         getChildren(): BasicTreeItem[] {
             return this.children;
         }
@@ -662,20 +714,107 @@ export namespace cc_view {
 
 
 
-    export class CCTreeView extends BasicTreeView<TreeItem<CCTreeView>>
-    {
+    export class CCTreeView extends BasicTreeView<TreeItem<CCTreeView>> {
         constructor(context: vscode.ExtensionContext) {
             super();
-            const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);
-            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "AccessKey", "dltxt.config.baidu.accesskey", true, false));
-            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "SecretKey", "dltxt.config.baidu.secretkey", true, false));
-            this.roots.push(baiduAPINode);
+            const configCommands = new CCDirectory(this, "设置向导", vscode.TreeItemCollapsibleState.Collapsed, 'settings-gear');
+            this.roots.push(configCommands);
+            configCommands.children.push(new CommandItem("自动识别文本格式", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.core.context.autoDetectFormat');
+            }, 'settings-gear'));
+            configCommands.children.push(new CommandItem("设置文本格式规范", async () => {
+                await configureFormat();
+            }, 'settings-gear'));
+            configCommands.children.push(new CommandItem("设置换行符", async () => {
+                await setNewlineToken();
+            }, 'settings-gear'));
+            configCommands.children.push(new CommandItem("切换换行符显示", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.switchNewlineTokenDisplay');
+            }, 'settings-gear'));
+
+
+            const textCommands = new CCDirectory(this, "文本编辑", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(textCommands);
+            textCommands.children.push(new CommandItem("复制原文到未翻译的译文行", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.copy_original');
+            }));
+            textCommands.children.push(new CommandItem("删除换行符", async () => {
+                await batchRemoveNewline();
+            }));
+            textCommands.children.push(new CommandItem("自动插入换行符", async () => {
+                await batchInsertNewline();
+            }));
+            textCommands.children.push(new CommandItem("提取译文", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.extract_single_line');
+            }));
+            textCommands.children.push(new CommandItem("格式化文本", async () => {
+                await vscode.commands.executeCommand('editor.action.formatDocument');
+            }));
+
+            textCommands.children.push(new CommandItem("批量替换译文", async () => {
+                await vscode.window.showInputBox({ prompt: '请输入要替换的文本（不支持正则表达式）' }).then(async (rawText) => {
+                    if (!rawText) {
+                        return;
+                    }
+                    await batchReplace(rawText);
+                });
+            }));
+
+            const checkingNode = new CCDirectory(this, "文本检查", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(checkingNode);
+            checkingNode.children.push(new CommandItem("批量检查译文", async () => {
+                await batchCheckCommand();
+            }));
+            checkingNode.children.push(new CommandItem("清除所有警告", async () => {
+                clearAllWarnings();
+            }));
+            checkingNode.children.push(new CommandItem("检查当前文本中的错别字", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.spellCheck');
+            }));
+            checkingNode.children.push(new CommandItem("清除错别字检查结果", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.spellCheckClear');
+            }));
+            checkingNode.children.push(new CommandItem("清除常用汉字警告白名单", async () => {
+                ContextHolder.setWorkspaceState('escapedCharacters', undefined);
+            }));
+            checkingNode.children.push(new CommandItem("检查相似的文本", async () => {
+                await checkSimilarText(context);
+            }));
+            checkingNode.children.push(new CommandItem("识别文本编码", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.detectEncoding');
+            }));
+
+
+            const batchNode = new CCDirectory(this, "进阶批量操作", vscode.TreeItemCollapsibleState.Collapsed);
+            this.roots.push(batchNode);
+            batchNode.children.push(new CommandItem("批量转换文件编码格式", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.convertToEncoding');
+            }));
+            batchNode.children.push(new CommandItem("将脚本提取为双行文本", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.dlbuild.extract');
+            }));
+            batchNode.children.push(new CommandItem("用双行文本的翻译替换脚本中的原文", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.dlbuild.pack');
+            }));
+            batchNode.children.push(new CommandItem("字数统计", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.dltransform.wordcount');
+            }));
+            batchNode.children.push(new CommandItem("将文本连接", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.dltransform.concat');
+            }));
+            batchNode.children.push(new CommandItem("将文本合并", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.dltransform.merge');
+            }));
+            batchNode.children.push(new CommandItem("执行自定义批量文本操作", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.dltransform.transform');
+            }));
+
+
 
             const dictServerNode = new CCDirectory(this, "辞典服务器", vscode.TreeItemCollapsibleState.Collapsed);
             this.roots.push(dictServerNode);
-
             dictServerNode.children.push(new CommandItem("关闭辞典服务器", () => {
-                if(!stopDictServer()) {
+                if (!stopDictServer()) {
                     vscode.window.showInformationMessage("当前没有辞典服务器在运行，或者辞典服务器不是由vscode启动的");
                 } else {
                     vscode.window.showInformationMessage("已关闭辞典服务器");
@@ -688,31 +827,10 @@ export namespace cc_view {
                 await downloadDefaultServer(ContextHolder.get());
             }));
 
-            const errorWarningNode = new CCDirectory(this, "错误与警告", vscode.TreeItemCollapsibleState.Collapsed);
-            this.roots.push(errorWarningNode);
-            errorWarningNode.children.push(new CommandItem("批量检查译文", async () => {
-                await batchCheckCommand();
-            }));
-            errorWarningNode.children.push(new CommandItem("清除所有警告", async () => {
-                clearAllWarnings();
-            }));
-            errorWarningNode.children.push(new CommandItem("清除常用汉字警告白名单", async () => {
-                ContextHolder.setWorkspaceState('escapedCharacters', undefined);
-            }));
-
-        
-            const otherCommands = new CCDirectory(this, "其他命令", vscode.TreeItemCollapsibleState.Collapsed);
-            this.roots.push(otherCommands);
-            otherCommands.children.push(new CommandItem("删除换行符", async () => {
-                await batchRemoveNewline();
-            }));
-            otherCommands.children.push(new CommandItem("自动插入换行符", async () => {
-                await batchInsertNewline();
-            }));
-            otherCommands.children.push(new CommandItem("检查相似的文本", async () => {
-                await checkSimilarText(context);
-            }));
-
+            const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);
+            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "AccessKey", "dltxt.config.baidu.accesskey", true, false));
+            baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "SecretKey", "dltxt.config.baidu.secretkey", true, false));
+            this.roots.push(baiduAPINode);
 
 
             this.dataChanged();
