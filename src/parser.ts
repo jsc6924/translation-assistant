@@ -3,6 +3,7 @@ import { createErrorDiagnostic, createErrorDiagnosticMultiLine, createDiagnostic
 import * as utils from './utils';
 import { AutoDetector, NoopAutoDetector, StandardParserAutoDetector, TextBlockAutoDetector } from './auto-format';
 import { findAllAndProcess } from './utils';
+import { get } from 'http';
 
 export function getRegex() {
     const config = vscode.workspace.getConfiguration("dltxt.core");
@@ -53,7 +54,7 @@ export interface MatchedGroups {
 ////////////////////////Start standard parser///////////////////////////////
 
 interface DocumentParser {
-  processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => void): void;
+  processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void): void;
 
   processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void): void;
 
@@ -73,11 +74,16 @@ class StandardDocumentParser implements DocumentParser {
 
     }
 
-    processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => void) {
+    processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void) {
         const [jreg, creg] = getRegex();
         if (!jreg || !creg) {
             throw new Error('jreg or creg undefined');
         }
+        const namePosition = getTalkingNamePosition();
+        const nameRegex = getTalkingNameRegex();
+        const defaultTalkingName = getDefaultTalkingName();
+        let beforeName = defaultTalkingName;
+
         let lines = getLines(text);
         let jgrps: MatchedGroups | undefined;
         let j_index = -1;
@@ -85,6 +91,14 @@ class StandardDocumentParser implements DocumentParser {
             let line = lines[i];
             line = line.trimRight();
             const m = jreg.exec(line);
+
+            if (namePosition === NamePosition.Before && nameRegex) {
+                const nameMatch = nameRegex.exec(line);
+                if (nameMatch && nameMatch.groups) {
+                    beforeName = nameMatch.groups.name || defaultTalkingName;
+                }
+            }
+
             if (m && m.groups) {
                 if (!!jgrps) {
                     throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
@@ -96,7 +110,20 @@ class StandardDocumentParser implements DocumentParser {
                 if (m && m.groups && jgrps) {
                     const cgrps = m.groups as any as MatchedGroups;
                     adjust(jgrps, cgrps);
-                    cb(jgrps, cgrps, j_index, i);
+                    let talkingName = beforeName;
+                    if (namePosition === NamePosition.Inline) {
+                      talkingName = defaultTalkingName;
+                        const inlineMatch = nameRegex?.exec(cgrps.text);
+                        if (inlineMatch && inlineMatch.groups) {
+                            talkingName = inlineMatch.groups.name || defaultTalkingName;
+                        }
+                    }
+                    cb(jgrps, cgrps, j_index, i, talkingName);
+
+                    if (namePosition === NamePosition.Before && jgrps?.suffix?.includes('」')) {
+                        beforeName = defaultTalkingName;
+                    }
+
                     jgrps = undefined;
                     j_index = -1;
                 }
@@ -557,4 +584,31 @@ function reloadDocumentParser() {
   } else {
     DocumentParser = new StandardDocumentParser();
   }
+}
+
+export enum NamePosition {
+  Before = '行前',
+  After = '行后', // TODO: implement
+  Inline = '行内',
+}
+
+export function getTalkingNamePosition(): NamePosition {
+  const config = vscode.workspace.getConfiguration("dltxt.core.name");
+  const pos = config.get<string>('position');
+  return NamePosition[pos as keyof typeof NamePosition] || NamePosition.Before;
+}
+
+export function getTalkingNameRegex(): RegExp| undefined {
+  const config = vscode.workspace.getConfiguration("dltxt.core.name");
+  const namePattern = config.get<string>('regex');
+  if (namePattern) {
+    return new RegExp(namePattern);
+  }
+  return undefined;
+}
+
+export function getDefaultTalkingName(): string {
+  const config = vscode.workspace.getConfiguration("dltxt.core.name");
+  const defaultName = config.get<string>('default');
+  return defaultName || '';
 }

@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.45.0",
+	"version": "3.46.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1165,6 +1165,25 @@
 					"type": "string",
 					"default": "",
 					"description": "其他合法的开头的正则表达式"
+				},
+				"dltxt.core.name.position": {
+					"type": "string",
+					"default": "行前",
+					"enum": [
+						"行前",
+						"行中"
+					],
+					"description": "对话角色名的位置"
+				},
+				"dltxt.core.name.regex": {
+					"type": "string",
+					"default": "^☆\\d+N☆(?<name>.*)$",
+					"description": "对话角色名的正则表达式"
+				},
+				"dltxt.core.name.default": {
+					"type": "string",
+					"default": "",
+					"description": "默认角色名（主角的名字）"
 				},
 				"dltxt.core.textBlock.pattern": {
 					"type": "string",

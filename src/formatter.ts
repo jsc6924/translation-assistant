@@ -15,7 +15,7 @@ function editTranslation(
   const config = vscode.workspace.getConfiguration("dltxt");
   const debugMode = config.get("formatter.z.debugMode") as boolean;
 
-  DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
+  DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index, talkingName) => {
     const line = document.lineAt(j_index);
     const nextLine = document.lineAt(c_index);
     let nextLineText = nextLine.text;
@@ -25,9 +25,9 @@ function editTranslation(
     }
 
     if (debugMode) {
-      const curLineText = `${jgrps?.prefix}{${jgrps?.white}}{${jgrps?.text}}{${jgrps?.suffix}}`
+      const curLineText = `${jgrps?.prefix}{${talkingName}}{${jgrps?.white}}{${jgrps?.text}}{${jgrps?.suffix}}`
       result.push(vscode.TextEdit.replace(line.range, curLineText));
-      nextLineText = `${cgrps?.prefix}{${cgrps?.white}}{${cgrps?.text}}{${cgrps?.suffix}}`
+      nextLineText = `${cgrps?.prefix}{${talkingName}}{${cgrps?.white}}{${cgrps?.text}}{${cgrps?.suffix}}`
       result.push(vscode.TextEdit.replace(nextLine.range, nextLineText));
     } else {
       nextLineText = `${cgrps?.prefix}${cgrps?.white}${cgrps?.text}${cgrps?.suffix}`
