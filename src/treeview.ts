@@ -190,6 +190,7 @@ export namespace dict_view {
         contextValue = 'dict-root-item';
         children: DictItem[] = [];
         contentNode: DictEntrySetItem | undefined;
+        namingNode: DictNamingRootItem | undefined;
         connected: boolean = false;
         constructor(treeview: DictTreeView, dictName: string, state: vscode.TreeItemCollapsibleState) {
             super(treeview, dictName, state);
@@ -293,10 +294,10 @@ export namespace dict_view {
         toggleFilter(filter: string) {
             if (this.filterEnabled) {
                 this.filter = '';
-                this.label = '内容';
+                this.label = '术语表';
             } else {
                 this.filter = filter;
-                this.label = `内容（查找：${filter}）`;
+                this.label = `术语表（查找：${filter}）`;
             }
             this.filterEnabled = !this.filterEnabled;
         }
@@ -334,6 +335,53 @@ export namespace dict_view {
         }
     }
 
+    class DictNamingRootItem extends DictItem { 
+        dictName = '';
+        contextValue = 'dict-naming-root-item';
+        iconPath = new vscode.ThemeIcon('calendar');
+        children: DictNamingCallerItem[] = [];
+        constructor(treeview: DictTreeView, dictName: string) {
+            super(treeview, '人称表', vscode.TreeItemCollapsibleState.Collapsed);
+            this.dictName = dictName;
+        }
+        getChildren(): BasicTreeItem[] {
+            return this.children;
+        }
+    }
+
+    class DictNamingCallerItem extends DictItem {
+        contextValue = 'dict-naming-caller-item';
+        iconPath = new vscode.ThemeIcon('person');
+        dictName: string = '';
+        caller: string = '';
+        children: DictNamingCalledItem[] = [];
+
+        constructor(treeview: DictTreeView, dictName: string, caller: string) {
+            super(treeview, caller, vscode.TreeItemCollapsibleState.Collapsed);
+            this.dictName = dictName;
+            this.caller = caller;
+        }
+        getChildren(): BasicTreeItem[] {
+            return this.children;
+        }
+    }
+
+    class DictNamingCalledItem extends DictItem {
+        contextValue = 'dict-naming-called-item';
+        iconPath = new vscode.ThemeIcon('person-filled');
+        dictName: string = '';
+        caller: string = '';
+        called: string = '';
+        translation: string = '';
+
+        constructor(treeview: DictTreeView, dictName: string, caller: string, called: string, translation: string) {
+            super(treeview, `${called}: ${translation}`, vscode.TreeItemCollapsibleState.None);
+            this.dictName = dictName;
+            this.caller = caller;
+            this.called = called;
+            this.translation = translation;
+        }
+    }
 
     export class DictTreeView extends BasicTreeView<DictItem> {
         // we register two commands for vscode, item clicked (we'll implement later) and the refresh button. 
@@ -344,6 +392,11 @@ export namespace dict_view {
             vscode.commands.registerCommand('Extension.dltxt.treeview.editItem', r => this.editItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.deleteItem', r => this.deleteItem(r));
             vscode.commands.registerCommand('Extension.dltxt.treeview.searchItem', r => this.searchItem(r));
+
+            vscode.commands.registerCommand('Extension.dltxt.treeview.addNaming', r => this.addNaming(r));
+            vscode.commands.registerCommand('Extension.dltxt.treeview.addNamingWithCaller', r => this.addNamingWithCaller(r));
+            vscode.commands.registerCommand('Extension.dltxt.treeview.editNaming', r => this.editNaming(r));
+            vscode.commands.registerCommand('Extension.dltxt.treeview.deleteNaming', r => this.deleteNaming(r));
             this.refresh();
         }
 
@@ -369,8 +422,11 @@ export namespace dict_view {
             const styleNode = this.constructStyleNode(name);
             simpleTMNode.children.push(styleNode);
 
-            simpleTMNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            simpleTMNode.contentNode = new DictEntrySetItem(name, this, `术语表`, vscode.TreeItemCollapsibleState.Expanded);
             simpleTMNode.children.push(simpleTMNode.contentNode);
+
+            simpleTMNode.namingNode = new DictNamingRootItem(this, name);
+            simpleTMNode.children.push(simpleTMNode.namingNode);
 
             this.roots.push(simpleTMNode);
             this.refresh(simpleTMNode);
@@ -387,8 +443,11 @@ export namespace dict_view {
             const styleNode = this.constructStyleNode(name);
             simpleTMNode.children.push(styleNode);
 
-            simpleTMNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            simpleTMNode.contentNode = new DictEntrySetItem(name, this, `术语表`, vscode.TreeItemCollapsibleState.Expanded);
             simpleTMNode.children.push(simpleTMNode.contentNode);
+
+            simpleTMNode.namingNode = new DictNamingRootItem(this, name);
+            simpleTMNode.children.push(simpleTMNode.namingNode);
 
             this.roots.push(simpleTMNode);
             this.refresh(simpleTMNode);
@@ -406,8 +465,12 @@ export namespace dict_view {
             const styleNode = this.constructStyleNode(name);
             rootNode.children.push(styleNode);
 
-            rootNode.contentNode = new DictEntrySetItem(name, this, `内容`, vscode.TreeItemCollapsibleState.Expanded);
+            rootNode.contentNode = new DictEntrySetItem(name, this, `术语表`, vscode.TreeItemCollapsibleState.Expanded);
             rootNode.children.push(rootNode.contentNode);
+
+            rootNode.namingNode = new DictNamingRootItem(this, name);
+            rootNode.children.push(rootNode.namingNode);
+
             this.roots.push(rootNode);
             this.refresh(rootNode);
             return true;
@@ -507,6 +570,23 @@ export namespace dict_view {
             }
         }
 
+        public async addNaming(item: DictNamingRootItem) {
+            vscode.commands.executeCommand('Extension.dltxt.naming_update', item.dictName, false)
+        }
+
+        public async addNamingWithCaller(item: DictNamingCallerItem) {
+            vscode.commands.executeCommand('Extension.dltxt.naming_update', item.dictName, false, item.caller)
+        }
+
+        public async editNaming(item: DictNamingCalledItem) {
+            vscode.
+            commands.executeCommand('Extension.dltxt.naming_update', item.dictName, false, item.caller, item.called)
+        }
+
+        public async deleteNaming(item: DictNamingCalledItem) {
+            vscode.commands.executeCommand('Extension.dltxt.naming_update', item.dictName, true, item.caller, item.called)
+        }
+
 
         getDictByName(name: string) {
             for (const node of this.roots as DictRootItem[]) {
@@ -550,6 +630,7 @@ export namespace dict_view {
                 const type = DictSettings.getDictType(node.dictName);
 
                 let keywords: any[] = [];
+                let namingRules: any = {};
                 if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
                     const game: string | undefined = DictSettings.getGameTitle(node.dictName);
                     if (!game || !node.connected) {
@@ -557,6 +638,7 @@ export namespace dict_view {
                         return;
                     }
                     keywords = DictSettings.getSimpleTMDictKeys(node.dictName, game);
+                    namingRules = DictSettings.getSimpleTMNamingRules(node.dictName, game);
                 } else if (type == DictType.Local) {
                     keywords = DictSettings.getLocalDictKeys(node.dictName);
                 }
@@ -572,6 +654,28 @@ export namespace dict_view {
                     return String(a.key).localeCompare(b.key);
                 });
                 (node.contentNode as DictEntrySetItem).children = dictEntryItems;
+                
+
+                // load naming rules
+                const callerItems = [];
+                for (const caller in namingRules) {
+                    const callerItem = new DictNamingCallerItem(this, node.dictName, caller);
+                    const calleds = namingRules[caller];
+                    for (const called in calleds) {
+                        const translation = calleds[called];
+                        const calledItem = new DictNamingCalledItem(this, node.dictName, caller, called, translation);
+                        callerItem.children.push(calledItem);
+                    }
+                    callerItem.children.sort((a, b) => {
+                        return String(a.called).localeCompare(b.called);
+                    });
+                    callerItems.push(callerItem);
+                }
+                callerItems.sort((a, b) => {
+                    return String(a.caller).localeCompare(b.caller);
+                });
+                (node.namingNode as DictNamingRootItem).children = callerItems;
+
                 for (const item of (node.children[0] as DictConfigRootItem).getChildren()) {
                     (item as DictConfigEntryItem).updateLabel();
                 }

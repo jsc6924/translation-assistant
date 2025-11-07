@@ -530,6 +530,38 @@ export class DictSettings {
   }
 
   static decoRepo = new Map<string, {version: string, deco: vscode.TextEditorDecorationType}>();
+  static namingDecoRepo = new Map<string,  vscode.TextEditorDecorationType>();
+
+  
+  static makeNamingDecoration(): vscode.TextEditorDecorationType {
+    let obj = {
+      borderWidth: '0 0 1px 0',
+      borderStyle: 'dashed',
+      borderRadius: '0',
+      overviewRulerColor: 'gray',
+      overviewRulerLane: vscode.OverviewRulerLane.Center,
+      light: {
+          // this color will be used in light color themes
+          borderColor: "#222",
+          //backgroundColor: "#222"
+      },
+      dark: {
+          // this color will be used in dark color themes
+          borderColor: '#eee',
+          //backgroundColor: '#eee'
+      }
+    };
+    
+    return vscode.window.createTextEditorDecorationType(obj);
+  }
+  static getNamingDecoration(dictName: string): vscode.TextEditorDecorationType | undefined {
+    if (this.namingDecoRepo.has(dictName)) {
+      return this.namingDecoRepo.get(dictName);
+    }
+    const deco = this.makeNamingDecoration();
+    this.namingDecoRepo.set(dictName, deco);
+    return deco;
+  }
 
   static getDictDecoration(dictName: string): {deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined, changed: boolean} {
     const overviewPosition = DictSettings.getStyleOverviewPosition(dictName);
@@ -657,6 +689,16 @@ export class DictSettings {
   }
   static setSimpleTMDictKeys(name: string, game: string, value: any) {
       return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`, value);
+  }
+  static getSimpleTMNamingRules(name: string, game: string) {
+    const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`) as Array<any>;
+    if (!v) {
+      return [];
+    }
+    return v;
+  }
+  static setSimpleTMNamingRules(name: string, game: string, value: any) {
+      return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`, value);
   }
   static getLocalDictKeys(name: string) {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey`) as Array<any>;

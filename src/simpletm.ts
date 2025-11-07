@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder, DictType } from './utils';
 import { editorWriteString } from './motion';
+import { DocumentParser } from './parser';
 const AhoCorasick = require('ahocorasick');
 
 
@@ -253,7 +254,7 @@ export function activate(context: vscode.ExtensionContext) {
 				DictSettings.setGameTitle(name, gameTitle);
 			}
 			let fullURL = BASE_URL + "/api/querybygame/" + gameTitle;
-			return axios.get(fullURL, {
+			const req1 = axios.get(fullURL, {
 				auth: {
 					username: username, password: apiToken
 				}
@@ -262,17 +263,30 @@ export function activate(context: vscode.ExtensionContext) {
 				if (result && gameTitle) {
                     DictSettings.setSimpleTMDictKeys(name, gameTitle, result.data);
 					dictNode?.setConnectionStatus(true);
-					dictTree?.refresh(dictNode);
 				}
 			}).catch((err) => {
 				const dictNode = dictTree?.getDictByName(name);
 				dictNode?.setConnectionStatus(false);
 				if (gameTitle) {
 					DictSettings.setSimpleTMDictKeys(name, gameTitle, undefined);
-					dictTree?.refresh(dictNode);
 				}
 				console.error(err);
 			});
+
+			const req2 = axios.get(BASE_URL + "/api2/naming/" + gameTitle, {
+				auth: {
+					username: username, password: apiToken
+				}
+			}).then(result => {
+				console.log(result);
+				if (result && gameTitle) {
+					DictSettings.setSimpleTMNamingRules(name, gameTitle, result.data.rules);
+				}
+			}).catch((err) => { 
+				console.error(err);
+			});
+			await Promise.all([req1, req2]);
+			dictTree?.refresh(dictNode);
 		}
 	}
 
@@ -540,6 +554,100 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		vscode.commands.executeCommand('Extension.dltxt.dict_update', name, rawText);
 	});
+	registerCommand(context, 'Extension.dltxt.naming_update', async function (dictName: string, wantDelete: boolean, caller?: string, called?: string, transcaller?: string) {
+		if (!dictName) {
+			vscode.window.showErrorMessage("请选择一个术语库");
+			return;
+		}
+		const type = DictSettings.getDictType(dictName);
+		if (type == DictType.Local) {
+			vscode.window.showErrorMessage("本地术语库暂不支持人名表");
+			return;
+		}
+		const {username, apiToken, BASE_URL, gameTitle} = await remoteUserConnectionGetter(dictName);
+		if (!username || !apiToken) {
+			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
+			return;
+		}
+		if (!gameTitle) {
+			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
+			return;
+		}
+		if (!caller) {
+			caller = await vscode.window.showInputBox({
+				prompt: "称呼人",
+				placeHolder: "留空取消",
+				ignoreFocusOut: true,
+			});
+			if (!caller) {
+				return;
+			}
+		}
+		if (!called) {
+			called = await vscode.window.showInputBox({
+				prompt: "被称呼人",
+				placeHolder: "留空取消",
+				ignoreFocusOut: true,
+			});
+			if (!called) {
+				return;
+			}
+		}
+		
+
+		if (wantDelete) {
+			const res = await vscode.window.showWarningMessage(`确定要删除人名词条${called}：${called}吗`, 
+				"是", "否");
+			if (res != '是') {
+				return;
+			}
+			axios.post(encodeURI(BASE_URL + "/api2/namingDelete"), 
+				{
+					game: gameTitle,
+					caller,
+					called
+				},
+				{
+					auth: {
+						username: username, password: apiToken
+					}
+				}
+			).then((res) => {
+				vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+			}, (e) => {
+				vscode.window.showErrorMessage(`${e}`)
+			})
+			return;
+		}
+		let fullURL = encodeURI(BASE_URL + "/api2/naming");
+		if (!transcaller) {
+			transcaller = await vscode.window.showInputBox({
+				prompt: "被称呼人的翻译",
+				placeHolder: "可留空",
+				ignoreFocusOut: true,
+			});
+			if (!transcaller) {
+				transcaller = '';
+			}
+		}
+		axios.post(fullURL, 
+			{
+				game: gameTitle,
+				caller,
+				called,
+				transcaller
+			},
+			{
+				auth: {
+					username: username, password: apiToken
+				}
+			}
+		).then((res) => {
+			vscode.commands.executeCommand('Extension.dltxt.sync_database', dictName);
+		}, (e) => {
+			vscode.window.showErrorMessage(`${e}`)
+		})
+	});
 	registerCommand(context, `Extension.dltxt.writeKeyword`, async　function (args) {
 		let index = args.index;
 		writeKeywordTranslation(index);
@@ -638,7 +746,6 @@ export function getDecorationsOnAllLines(uri: vscode.Uri): Map<number, any[]> {
 export function updateKeywordDecorations() {
 
     let activeEditor = vscode.window.activeTextEditor;
-    const config = vscode.workspace.getConfiguration("dltxt");
     if (!activeEditor) {
         return;
     }
@@ -646,6 +753,7 @@ export function updateKeywordDecorations() {
 	const dictNames = DictSettings.getAllDictNames();
 	for (const dictName of dictNames) {
 		const {deco, oldDeco, changed} = DictSettings.getDictDecoration(dictName);
+		const namingDecoType = DictSettings.getNamingDecoration(dictName);
 		const keywordsDecos: vscode.DecorationOptions[] = [];
 		const type = DictSettings.getDictType(dictName);
 		const showHighLight = DictSettings.getStyleShow(dictName);
@@ -656,6 +764,7 @@ export function updateKeywordDecorations() {
 			if (deco) {
 				activeEditor.setDecorations(deco, []);
 			}
+			namingDecoType && activeEditor.setDecorations(namingDecoType, []);
 			continue;
 		}
 		if (changed && oldDeco) {
@@ -663,6 +772,7 @@ export function updateKeywordDecorations() {
 		}
 
 		let keywords = [];
+		let naming: any = {};
 		if (type === DictType.Local) {
 			keywords = DictSettings.getLocalDictKeys(dictName);
 		} else if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
@@ -671,6 +781,7 @@ export function updateKeywordDecorations() {
 				continue;
 			}
 			keywords = DictSettings.getSimpleTMDictKeys(dictName, game);
+			naming = DictSettings.getSimpleTMNamingRules(dictName, game);
 		}
 		const testArray: Array<String> = [];
 		for (let i = 0; i < keywords.length; i++) {
@@ -679,51 +790,97 @@ export function updateKeywordDecorations() {
 			if(vr)
 				testArray.push(vr);
 		}
-		if (testArray.length === 0) {
-			continue;
-		}
-		let dict = new Map<String, string>();
-		const comments = new Map<String, string>();
-		keywords.forEach(v => {
-			dict.set(v['raw'], v['translate']);
-			if (v['comment']) {
-				comments.set(v['raw'], v['comment']);
+		if (testArray.length > 0) {
+			let dict = new Map<String, string>();
+			const comments = new Map<String, string>();
+			keywords.forEach(v => {
+				dict.set(v['raw'], v['translate']);
+				if (v['comment']) {
+					comments.set(v['raw'], v['comment']);
+				}
+			});
+
+			const text = activeEditor.document.getText();
+
+			const ac = new AhoCorasick(testArray);
+			const results = ac.search(text) as any[];
+			for (let res of results) {
+				const endIndex = res[0];
+				const keywords = res[1];
+				for (let keyword of keywords) {
+					const index = endIndex + 1 - keyword.length;
+					const startPos = activeEditor.document.positionAt(index);
+					const endPos = activeEditor.document.positionAt(index + keyword.length);
+					const word = dict.get(keyword)?.replace(/"/g, '') as string;
+					const originalWord = keyword.replace(/"/g, '') as string;
+					const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word)}"})`;
+					const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}","line":${startPos.line}})`;
+					const comment = comments.has(originalWord) ? ` 备注：${comments.get(originalWord)}` : '';
+					const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}${comment}`);
+					hoverMarkdown.isTrusted = true;
+					const decoration = {
+						range: new vscode.Range(startPos, endPos),
+						hoverMessage: hoverMarkdown,
+						renderOptions: {},
+						__dltxt: {
+							old_text: originalWord,
+							new_text: word
+						}
+					};
+					keywordsDecos.push(decoration);
+				}
 			}
-		});
+			activeEditor.setDecorations(deco, keywordsDecos);
+			const decoID = `${activeEditor.document.uri.fsPath}::${dictName}`;
+			DecorationMemoryStorage.set(decoID, keywordsDecos);
+		}
+		
 
-		const text = activeEditor.document.getText();
-
-		const ac = new AhoCorasick(testArray);
-		const results = ac.search(text) as any[];
-		for(let res of results) {
-			const endIndex = res[0];
-			const keywords = res[1];
-			for(let keyword of keywords) {
-				const index = endIndex + 1 - keyword.length;
-				const startPos = activeEditor.document.positionAt(index);
-				const endPos = activeEditor.document.positionAt(index + keyword.length);
-				const word = dict.get(keyword)?.replace(/"/g, '') as string;
-				const originalWord = keyword.replace(/"/g, '') as string;
-				const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word)}"})`;
-				const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}","line":${startPos.line}})`;
-				const comment = comments.has(originalWord) ? ` 备注：${comments.get(originalWord)}` : '';
-				const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}${comment}`);
-				hoverMarkdown.isTrusted = true;
-				const decoration = {
-					range: new vscode.Range(startPos, endPos),
-					hoverMessage: hoverMarkdown,
-					renderOptions: {},
-					__dltxt: {
-						old_text: originalWord,
-						new_text: word
+		if (Object.keys(naming).length > 0) {
+			const namingDecos: vscode.DecorationOptions[] = [];
+			const testArrays = new Map<string, string[]>();
+			for (const caller in naming) {
+				const testArray: string[] = [];
+				for(const called in naming[caller]) {
+					testArray.push(called);
+				}
+				testArrays.set(caller, testArray);
+			}
+			DocumentParser.processPairedLines(activeEditor.document, (jgrps, cgrps, j_index, c_index, talkingName) => {
+				if (talkingName && testArrays.has(talkingName)) {
+					const testArray = testArrays.get(talkingName);
+					const ac = new AhoCorasick(testArray);
+					const jPrefixLen = jgrps.prefix.length + jgrps.white.length
+					const results = ac.search(jgrps.text) as any[];
+					for (const res of results) {
+						const endIndex = res[0];
+						const keywords = res[1];
+						for (const keyword of keywords) {
+							const index = jPrefixLen + endIndex + 1 - keyword.length;
+							const startPos = new vscode.Position(j_index, index);
+							const endPos = new vscode.Position(j_index, index + keyword.length);
+							const trans = naming[talkingName][keyword]?.replace(/"/g, '') as string;
+							const called = keyword.replace(/"/g, '') as string;
+							const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(trans)}"})`;
+							const hoverMarkdown = new vscode.MarkdownString(`${trans} ${copyCommand}`);
+							hoverMarkdown.isTrusted = true;
+							const decoration = {
+								range: new vscode.Range(startPos, endPos),
+								hoverMessage: hoverMarkdown,
+								renderOptions: {},
+								__dltxt: {
+									old_text: called,
+									new_text: trans
+								}
+							}
+							namingDecos.push(decoration);
+						}
 					}
-				};
-				keywordsDecos.push(decoration);
-			}
+				}
+			})
+			namingDecoType && activeEditor.setDecorations(namingDecoType, namingDecos);
 		}
-		activeEditor.setDecorations(deco, keywordsDecos);
-		const decoID = `${activeEditor.document.uri.fsPath}::${dictName}`;
-		DecorationMemoryStorage.set(decoID, keywordsDecos);
+
 
 	}
     

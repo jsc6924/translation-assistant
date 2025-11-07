@@ -342,6 +342,42 @@
 				"category": "DLTXT"
 			},
 			{
+				"command": "Extension.dltxt.treeview.addNaming",
+				"title": "添加人名词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/add.svg",
+					"dark": "icons/dark/add.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.addNamingWithCaller",
+				"title": "添加人名词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/add.svg",
+					"dark": "icons/dark/add.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.editNaming",
+				"title": "编辑人名词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/edit.svg",
+					"dark": "icons/dark/edit.svg"
+				}
+			},
+			{
+				"command": "Extension.dltxt.treeview.deleteNaming",
+				"title": "删除人名词条",
+				"category": "DLTXT",
+				"icon": {
+					"light": "icons/light/trash.svg",
+					"dark": "icons/dark/trash.svg"
+				}
+			},
+			{
 				"command": "Extension.dltxt.treeview.setClipboardString",
 				"title": "编辑剪贴板",
 				"category": "DLTXT",
@@ -1085,7 +1121,27 @@
 					"when": "view == dltxt-dict && viewItem == dict-entry-item",
 					"group": "0_@3"
 				},
-				
+
+				{
+					"command": "Extension.dltxt.treeview.addNaming",
+					"when": "view == dltxt-dict && viewItem == dict-naming-root-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.addNamingWithCaller",
+					"when": "view == dltxt-dict && viewItem == dict-naming-caller-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.editNaming",
+					"when": "view == dltxt-dict && viewItem == dict-naming-called-item",
+					"group": "inline@1"
+				},
+				{
+					"command": "Extension.dltxt.treeview.deleteNaming",
+					"when": "view == dltxt-dict && viewItem == dict-naming-called-item",
+					"group": "inline@2"
+				},
 				{
 					"command": "Extension.dltxt.treeview.writeClipboardString",
 					"when": "view == dltxt-clipboard && viewItem == clipboard-item",
