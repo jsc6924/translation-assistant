@@ -2,13 +2,13 @@ import * as vscode from 'vscode'
 import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder, DictType } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat } from './utils';
 import { editorWriteString } from './motion';
 import { DocumentParser } from './parser';
 const AhoCorasick = require('ahocorasick');
 
 
-export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com/";
+export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com";
 
 export let dictTree: dict_view.DictTreeView | undefined = undefined; 
 
@@ -253,7 +253,7 @@ export function activate(context: vscode.ExtensionContext) {
 			if (type === DictType.RemoteURL) {
 				DictSettings.setGameTitle(name, gameTitle);
 			}
-			let fullURL = BASE_URL + "/api/querybygame/" + gameTitle;
+			let fullURL = pathConcat(BASE_URL, "/api/querybygame/" + gameTitle);
 			const req1 = axios.get(fullURL, {
 				auth: {
 					username: username, password: apiToken
@@ -273,12 +273,11 @@ export function activate(context: vscode.ExtensionContext) {
 				console.error(err);
 			});
 
-			const req2 = axios.get(BASE_URL + "/api2/naming/" + gameTitle, {
+			const req2 = axios.get(pathConcat(BASE_URL, "/api2/naming/" + gameTitle), {
 				auth: {
 					username: username, password: apiToken
 				}
 			}).then(result => {
-				console.log(result);
 				if (result && gameTitle) {
 					DictSettings.setSimpleTMNamingRules(name, gameTitle, result.data.rules);
 				}
@@ -415,7 +414,7 @@ export function activate(context: vscode.ExtensionContext) {
 		var msg = "";
 		if (translate) {
 			msg = rawText + "->" + translate;
-			fullURL = encodeURI(BASE_URL + "api2/update");
+			fullURL = encodeURI(pathConcat(BASE_URL, "/api2/update"));
 			console.log(fullURL);
 			axios.post(fullURL, 
 				{
@@ -446,7 +445,7 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		} else {
 			msg = "deleted: " + rawText;
-			fullURL = encodeURI(BASE_URL + "api2/delete");
+			fullURL = encodeURI(pathConcat(BASE_URL, "/api2/delete"));
 			vscode.window.showWarningMessage(`要删除词条"${rawText}"吗？`, '是', '否')
 			.then(result => {
 				if (result == '是') {
@@ -561,7 +560,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		const type = DictSettings.getDictType(dictName);
 		if (type == DictType.Local) {
-			vscode.window.showErrorMessage("本地术语库暂不支持人名表");
+			vscode.window.showErrorMessage("本地术语库暂不支持人称表");
 			return;
 		}
 		const {username, apiToken, BASE_URL, gameTitle} = await remoteUserConnectionGetter(dictName);
@@ -596,12 +595,12 @@ export function activate(context: vscode.ExtensionContext) {
 		
 
 		if (wantDelete) {
-			const res = await vscode.window.showWarningMessage(`确定要删除人名词条${called}：${called}吗`, 
+			const res = await vscode.window.showWarningMessage(`确定要删除人称词条${called}：${called}吗`, 
 				"是", "否");
 			if (res != '是') {
 				return;
 			}
-			axios.post(encodeURI(BASE_URL + "/api2/namingDelete"), 
+			axios.post(encodeURI(pathConcat(BASE_URL, "/api2/namingDelete")), 
 				{
 					game: gameTitle,
 					caller,
@@ -619,7 +618,7 @@ export function activate(context: vscode.ExtensionContext) {
 			})
 			return;
 		}
-		let fullURL = encodeURI(BASE_URL + "/api2/naming");
+		let fullURL = encodeURI(pathConcat(BASE_URL, "/api2/naming"));
 		if (!transcaller) {
 			transcaller = await vscode.window.showInputBox({
 				prompt: "被称呼人的翻译",
@@ -952,7 +951,7 @@ export async function migration(context: vscode.ExtensionContext) {
 	const game = config.get('simpleTM.project');
 	if (dictTree?.roots.length == 0 && (url || user || api || game)) {
 		if (!url) {
-			url = 'https://simpletm.jscrosoft.com/';
+			url = 'https://simpletm.jscrosoft.com';
 		}
 		const name = 'remote-dictionary';
 		const allDicts = DictSettings.getAllDictNames();

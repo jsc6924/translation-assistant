@@ -343,7 +343,7 @@
 			},
 			{
 				"command": "Extension.dltxt.treeview.addNaming",
-				"title": "添加人名词条",
+				"title": "添加人称词条",
 				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/add.svg",
@@ -352,7 +352,7 @@
 			},
 			{
 				"command": "Extension.dltxt.treeview.addNamingWithCaller",
-				"title": "添加人名词条",
+				"title": "添加人称词条",
 				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/add.svg",
@@ -361,7 +361,7 @@
 			},
 			{
 				"command": "Extension.dltxt.treeview.editNaming",
-				"title": "编辑人名词条",
+				"title": "编辑人称词条",
 				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/edit.svg",
@@ -370,7 +370,7 @@
 			},
 			{
 				"command": "Extension.dltxt.treeview.deleteNaming",
-				"title": "删除人名词条",
+				"title": "删除人称词条",
 				"category": "DLTXT",
 				"icon": {
 					"light": "icons/light/trash.svg",

@@ -8,6 +8,16 @@ const archiver = require("archiver");
 export type Pair<T1, T2> = [T1, T2];
 export type Tuple3<T1, T2, T3> = [T1, T2, T3];
 
+export function pathConcat(base: string, pathpart: string) {
+  if (base.endsWith('/') && pathpart.startsWith('/')) {
+    return base.slice(0, base.length - 1) + pathpart;
+  }
+  if (!base.endsWith('/') && !pathpart.startsWith('/')) {
+    return base + '/' + pathpart;
+  }
+  return base + pathpart;
+}
+
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
   if (pattern.flags.indexOf('g') == -1) {
     vscode.window.showErrorMessage('pattern must have a "g" flag in findLastMatchIndex');
