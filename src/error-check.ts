@@ -483,7 +483,6 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             }
         }
 
-
     });
     return [res, untranslatedLines];
 }
