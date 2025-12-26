@@ -21,6 +21,7 @@ export enum ErrorCode {
     FoundKana = 9,
     ExclamationQuestion = 10,
     UntranslatedKeyword = 11,
+    LineTooLong = 12,
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -354,6 +355,11 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     const checkPuncComb = config.get<boolean>('appearance.warning.checkPuncCombination') as boolean;
     const checkExclamationQuestion = config.get<boolean>('formatter.a.fixExcliamationQuestion') as boolean;
 
+    const checkLineLength = config.get<boolean>('nestedLine.check') as boolean;
+    const lineSplitter = config.get<string>('nestedLine.token') as string;
+    const splitDisplayLength = lineSplitter.length;
+    const maxLineLength = config.get<number>('nestedLine.maxLen') as number;
+
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
         if (normalize(jgrps.text) === normalize(cgrps.text)) {
             if (!skipChecking(cgrps)) {
@@ -459,6 +465,25 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             }
         }
 
+        if (checkLineLength) {
+            const lines = `${cgrps.white}${cgrps.text}${cgrps.suffix}`;
+            const lineList = lines.split(lineSplitter);
+            const lineLengths = lineList.map(l => l.length);
+            const prevLengths = [cgrps.prefix.length + cgrps.white.length];
+            for (let i = 1; i < lineLengths.length; i++) {
+                prevLengths.push(prevLengths[i - 1] + splitDisplayLength + lineLengths[i - 1]);
+            }
+            for (let i = 0; i < lineList.length; i++) {
+                const line = lineList[i];
+
+                if (displayLength(line) > 2 * maxLineLength) {
+                    const startChar = prevLengths[i];
+                    const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `单行长度超过 ${maxLineLength} 字符`, c_index, startChar, lineLengths[i], ErrorCode.LineTooLong);
+                    res.push(d);
+                }
+            }
+        }
+
 
     });
     return [res, untranslatedLines];
@@ -495,4 +520,25 @@ export function clearAllWarnings() {
     DltxtDiagCollection.clear();
     DltxtDiagCollectionMissionLine.clear();
     DltxtDiagCollectionSpellcheck.clear();
+}
+
+function displayLength(str: string): number {
+    // simple implementation: count full-width chars as 2, half-width as 1
+    let len = 0;
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if ((code >= 0x1100 && code <= 0x115F) || // Hangul Jamo
+            (code >= 0x2E80 && code <= 0xA4CF && code !== 0x303F) || // CJK Radicals Supplement .. Yi Radicals
+            (code >= 0xAC00 && code <= 0xD7A3) || // Hangul Syllables
+            (code >= 0xF900 && code <= 0xFAFF) || // CJK Compatibility Ideographs
+            (code >= 0xFE10 && code <= 0xFE19) || // Vertical Forms
+            (code >= 0xFE30 && code <= 0xFE6F) || // CJK Compatibility Forms
+            (code >= 0xFF00 && code <= 0xFF60) || // Fullwidth Forms
+            (code >= 0xFFE0 && code <= 0xFFE6)) { // Fullwidth Forms
+            len += 2;
+        } else {
+            len += 1;
+        }
+    }
+    return len;
 }
