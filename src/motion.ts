@@ -59,8 +59,15 @@ export function activate(context: vscode.ExtensionContext) {
       updateNewlineDecorations();
     });
   });
+
+  registerCommand(context, 'Extension.dltxt.switchStrictEditing', () => {
+    const config = vscode.workspace.getConfiguration("dltxt.core");
+    const current = config.get<boolean>('strictEditing');
+    config.update('strictEditing', !current, vscode.ConfigurationTarget.Workspace);
+    vscode.window.showInformationMessage(`编辑限制模式已${!current ? '启用' : '关闭'}`);
+  });
 }
- 
+
 export function getTextDelimiter() {
   const config = vscode.workspace.getConfiguration("dltxt");
   const textDelimiterStr = config.get('core.z.textDelimiter') as string;

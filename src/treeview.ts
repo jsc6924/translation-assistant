@@ -835,6 +835,9 @@ export namespace cc_view {
             configCommands.children.push(new CommandItem("切换换行符显示", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.switchNewlineTokenDisplay');
             }, 'settings-gear'));
+            configCommands.children.push(new CommandItem("切换编辑限制模式", async () => {
+                await vscode.commands.executeCommand('Extension.dltxt.switchStrictEditing');
+            }, 'settings-gear'));
 
 
             const textCommands = new CCDirectory(this, "文本编辑", vscode.TreeItemCollapsibleState.Collapsed);

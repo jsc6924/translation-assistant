@@ -67,11 +67,23 @@ interface DocumentParser {
   errorCheck(document: string | string[] | vscode.TextDocument): [boolean, vscode.Diagnostic[]];
 
   getFormatDetector(): AutoDetector;
+
+  isUneditable(lineText: string): boolean;
 }
+
+
 
 class StandardDocumentParser implements DocumentParser {
     constructor() {
 
+    }
+
+    isUneditable(lineText: string): boolean {
+      const [jreg, _] = getRegex();
+      if (!jreg) {
+          return false;
+      }
+      return jreg.test(lineText);
     }
 
     processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void) {
@@ -363,6 +375,9 @@ export class TextBlockDocumentParser implements DocumentParser {
     throw new Error('Method not implemented.');
   }
 
+  isUneditable(lineText: string): boolean {
+    return false; // TODO: implement
+  }
 
   processPairedLines(input: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => void): void {
     const [reg] = getTextBlockRegex();

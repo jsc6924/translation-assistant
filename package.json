@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.46.0",
+	"version": "3.47.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -192,6 +192,16 @@
 			{
 				"command": "Extension.dltxt.batch_check_folder",
 				"title": "批量检查译文",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_report",
+				"title": "批量检查译文并生成报告",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_report_folder",
+				"title": "批量检查译文并生成报告",
 				"category": "DLTXT"
 			},
 			{
@@ -928,7 +938,13 @@
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.batch_check_folder",
 					"group": "dltxt.t.menu@2"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.batch_report_folder",
+					"group": "dltxt.t.menu@3"
 				}
+
 			],
 			"dltxt-explorer-submenu": [
 				{
@@ -1030,6 +1046,11 @@
 				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.batch_check",
+					"group": "dltxt.rbatch"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.batch_report",
 					"group": "dltxt.rbatch"
 				},
 				{
@@ -1221,6 +1242,11 @@
 					"type": "string",
 					"default": "",
 					"description": "其他合法的开头的正则表达式"
+				},
+				"dltxt.core.strictEditing": {
+					"type": "boolean",
+					"default": true,
+					"description": "编辑限制模式：原文不可修改，不可删除或插入行"
 				},
 				"dltxt.core.name.position": {
 					"type": "string",
@@ -1455,6 +1481,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "快捷键：把光标后译文移动到下一行时同时移动光标"
+				},
+				"dltxt.nestedLine.check": {
+					"type": "boolean",
+					"default": true,
+					"description": "是否检查每行文本长度"
 				},
 				"dltxt.nestedLine.token": {
 					"type": "string",

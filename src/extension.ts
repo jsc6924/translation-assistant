@@ -24,6 +24,7 @@ import * as parser from './parser';
 import * as batch from './batch';
 import * as crossref from './crossref';
 import * as error_check from './error-check';
+import { getRegex } from './parser';
 
 
 
@@ -101,6 +102,29 @@ export function activate(context: vscode.ExtensionContext) {
 	}, null, context.subscriptions);
 
 	vscode.workspace.onDidChangeTextDocument(event => {
+		let activeEditor = vscode.window.activeTextEditor;
+		const config = vscode.workspace.getConfiguration("dltxt.core");
+		const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo || 
+				event.reason === vscode.TextDocumentChangeReason.Redo);
+		if (config.get<boolean>('strictEditing') && !noStrict) {
+			for (const change of event.contentChanges) {
+				const startLine = change.range.start.line;
+				const endLine = change.range.end.line;
+				if (startLine !== endLine || change.text.indexOf('\n') !== -1) {
+					vscode.commands.executeCommand('undo');
+					vscode.window.showWarningMessage('不可删除或插入行。您可以在设置中查找dltxt.core.strictEditing关闭此功能。');
+					return;
+				}
+				for (let line = startLine; line <= endLine; line++) {
+					const lineText = event.document.lineAt(line).text;
+					if (parser.DocumentParser.isUneditable(lineText)) {
+						vscode.commands.executeCommand('undo');
+						vscode.window.showWarningMessage('原文不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。');
+						return;
+					}
+				}
+			}
+		}
 		if (activeEditor && event.document === activeEditor.document) {
 			triggerUpdateDecorations();
 		}
