@@ -548,8 +548,6 @@ export class DictSettings {
       borderWidth: '0 0 1px 0',
       borderStyle: 'dashed',
       borderRadius: '0',
-      overviewRulerColor: 'gray',
-      overviewRulerLane: vscode.OverviewRulerLane.Center,
       light: {
           // this color will be used in light color themes
           borderColor: "#222",
