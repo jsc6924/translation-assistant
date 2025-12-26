@@ -357,7 +357,6 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
 
     const checkLineLength = config.get<boolean>('nestedLine.check') as boolean;
     const lineSplitter = config.get<string>('nestedLine.token') as string;
-    const splitDisplayLength = lineSplitter.length;
     const maxLineLength = config.get<number>('nestedLine.maxLen') as number;
 
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
@@ -471,7 +470,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             const lineLengths = lineList.map(l => l.length);
             const prevLengths = [cgrps.prefix.length + cgrps.white.length];
             for (let i = 1; i < lineLengths.length; i++) {
-                prevLengths.push(prevLengths[i - 1] + splitDisplayLength + lineLengths[i - 1]);
+                prevLengths.push(prevLengths[i - 1] + lineSplitter.length + lineLengths[i - 1]);
             }
             for (let i = 0; i < lineList.length; i++) {
                 const line = lineList[i];
