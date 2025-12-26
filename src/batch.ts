@@ -136,6 +136,55 @@ async function batch_check(documentUris: vscode.Uri[]) {
     vscode.window.showInformationMessage(`已检查 ${file_checked}/${total_file} 个文件`);
 }
 
+
+async function batch_report(documentUris: vscode.Uri[]) {
+    // replace text in all selected files, using workspace edit
+    const total_file = documentUris.length;
+    let file_checked = 0;
+
+    // generate an error report at a temp text document
+    const reportDoc = await vscode.workspace.openTextDocument({ language: 'markdown' });
+    const reportLines: string[] = [];
+    reportLines.push(`# 文本检查报告`);
+    reportLines.push(`共检查 ${total_file} 个文件`);
+    reportLines.push(`------------------\n`);
+
+    await batchProcess(documentUris, doc => {
+        const [diags, untranslatedLines] = warningCheck(doc);
+        utils.DltxtDiagCollection.set(doc.uri, diags);
+        diags.forEach(d => {
+            const line = doc.lineAt(d.range.start.line);
+            const fsPathNormalized = doc.uri.fsPath.replace(/\\/g, '/');
+            reportLines.push(`[link](vscode://file/${fsPathNormalized}:${d.range.start.line + 1}) : ${d.message}`);
+        });
+
+        const missinglineDiags = untranslatedLines.map(line => {
+            const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, '未翻译', line, 0, 1000);
+            const fsPathNormalized = doc.uri.fsPath.replace(/\\/g, '/');
+            reportLines.push(`[link](vscode://file/${fsPathNormalized}:${line + 1}): 未翻译`);
+            return d;
+        });
+        utils.DltxtDiagCollectionMissionLine.set(doc.uri, missinglineDiags);
+
+        reportLines.push(`------------------\n`);
+        file_checked++;
+    });
+
+    // apply the report to the reportDoc
+    const reportText = reportLines.join('\n');
+    const edit = new vscode.WorkspaceEdit();
+    const fullRange = new vscode.Range(
+        reportDoc.positionAt(0),
+        reportDoc.positionAt(reportDoc.getText().length)
+    );
+    edit.replace(reportDoc.uri, fullRange, reportText);
+    await vscode.workspace.applyEdit(edit);
+    await vscode.window.showTextDocument(reportDoc,  );
+
+    vscode.window.showInformationMessage(`已检查 ${file_checked}/${total_file} 个文件，报告已生成`);
+
+}
+
 async function batch_insert_newline(documentUris: vscode.Uri[]) {
     const config = vscode.workspace.getConfiguration("dltxt");
     const newline = config.get<string>('nestedLine.token');
@@ -213,6 +262,14 @@ export async function batchCheckCommand() {
         return;
     }
     await batch_check(documentUris);
+}
+
+export async function batchReportCommand() {
+    const documentUris = await selectBatchRange(false, '{txt,TXT}');
+    if (!documentUris) {
+        return;
+    }
+    await batch_report(documentUris);
 }
 
 export async function batchInsertNewline() {
@@ -300,7 +357,6 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     registerCommand(context, 'Extension.dltxt.batch_check', batchCheckCommand);
-
     registerCommand(context, 'Extension.dltxt.batch_check_folder', async (arg) => {
         const folderPath = arg.fsPath;
         if (!fs.statSync(folderPath).isDirectory()) {
@@ -310,6 +366,18 @@ export function activate(context: vscode.ExtensionContext) {
         const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
         const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
         await batch_check(documentUris);
+    });
+
+    registerCommand(context, 'Extension.dltxt.batch_report', batchReportCommand);
+    registerCommand(context, 'Extension.dltxt.batch_report_folder', async (arg) => {
+        const folderPath = arg.fsPath;
+        if (!fs.statSync(folderPath).isDirectory()) {
+            vscode.window.showInformationMessage('请选中一个文件夹');
+            return;
+        }
+        const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
+        const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
+        await batch_report(documentUris);
     });
 
 }
