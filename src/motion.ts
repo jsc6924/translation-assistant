@@ -537,7 +537,7 @@ function replaceAllInLine(old_text: string, new_text: string, line: number) {
 const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/[っ゛]/g, ''],
     [/だめ/g, '不行'],
-    [/[れぺ][ろる]+/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
+    [/[れぺ]ぇ?[ろる]+/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
     [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
     [/[ちじぢ]ゅ[ぷぶぽぼ]+/g, (s)=> '啾' + repeatStr('噗',s.length-2, false)],
     [/[ちじぢ]ゅ[うぅ]?/g, '啾'],
@@ -563,7 +563,7 @@ const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
     [/[ぷぶ][ん]?/g, '噗'],
     [/む[ん]?/g, '姆'],
     [/る/g, '噜'],
-    [/ん+/g, (s)=>repeatStr('嗯',s.length, true)],
+    [/ん+ぅ*/g, (s)=>repeatStr('嗯',s.length, true)],
     [/～、/g, "～"],
     [/嗯呜/g, "嗯"],
     [/呼呜/g, "呼"],
