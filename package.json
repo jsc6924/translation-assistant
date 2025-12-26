@@ -10,7 +10,7 @@
 	},
 	"categories": [
 		"Programming Languages"
-	], 
+	],
 	"activationEvents": [
 		"onLanguage:dltxt",
 		"onLanguage:sltxt"
@@ -944,7 +944,6 @@
 					"command": "Extension.dltxt.batch_report_folder",
 					"group": "dltxt.t.menu@3"
 				}
-
 			],
 			"dltxt-explorer-submenu": [
 				{
@@ -1142,7 +1141,6 @@
 					"when": "view == dltxt-dict && viewItem == dict-entry-item",
 					"group": "0_@3"
 				},
-
 				{
 					"command": "Extension.dltxt.treeview.addNaming",
 					"when": "view == dltxt-dict && viewItem == dict-naming-root-item",
@@ -1548,6 +1546,7 @@
 		"@types/kuromoji": "^0.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
+		"@types/vscode": "^1.80.0",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
 		"esbuild": "^0.17.19",
@@ -1558,7 +1557,6 @@
 		"vscode-test": "^1.3.0"
 	},
 	"dependencies": {
-		"@types/vscode": "1.80",
 		"@vscode/vsce": "^3.5.0",
 		"ahocorasick": "^1.0.2",
 		"archiver": "^5.3.1",

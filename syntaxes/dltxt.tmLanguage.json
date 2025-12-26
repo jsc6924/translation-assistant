@@ -117,6 +117,34 @@
 				"2": { "name" : "st.nme.translated.txt" }
 			}
 		},
+		"nene.txt.original": {
+			"match": "(☆\\d+T☆)(.*)",
+			"captures": {
+				"1": { "name" : "st.original.tag" },
+				"2": { "name" : "original.txt" }
+			}
+		},
+		"nene.txt.translated": {
+			"match": "(★\\d+T★)(.*)",
+			"captures": {
+				"1": { "name" : "st.translated.tag" },
+				"2": { "name" : "translated.txt" }
+			}
+		},
+		"nene.nme.original": {
+			"match": "(☆\\d+N☆)(.*)",
+			"captures": {
+				"1": { "name" : "st.nme.original.tag" },
+				"2": { "name" : "st.nme.original.txt" }
+			}
+		},
+		"nene.nme.translated": {
+			"match": "(★\\d+N★)(.*)",
+			"captures": {
+				"1": { "name" : "st.nme.translated.tag" },
+				"2": { "name" : "st.nme.translated.txt" }
+			}
+		},
 		"test": {
 			"begin": "<%\\s*\n",
 			"beginCaptures": {"0": {"name": "begin"}},
