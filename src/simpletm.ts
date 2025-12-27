@@ -756,6 +756,7 @@ export function updateKeywordDecorations() {
 		const keywordsDecos: vscode.DecorationOptions[] = [];
 		const type = DictSettings.getDictType(dictName);
 		const showHighLight = DictSettings.getStyleShow(dictName);
+		const decoID = `${activeEditor.document.uri.fsPath}::${dictName}`;
 		if (!showHighLight) {
 			if (oldDeco) {
 				activeEditor.setDecorations(oldDeco, []);
@@ -830,14 +831,12 @@ export function updateKeywordDecorations() {
 				}
 			}
 			activeEditor.setDecorations(deco, keywordsDecos);
-			const decoID = `${activeEditor.document.uri.fsPath}::${dictName}`;
-			DecorationMemoryStorage.set(decoID, keywordsDecos);
 		}
 		
 
+		const namingDecos: vscode.DecorationOptions[] = [];
 		if (Object.keys(naming).length > 0) {
-			const namingDecos: vscode.DecorationOptions[] = [];
-			const testArrays = new Map<string, string[]>();
+			const testArrays = new Map<string, string[]>(); // caller -> called[]
 			for (const caller in naming) {
 				const testArray: string[] = [];
 				for(const called in naming[caller]) {
@@ -845,42 +844,57 @@ export function updateKeywordDecorations() {
 				}
 				testArrays.set(caller, testArray);
 			}
+			const allCalleds = new Set<string>();
+			for (const caller in naming) {
+				for (const called in naming[caller]) {
+					allCalleds.add(called);
+				}
+			}
+			const allCalledArray = Array.from(allCalleds);
+			const lineNumberToTalker = new Map<number, string>();
 			DocumentParser.processPairedLines(activeEditor.document, (jgrps, cgrps, j_index, c_index, talkingName) => {
-				if (talkingName && testArrays.has(talkingName)) {
-					const testArray = testArrays.get(talkingName);
-					const ac = new AhoCorasick(testArray);
-					const jPrefixLen = jgrps.prefix.length + jgrps.white.length
-					const results = ac.search(jgrps.text) as any[];
-					for (const res of results) {
-						const endIndex = res[0];
-						const keywords = res[1];
-						for (const keyword of keywords) {
-							const index = jPrefixLen + endIndex + 1 - keyword.length;
-							const startPos = new vscode.Position(j_index, index);
-							const endPos = new vscode.Position(j_index, index + keyword.length);
-							const trans = naming[talkingName][keyword]?.replace(/"/g, '') as string;
-							const called = keyword.replace(/"/g, '') as string;
-							const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(trans)}"})`;
-							const hoverMarkdown = new vscode.MarkdownString(`${trans} ${copyCommand}`);
-							hoverMarkdown.isTrusted = true;
-							const decoration = {
-								range: new vscode.Range(startPos, endPos),
-								hoverMessage: hoverMarkdown,
-								renderOptions: {},
-								__dltxt: {
-									old_text: called,
-									new_text: trans
-								}
-							}
-							namingDecos.push(decoration);
+				if (talkingName) {
+					lineNumberToTalker.set(j_index, talkingName);
+					lineNumberToTalker.set(c_index, talkingName);
+				}
+			});
+			const ac = new AhoCorasick(allCalledArray);
+			const results = ac.search(activeEditor.document.getText()) as any[];
+			for (const res of results) {
+				const endIndex = res[0];
+				const keywords = res[1];
+				for (const keyword of keywords) {
+					const index = endIndex + 1 - keyword.length;
+					const startPos = activeEditor.document.positionAt(index);
+					const endPos = activeEditor.document.positionAt(index + keyword.length);
+					const talkingName = lineNumberToTalker.get(startPos.line);
+					if (!talkingName) {
+						continue;
+					}
+					const trans = naming[talkingName][keyword]?.replace(/"/g, '') as string;
+					const called = keyword.replace(/"/g, '') as string;
+					const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(trans)}"})`;
+					const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(called)}","new_text":"${encodeURIComponent(trans)}","line":${startPos.line}})`;
+					const hoverMarkdown = new vscode.MarkdownString(`${trans} ${copyCommand} ${replaceCommand}`);
+					hoverMarkdown.isTrusted = true;
+					const decoration = {
+						range: new vscode.Range(startPos, endPos),
+						hoverMessage: hoverMarkdown,
+						renderOptions: {},
+						__dltxt: {
+							old_text: called,
+							new_text: trans
 						}
 					}
+					namingDecos.push(decoration);
 				}
-			})
-			namingDecoType && activeEditor.setDecorations(namingDecoType, namingDecos);
+			}
+			if (namingDecoType) {
+				activeEditor.setDecorations(namingDecoType, namingDecos);
+			}
 		}
 
-
+		DecorationMemoryStorage.set(decoID, keywordsDecos.concat(namingDecos));
 	}
     
 }
