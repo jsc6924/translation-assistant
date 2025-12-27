@@ -132,6 +132,16 @@ export function removeSpace(text: string): string {
   return text.replace(/\s+/g, '');
 }
 
+export function countInString(str: string, char: string): number {
+  let count = 0;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === char) {
+      count++;
+    }
+  }
+  return count;
+}
+
 export const DltxtDiagCollection = vscode.languages.createDiagnosticCollection(`dltxt`);
 export const DltxtDiagCollectionSpellcheck = vscode.languages.createDiagnosticCollection(`dltxt-spellcheck`);
 export const DltxtDiagCollectionMissionLine = vscode.languages.createDiagnosticCollection(`dltxt-missingline`);

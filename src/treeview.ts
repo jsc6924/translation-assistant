@@ -8,7 +8,7 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace, batchSpecialTranslate } from './batch';
 import { checkSimilarText } from './crossref';
 import { setNewlineToken } from './newline';
 import { configureFormat } from './formatter';
@@ -844,6 +844,9 @@ export namespace cc_view {
             this.roots.push(textCommands);
             textCommands.children.push(new CommandItem("复制原文到未翻译的译文行", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.copy_original');
+            }));
+            textCommands.children.push(new CommandItem("翻译特殊拟声词", async () => {
+                await batchSpecialTranslate();
             }));
             textCommands.children.push(new CommandItem("删除换行符", async () => {
                 await batchRemoveNewline();

@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as motion from './motion';
-import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder, compareVersions } from './utils';
+import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder, compareVersions, countInString } from './utils';
 import {
 	formatter, copyOriginalToTranslation,
 	repeatFirstChar
@@ -106,21 +106,29 @@ export function activate(context: vscode.ExtensionContext) {
 		const config = vscode.workspace.getConfiguration("dltxt.core");
 		const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo || 
 				event.reason === vscode.TextDocumentChangeReason.Redo);
+		// Skip non-file documents (terminal, output, etc.)
+		if (event.document.uri.scheme !== 'file') {
+			return;
+		}
 		if (config.get<boolean>('strictEditing') && !noStrict) {
 			for (const change of event.contentChanges) {
 				const startLine = change.range.start.line;
 				const endLine = change.range.end.line;
-				if (startLine !== endLine || change.text.indexOf('\n') !== -1) {
+				const originalLineCount = endLine - startLine + 1;
+				const newLineCount = countInString(change.text, '\n') + 1;
+				if (originalLineCount !== newLineCount) {
 					vscode.commands.executeCommand('undo');
-					vscode.window.showWarningMessage('不可删除或插入行。您可以在设置中查找dltxt.core.strictEditing关闭此功能。');
+					vscode.window.showWarningMessage(`不可删除或插入行。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line} ${change.range.end.line}`);
 					return;
 				}
-				for (let line = startLine; line <= endLine; line++) {
-					const lineText = event.document.lineAt(line).text;
-					if (parser.DocumentParser.isUneditable(lineText)) {
-						vscode.commands.executeCommand('undo');
-						vscode.window.showWarningMessage('原文不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。');
-						return;
+				if (newLineCount <= 2) {
+					for (let line = startLine; line <= endLine; line++) {
+						const lineText = event.document.lineAt(line).text;
+						if (parser.DocumentParser.isUneditable(lineText)) {
+							vscode.commands.executeCommand('undo');
+							vscode.window.showWarningMessage(`原文不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line}`);
+							return;
+						}
 					}
 				}
 			}

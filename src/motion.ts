@@ -587,22 +587,26 @@ export function translateCurrentLine(
   if (!ok || !curLine) {
     return;
   }
-  let replacedLine = curLine.text;
-  if (kTohConversion) {
-    replacedLine = utils.katakanaToHiragana(replacedLine);
-  }
-  for (const [k,v] of lookupTable) {
-    if (typeof v == "string") {
-      replacedLine = replacedLine.replace(k, v);
-    } else {
-      replacedLine = replacedLine.replace(k, v);
-    }
-  }
+  let replacedLine = translateString(curLine.text, lookupTable, kTohConversion);
   editor.edit((editbuilder) => {
     if (curLine) {
       editbuilder.replace(curLine.range, replacedLine);
     }
   });
+}
+
+export function translateString(line: string, lookupTable: Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable, kTohConversion: boolean = true): string {
+  if (kTohConversion) {
+    line = utils.katakanaToHiragana(line);
+  }
+  for (const [k,v] of lookupTable) {
+    if (typeof v == "string") {
+      line = line.replace(k, v);
+    } else {
+      line = line.replace(k, v);
+    }
+  }
+  return line;
 }
 
 export function editorWriteString(s: string) {

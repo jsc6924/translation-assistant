@@ -9,9 +9,10 @@ import { performance } from 'perf_hooks';
 import { createDiagnostic, ErrorCode, filterUntranslatedLines, updateNewlineDecorations, warningCheck } from './error-check';
 import { insert_newline_for_line } from './newline';
 import { Pair } from './utils';
+import { translateString } from './motion';
 
 
-export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = true, batchSize: number = 64) {
+export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = false, batchSize: number = 64) {
     // filter documentUris to exclude files in ExcludedPaths
     const filteredUris = vscode.workspace.workspaceFolders ? documentUris.filter(uri => {
         return !ExcludedPaths.some(excludedPath => uri.fsPath.startsWith(excludedPath));
@@ -50,7 +51,7 @@ export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.
 }
 
 export async function selectBatchRange(undoable: boolean, ext?: string): Promise<vscode.Uri[] | undefined> {
-    const convertRange = ['所有打开的文件', '当前目录下所有文件', '当前目录下所有文件（不包含子目录）'];
+    const convertRange = ['当前文件', '所有打开的文件', '当前目录下所有文件', '当前目录下所有文件（不包含子目录）'];
     // Show encoding selection menu
     const selectedRange = await vscode.window.showQuickPick(convertRange, {
         placeHolder: '选择转换范围',
@@ -80,9 +81,16 @@ export async function selectBatchRange(undoable: boolean, ext?: string): Promise
         // Search for all files in the workspace folder
         return await vscode.workspace.findFiles(filePattern, excludePattern, undefined, undefined);
     }
-    if (selectedRange === '当前目录下所有文件') {
-        return globAllFilesHelper("**/*");
+    if (selectedRange === '当前文件') {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('当前没有打开的文件');
+            return;
+        }
+        return [editor.document.uri];
 
+    } else if (selectedRange === '当前目录下所有文件') {
+        return globAllFilesHelper("**/*");
     } else if (selectedRange === '当前目录下所有文件（不包含子目录）') {
         return globAllFilesHelper("*");
     } else {
@@ -222,7 +230,7 @@ async function batch_insert_newline(documentUris: vscode.Uri[]) {
     vscode.window.showInformationMessage(`已处理 ${file_processed}/${total_file} 个文件`);
 }
 
-async function batch_reomve_newline(documentUris: vscode.Uri[]) {
+async function batch_remove_newline(documentUris: vscode.Uri[]) {
     const config = vscode.workspace.getConfiguration("dltxt");
     const newline = config.get<string>('nestedLine.token');
     if (!newline) {
@@ -246,6 +254,26 @@ async function batch_reomve_newline(documentUris: vscode.Uri[]) {
                 const line = doc.lineAt(i);
                 const start = line.range.start.with({ character: groups.prefix.length });
                 const end = line.range.end;
+                workspaceEdit.replace(doc.uri, new vscode.Range(start, end), replaced);
+            }
+        });
+        file_processed++;
+    });
+    await vscode.workspace.applyEdit(workspaceEdit);
+    vscode.window.showInformationMessage(`已处理 ${file_processed}/${total_file} 个文件`);
+}
+
+async function batch_special_translate(documentUris: vscode.Uri[]) {
+    const workspaceEdit = new vscode.WorkspaceEdit();
+    const total_file = documentUris.length;
+    let file_processed = 0;
+    await batchProcess(documentUris, doc => {
+        DocumentParser.processTranslatedLines(doc, (groups, i) => {
+            const replaced = translateString(groups.text);
+            if (replaced != groups.text) {
+                const line = doc.lineAt(i);
+                const start = line.range.start.with({ character: groups.prefix.length + groups.white.length });
+                const end = line.range.end.with({ character: groups.prefix.length + groups.white.length + groups.text.length });
                 workspaceEdit.replace(doc.uri, new vscode.Range(start, end), replaced);
             }
         });
@@ -285,7 +313,15 @@ export async function batchRemoveNewline() {
     if (!documentUris) {
         return;
     }
-    await batch_reomve_newline(documentUris);
+    await batch_remove_newline(documentUris);
+}
+
+export async function batchSpecialTranslate() {
+    const documentUris = await selectBatchRange(true, '{txt,TXT}');
+    if (!documentUris) {
+        return;
+    }
+    await batch_special_translate(documentUris);
 }
 
 export async function batchReplace(rawText: string) {
