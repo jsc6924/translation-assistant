@@ -106,11 +106,11 @@ export function activate(context: vscode.ExtensionContext) {
 		const config = vscode.workspace.getConfiguration("dltxt.core");
 		const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo || 
 				event.reason === vscode.TextDocumentChangeReason.Redo);
-		// Skip non-file documents (terminal, output, etc.)
-		if (event.document.uri.scheme !== 'file') {
+		// Skip non-file documents (terminal, output, etc.) and non-.txt files
+		if (event.document.uri.scheme !== 'file' || !event.document.uri.fsPath.endsWith('.txt')) {
 			return;
 		}
-		if (config.get<boolean>('strictEditing') && !noStrict) {
+		if (config.get<boolean>('strictEditing') && !noStrict && !tempDisableStrictEditing) {
 			for (const change of event.contentChanges) {
 				const startLine = change.range.start.line;
 				const endLine = change.range.end.line;
@@ -118,7 +118,11 @@ export function activate(context: vscode.ExtensionContext) {
 				const newLineCount = countInString(change.text, '\n') + 1;
 				if (originalLineCount !== newLineCount) {
 					vscode.commands.executeCommand('undo');
-					vscode.window.showWarningMessage(`不可删除或插入行。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line} ${change.range.end.line}`);
+					vscode.window.showWarningMessage(`不可删除或插入行。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line} ${change.range.end.line}`, '临时关闭').then(selection => {
+						if (selection === '临时关闭') {
+							tempDisableStrictEditing = true;
+						}
+					});
 					return;
 				}
 				if (newLineCount <= 2) {
@@ -126,7 +130,11 @@ export function activate(context: vscode.ExtensionContext) {
 						const lineText = event.document.lineAt(line).text;
 						if (parser.DocumentParser.isUneditable(lineText)) {
 							vscode.commands.executeCommand('undo');
-							vscode.window.showWarningMessage(`原文不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line}`);
+							vscode.window.showWarningMessage(`原文不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line}`, '临时关闭').then(selection => {
+								if (selection === '临时关闭') {
+									tempDisableStrictEditing = true;
+								}
+							});
 							return;
 						}
 					}
@@ -217,6 +225,8 @@ export function activate(context: vscode.ExtensionContext) {
 	migration(context);
 
 }
+
+var tempDisableStrictEditing = false;
 
 // this method is called when your extension is deactivated
 export function deactivate() { }
