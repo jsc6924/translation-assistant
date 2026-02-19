@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.47.3",
+	"version": "3.48.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -578,6 +578,11 @@
 			{
 				"command": "Extension.dltxt.cursorToSublineEnd",
 				"key": "shift+]",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
+			},
+			{
+				"command": "Extension.dltxt.cursorToNextSentenceInLine",
+				"key": "shift+space",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'"
 			},
 			{

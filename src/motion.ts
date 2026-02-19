@@ -21,6 +21,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToSublineEnd', () => {
 		nextPuncInText(false);
 	});
+
+  registerCommand(context, 'Extension.dltxt.cursorToNextSentenceInLine', cursorToNextSentenceInLine);
   
   registerCommand(context, 'Extension.dltxt.cursorToPrevBinarySearch', cursorToPrevBinarySearch);
 
@@ -68,12 +70,14 @@ export function activate(context: vscode.ExtensionContext) {
   });
 }
 
-export function getTextDelimiter() {
+export function getTextDelimiter(extra: string = '') {
   const config = vscode.workspace.getConfiguration("dltxt");
   const textDelimiterStr = config.get('core.z.textDelimiter') as string;
   try {
-    const translatedSuffixRegex = new RegExp(textDelimiterStr, 'g');
-    return translatedSuffixRegex;
+    if (extra) {
+      return new RegExp(`(${extra})|(${textDelimiterStr})`, 'g');
+    }
+    return new RegExp(textDelimiterStr, 'g');
   } catch (e) {
     vscode.window.showErrorMessage(`${e}`);
   }
@@ -226,6 +230,70 @@ function cursorToPrevWord() {
     else
       utils.setCursorAndScroll(editor, 0, c.character - 1, false);
   }
+}
+
+function cursorToNextSentenceInLine() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || !editor.selection.isEmpty) {
+    return;
+  }
+  const c = editor.selection.active;
+  let text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
+  const config = vscode.workspace.getConfiguration("dltxt");
+  const token = config.get<string>('nestedLine.token') || '\\r\\n';
+  const delimiterPattern = getTextDelimiter();
+
+  let delta = 0;
+  let match = delimiterPattern.exec(text);
+  if (!match) {
+    delta = text.length + 1;
+    utils.setCursorAndScroll(editor, 0, c.character + delta, false);
+    return;
+  }
+  
+  delimiterPattern.lastIndex = 0; // reset lastIndex to search from the start again
+  const cuttedLen = match.index;
+  text = text.substring(match.index, text.length); // text starting from the first delimiter
+  const tokenRegex = /\\r\\n/g;
+  while (match = execBothPattern(delimiterPattern, tokenRegex, text)) {
+    if (match.index !== delta) {
+      break;
+    }
+    delta = match.index + match[0].length; // next char after the delimiter
+  }
+  if (delta > 0) {
+    utils.setCursorAndScroll(editor, 0, c.character + cuttedLen + delta, false);
+  }
+}
+
+
+function execBothPattern(a: RegExp, b: RegExp, text: string): RegExpExecArray | null {
+    const nextMatchA = a.exec(text);
+    const nextMatchB = b.exec(text);
+    if (!nextMatchA && !nextMatchB) {
+      return null;
+    }
+    // perfer match where index is smaller, if equal perfer the longer match
+    if (!nextMatchA) {
+      return nextMatchB;
+    } else if (!nextMatchB) {
+      return nextMatchA;
+    } else {
+      if (nextMatchA.index < nextMatchB.index) {
+        b.lastIndex = a.lastIndex
+        return nextMatchA;
+      } else if (nextMatchA.index > nextMatchB.index) {
+        a.lastIndex = b.lastIndex
+        return nextMatchB;
+      } else if (nextMatchA[0].length > nextMatchB[0].length) {
+        b.lastIndex = a.lastIndex
+        return nextMatchA;
+      } else {
+        a.lastIndex = b.lastIndex
+        return nextMatchB;
+      }
+    }
+
 }
 
 const BinarySearchState = {

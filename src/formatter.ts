@@ -267,7 +267,7 @@ const alphaNumPattern = /[A-Za-z0-9]/;
 export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode.TextEditor, editBuilder: vscode.TextEditorEdit) {
   const cur = editor.selection.start;
   let curChar = cur.character;
-  const delimiterPattern = getTextDelimiter();
+  const delimiterPattern = getTextDelimiter('[A-Za-z0-9]');
 
   const rep = (cgrps: MatchedGroups) => {
     let text: string = cgrps.text as string;
@@ -277,9 +277,6 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
     if (i == -1) {
       i = 0;
     } else {
-      while (i < textLeft.length && alphaNumPattern.test(textLeft[i])) {
-        i++;
-      }
       const match = delimiterPattern.exec(textLeft.substring(i));
       if (!match) {
         return;
