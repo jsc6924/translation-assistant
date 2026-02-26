@@ -421,7 +421,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         }
 
         if (spaceAfterQE === "添加空格") {
-            const regStr = `([？！])(?!${escapedLineSplitter})[^　？！]`;
+            const regStr = `([？！])(?!${escapedLineSplitter})[^　？！」』）】]`;
             findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
                 res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '？和！后面应添加全角空格', c_index, pre + m.index, 1, ErrorCode.MissingSpaceAfterQE));
                 return false;
