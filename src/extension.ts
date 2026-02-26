@@ -187,6 +187,12 @@ export function activate(context: vscode.ExtensionContext) {
 		const s = clipboard.ClipBoardManager.get(context, k);
 		motion.editorWriteString(s);
 	});
+
+	registerCommand(context, "Extension.dltxt.writeNewlineToken", () => {
+		const config = vscode.workspace.getConfiguration("dltxt");
+		const token = config.get<string>("nestedLine.token") || "\\r\\n";
+		motion.editorWriteString(token);
+	})
 	
 	registerCommand(context, 'Extension.dltxt.detectEncoding', async () => {
 		const editor = vscode.window.activeTextEditor;
