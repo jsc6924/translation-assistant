@@ -930,6 +930,9 @@ find ./src -type f -print0 | xargs -0 wc -l
 
 ---
 ## Release Notes
+#### 3.49  (2026/02/26)
+- 插入换行符快捷键
+- ？/！后面的空格不符合规定时显示警告
 #### 3.48  (2026/02/20)
 - shift+space移动到下一个句子
 - 修复ctrl+alt+space功能的一个问题

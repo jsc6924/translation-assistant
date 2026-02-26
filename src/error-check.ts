@@ -22,6 +22,7 @@ export enum ErrorCode {
     ExclamationQuestion = 10,
     UntranslatedKeyword = 11,
     LineTooLong = 12,
+    MissingSpaceAfterQE = 13,
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -359,6 +360,8 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     const lineSplitter = config.get<string>('nestedLine.token') as string;
     const maxLineLength = config.get<number>('nestedLine.maxLen') as number;
 
+    const spaceAfterQE = config.get<string>('formatter.c.addSpaceAfterQE') as string;
+
     DocumentParser.processPairedLines(document, (jgrps, cgrps, j_index, c_index) => {
         if (normalize(jgrps.text) === normalize(cgrps.text)) {
             if (!skipChecking(cgrps)) {
@@ -411,6 +414,20 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             const regStr = `(……?|——?|${snake})[。、，]`;
             findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
                 res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '标点符号使用不规范', c_index, pre + m.index, m[0].length, ErrorCode.WrongPuncComb));
+                return false;
+            });
+        }
+
+        if (spaceAfterQE === "添加空格") {
+            const regStr = `([？！])([^　？！])`;
+            findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '？和！后面应添加全角空格', c_index, pre + m.index, 1, ErrorCode.MissingSpaceAfterQE));
+                return false;
+            });
+        } else if (spaceAfterQE === "删除空格") {
+            const regStr = `([？！])[　 ]+`;
+            findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
+                res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '？和！后面不要留空格', c_index, pre + m.index + 1, m[0].length - 1, ErrorCode.MissingSpaceAfterQE));
                 return false;
             });
         }
