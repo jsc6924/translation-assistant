@@ -8,7 +8,7 @@ import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { clearAllWarnings } from './error-check';
-import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace, batchSpecialTranslate } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace, batchReportCommand, batchSpecialTranslate } from './batch';
 import { checkSimilarText } from './crossref';
 import { setNewlineToken } from './newline';
 import { configureFormat } from './formatter';
@@ -874,6 +874,9 @@ export namespace cc_view {
             this.roots.push(checkingNode);
             checkingNode.children.push(new CommandItem("批量检查译文", async () => {
                 await batchCheckCommand();
+            }));
+            checkingNode.children.push(new CommandItem("批量检查译文并生成报告", async () => {
+                await batchReportCommand();
             }));
             checkingNode.children.push(new CommandItem("清除所有警告", async () => {
                 clearAllWarnings();
