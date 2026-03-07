@@ -254,7 +254,7 @@ function cursorToNextSentenceInLine() {
   delimiterPattern.lastIndex = 0; // reset lastIndex to search from the start again
   const cuttedLen = match.index;
   text = text.substring(match.index, text.length); // text starting from the first delimiter
-  const tokenRegex = /\\r\\n/g;
+  const tokenRegex = new RegExp(token, 'g');
   while (match = execBothPattern(delimiterPattern, tokenRegex, text)) {
     if (match.index !== delta) {
       break;
