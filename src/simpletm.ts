@@ -858,6 +858,7 @@ export function updateKeywordDecorations() {
 					lineNumberToTalker.set(c_index, talkingName);
 				}
 			});
+			const calledTranslationResolver = new CalledTranslationResolver(naming, lineNumberToTalker);
 			const ac = new AhoCorasick(allCalledArray);
 			const results = ac.search(activeEditor.document.getText()) as any[];
 			for (const res of results) {
@@ -867,15 +868,15 @@ export function updateKeywordDecorations() {
 					const index = endIndex + 1 - keyword.length;
 					const startPos = activeEditor.document.positionAt(index);
 					const endPos = activeEditor.document.positionAt(index + keyword.length);
-					const talkingName = lineNumberToTalker.get(startPos.line);
-					if (!talkingName) {
+					let [trans, comment] = calledTranslationResolver.resolve(keyword, startPos);
+					if (!trans) {
 						continue;
 					}
-					const trans = naming[talkingName][keyword]?.replace(/"/g, '') as string;
 					const called = keyword.replace(/"/g, '') as string;
 					const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(trans)}"})`;
 					const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(called)}","new_text":"${encodeURIComponent(trans)}","line":${startPos.line}})`;
-					const hoverMarkdown = new vscode.MarkdownString(`${trans} ${copyCommand} ${replaceCommand}`);
+					const formatComment = comment ? ` (${comment})` : '';
+					const hoverMarkdown = new vscode.MarkdownString(`${trans}${formatComment} ${copyCommand} ${replaceCommand}`);
 					hoverMarkdown.isTrusted = true;
 					const decoration = {
 						range: new vscode.Range(startPos, endPos),
@@ -897,6 +898,50 @@ export function updateKeywordDecorations() {
 		DecorationMemoryStorage.set(decoID, keywordsDecos.concat(namingDecos));
 	}
     
+}
+
+class CalledTranslationResolver {
+	private inversed = new Map<string, Map<string, string>>(); // called -> caller -> trans
+	constructor(private naming: any, private lineNumberToTalker: Map<number, string>) {
+		for (const caller in naming) {
+			for (const called in naming[caller]) {
+				if (!this.inversed.has(called)) {
+					this.inversed.set(called, new Map<string, string>());
+				}
+				this.inversed.get(called)?.set(caller, naming[caller][called]);
+			}
+		}
+	}
+	resolve(called: string, position: vscode.Position): [string | undefined, string | undefined] {
+		const talkingName = this.lineNumberToTalker.get(position.line);
+		if (!talkingName) {
+			return [undefined, undefined];
+		}
+		let trans = this.naming[talkingName][called]?.replace(/"/g, '') as string;
+		let comment = undefined;
+		if (!trans) {
+			const MatchAnyTalker = '*';
+			trans = this.naming[MatchAnyTalker][called]?.replace(/"/g, '') as string;
+		}
+		if (!trans) {
+			const possibleTrans = [];
+			const callerMap = this.inversed.get(called);
+			if (callerMap) {
+				for (const [caller, callerTrans] of callerMap) {
+					if (callerTrans) {
+						possibleTrans.push(`${caller}: ${callerTrans}`);
+						if (!trans) {
+							trans = callerTrans.replace(/"/g, '') as string;
+						}
+					}
+				}
+			}
+			if (possibleTrans.length > 0) {
+				comment = possibleTrans.join(', ');
+			}
+		}
+		return [trans, comment];
+	}
 }
 
 function updateLocalDictKey(dictName: string, key: string, value: string | undefined): boolean {

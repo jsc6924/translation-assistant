@@ -832,6 +832,9 @@ export namespace cc_view {
             configCommands.children.push(new CommandItem("设置换行符", async () => {
                 await setNewlineToken();
             }, 'settings-gear'));
+            configCommands.children.push(new CommandItem("设置单行最大长度", async () => {
+                await vscode.commands.executeCommand('dltxt.setting.setLineMaxLength');
+            }, 'settings-gear'))
             configCommands.children.push(new CommandItem("切换换行符显示", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.switchNewlineTokenDisplay');
             }, 'settings-gear'));

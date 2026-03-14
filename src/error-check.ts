@@ -40,6 +40,19 @@ export function activate(context: vscode.ExtensionContext) {
         await config.update(setting, false, vscode.ConfigurationTarget.Workspace);
         updateErrorDecorations();
     }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('dltxt.setting.setLineMaxLength', async (setting: string) => {
+        const config = vscode.workspace.getConfiguration("dltxt");
+        const current = config.get<number>('nestedLine.maxLen') as number;
+        const input = await vscode.window.showInputBox({
+            prompt: '请输入单行最大长度（全角字符数）',
+            value: current.toString(),
+        });
+        if (input !== undefined) {
+            await config.update('nestedLine.maxLen', parseInt(input), vscode.ConfigurationTarget.Workspace);
+            updateErrorDecorations();
+        }
+    }));
 }
 
 export class MyCodeActionProvider implements vscode.CodeActionProvider {
@@ -157,6 +170,17 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     codeActions.push(fix);
                 }
                 break;
+
+                case ErrorCode.LineTooLong: {
+                    const fix = new vscode.CodeAction('更改最大长度', vscode.CodeActionKind.QuickFix);
+                    fix.command = {
+                        command: 'dltxt.setting.setLineMaxLength',
+                        title: '更改最大长度',
+                    };
+                    fix.diagnostics = [diagnostic];
+                    fix.isPreferred = true;
+                    codeActions.push(fix);
+                }
 
             }
         });
