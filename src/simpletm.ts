@@ -11,6 +11,7 @@ const AhoCorasick = require('ahocorasick');
 export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com";
 
 export let dictTree: dict_view.DictTreeView | undefined = undefined; 
+export const autoSyncVSCodeSettingsConfigName = "dltxt.config.autoSyncVSCodeSettings";
 
 export function activate(context: vscode.ExtensionContext) {
 	const configInit = vscode.workspace.getConfiguration("dltxt");
@@ -105,8 +106,21 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(`成功导出到${saveUri.fsPath}`);
 	});
 
+	registerCommand(context, 'Extension.dltxt.treeview.dict.reloadDict', async (item: dict_view.DictRootItem) => {
+		if (!item) {
+			return;
+		}
+		await vscode.commands.executeCommand('Extension.dltxt.sync_database_with_vscode_config', item.dictName);
+		const config = vscode.workspace.getConfiguration();
+		if (config.get(autoSyncVSCodeSettingsConfigName)) {
+			vscode.window.showInformationMessage(`术语库${item.dictName}已重新加载并同步VSCode设置`);
+		} else {
+			vscode.window.showInformationMessage(`术语库${item.dictName}已重新加载(未同步VSCode设置)`);
+		}
+	});
+
 	registerCommand(context, 'Extension.dltxt.treeview.dict.removeDict', async (item: dict_view.DictRootItem) => {
-		const res = await vscode.window.showWarningMessage(`确定要断开与术语库${item.dictName}的连接吗`, 
+		const res = await vscode.window.showWarningMessage(`确定要移除术语库${item.dictName}吗（仅从列表移除，不会删除术语库）？`, 
 			"是", "否");
 		if (res != '是') {
 			return;
@@ -289,8 +303,60 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}
 
+	async function syncVscodeConfig(name: string) {
+		const config = vscode.workspace.getConfiguration();
+		const dictNode = dictTree?.getDictByName(name);
+		if (!dictNode) {
+			return;
+		}
+		const type = DictSettings.getDictType(name);
+		if (type === DictType.Local) {
+			return;
+		}
+		if (!config.get(autoSyncVSCodeSettingsConfigName)) {
+			return;
+		}
+		const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
+		if (!username || !apiToken) {
+			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
+			return;
+		}
+		if (!gameTitle) {
+			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
+			return;
+		}
+		const fullURL = pathConcat(BASE_URL, "/api2/vscodeConfig/" + gameTitle);
+		const req1 = axios.get(fullURL, {
+			auth: {
+				username: username, password: apiToken
+			}
+		}).then(result => {
+			if (result && result.data) {
+				const config = vscode.workspace.getConfiguration();
+				for (const key in result.data) {
+					if (key === autoSyncVSCodeSettingsConfigName) {
+						continue;
+					}
+					const value = result.data[key];
+					config.update(key, value, vscode.ConfigurationTarget.Workspace);
+				}
+			}
+		}).catch((err) => {
+			console.error(err);
+		});
+	}
+
+
+
 	registerCommand(context, 'Extension.dltxt.sync_database', async function (name: string) {
 		await syncDatabase(name);
+		updateKeywordDecorations();
+	});
+
+	registerCommand(context, 'Extension.dltxt.sync_database_with_vscode_config', async function (name: string) {
+		await syncDatabase(name);
+		await syncVscodeConfig(name);
 		updateKeywordDecorations();
 	});
 
@@ -298,6 +364,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const dictNames = DictSettings.getAllDictNames();
 		for (const name of dictNames) {
 			await syncDatabase(name);
+			await syncVscodeConfig(name);
 		}
 		updateKeywordDecorations();
 	});

@@ -244,7 +244,7 @@ export namespace dict_view {
                     return;
                 }
             }
-            await vscode.commands.executeCommand('Extension.dltxt.sync_database', this.dictName);
+            await vscode.commands.executeCommand('Extension.dltxt.sync_database_with_vscode_config', this.dictName);
         }
     }
     class DictConfigStyleRootItem extends ConfigRootItem<DictTreeView> {
