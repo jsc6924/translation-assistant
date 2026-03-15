@@ -16,6 +16,10 @@
 
 **[视频教程（v3.4 - v3.25）](https://www.bilibili.com/video/BV1BDWKeiEyf/)**
 
+**[视频教程（v3.26-3.44)](https://www.bilibili.com/video/BV17PWdzhEkR/)**
+
+**[视频教程（v3.45-3.50)](https://www.bilibili.com/video/BV1NVw3zcEyX/)**
+
 ## 目录
 - [基本使用流程](#基本使用流程)
 - [格式支持](#格式支持)
