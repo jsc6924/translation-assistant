@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.50.1",
+	"version": "3.50.2",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -202,6 +202,11 @@
 			{
 				"command": "Extension.dltxt.batch_report_folder",
 				"title": "批量检查译文并生成报告",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.text_analysis_folder",
+				"title": "文本分析",
 				"category": "DLTXT"
 			},
 			{
@@ -961,6 +966,11 @@
 				{
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.batch_report_folder",
+					"group": "dltxt.t.menu@3"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.text_analysis_folder",
 					"group": "dltxt.t.menu@3"
 				}
 			],

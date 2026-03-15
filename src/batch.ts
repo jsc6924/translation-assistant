@@ -10,6 +10,7 @@ import { createDiagnostic, ErrorCode, filterUntranslatedLines, updateNewlineDeco
 import { insert_newline_for_line } from './newline';
 import { Pair } from './utils';
 import { translateString } from './motion';
+import { TextAnalysis } from './text-analysis';
 
 
 export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = false, batchSize: number = 64) {
@@ -414,6 +415,17 @@ export function activate(context: vscode.ExtensionContext) {
         const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
         const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
         await batch_report(documentUris);
+    });
+
+    registerCommand(context, 'Extension.dltxt.text_analysis_folder', async (arg) => {
+        const folderPath = arg.fsPath;
+        if (!fs.statSync(folderPath).isDirectory()) {
+            vscode.window.showInformationMessage('请选中一个文件夹');
+            return;
+        }
+        const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
+        const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
+        await TextAnalysis(documentUris);
     });
 
 }
