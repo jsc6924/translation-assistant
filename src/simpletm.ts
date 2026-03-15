@@ -984,7 +984,10 @@ class CalledTranslationResolver {
 		if (!talkingName) {
 			return [undefined, undefined];
 		}
-		let trans = this.naming[talkingName][called]?.replace(/"/g, '') as string;
+		let trans = '';
+		if (this.naming[talkingName] && this.naming[talkingName][called]) {
+			trans = this.naming[talkingName][called].replace(/"/g, '') as string;
+		}
 		let comment = undefined;
 		if (!trans) {
 			const MatchAnyTalker = '*';
