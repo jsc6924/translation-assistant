@@ -37,16 +37,17 @@ class SegmentGroup {
 
     // suppose both this group and the other group is sorted
     isSubsetOf(other: SegmentGroup): boolean {
+        let j = 0;
         for (let i = 0; i < this.segments.length; i++) {
             const seg = this.segments[i];
-            // find the first segment in other that ends after seg
-            let j = -1;
-            for (let stepSize = Math.floor(other.segments.length / 2); stepSize > 0; stepSize = stepSize >> 1) {
-                if (j + stepSize < other.segments.length && other.segments[j + stepSize].end <= seg.end) {
-                    j += stepSize;
-                }
+            while (j < other.segments.length && other.segments[j].end < seg.end) {
+                j++;
             }
-            if (j === -1 || other.segments[j].start > seg.start) {
+            if (j >= other.segments.length) {
+                return false;
+            }
+            const otherSeg = other.segments[j];
+            if (otherSeg.start > seg.start || otherSeg.end < seg.end) {
                 return false;
             }
         }
@@ -95,6 +96,7 @@ class Corpus {
 
         // filter out groups that only appear once
         const segGroups = Array.from(groupMap.values()).filter(g => g.segments.length > 1);
+        segGroups.forEach(g => g.sortSegments());
         SegGroupsByLength[1] = segGroups;
 
         // build longer segments based on shorter segments
@@ -138,6 +140,8 @@ class Corpus {
                 }
                 return true;
             });
+            // Sort to ensure consistent results across runs if multiple groups exist
+            filteredPrevGroups.sort((a, b) => a.segments[0].start - b.segments[0].start);
             SegGroupsByLength[length - 1] = filteredPrevGroups;
         }
         return SegGroupsByLength;
@@ -147,13 +151,31 @@ class Corpus {
 
 export async function TextAnalysis(documentUris: vscode.Uri[]) {
     const corpus = new Corpus();
+    const fileEntries: { filePath: string, sentences: { line: number, text: string }[] }[] = [];
 
-    await batchProcess(documentUris, doc => {
-        const fileID = corpus.addFile(doc.uri.fsPath);
+    await batchProcess(documentUris, (doc, index) => {
+        const sentences: { line: number, text: string }[] = [];
         DocumentParser.processPairedLines(doc, (jgrps, cgrps, j_index, c_index) => {
-            corpus.addSentence(fileID, j_index, jgrps.text);
+            sentences.push({ line: j_index, text: jgrps.text });
         });
+        fileEntries[index] = {
+            filePath: doc.uri.fsPath,
+            sentences,
+        };
     });
+
+    fileEntries.sort((a, b) => a.filePath.localeCompare(b.filePath)); // sort by file path to ensure consistent results across runs
+
+    for (const entry of fileEntries) {
+        if (!entry) {
+            continue;
+        }
+        const fileID = corpus.addFile(entry.filePath);
+        for (const sentence of entry.sentences) {
+            corpus.addSentence(fileID, sentence.line, sentence.text);
+        }
+        corpus.addSentence(fileID, entry.sentences.length, `${entry.filePath}:${entry.sentences.length}`); // add an unique sentence to avoid out of bound when looking for next sentence
+    }
 
     const results = corpus.computeDupSegments();
     const output = formatResults(corpus, results);
@@ -166,7 +188,7 @@ export async function TextAnalysis(documentUris: vscode.Uri[]) {
 }
 
 function formatResults(corpus: Corpus, results: SegmentGroup[][]): string {
-    let output = "# 文本重复分析\n\n";
+    let output = "# 文本重复项分析\n\n";
     let found = false;
     let minLengthToShow = 4;
 
@@ -179,12 +201,13 @@ function formatResults(corpus: Corpus, results: SegmentGroup[][]): string {
         found = true;
         output += `## 长度 ${length}\n\n`;
 
-        for (const group of groups) {
+        for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
             const firstSeg = group.segments[0];
-            output += "### 内容\n";
+            output += `### 重复段${i + 1}\n`;
             output += "```\n";
-            for (let i = firstSeg.start; i < firstSeg.end; i++) {
-                output += corpus.sentences[i].text + "\n";
+            for (let j = firstSeg.start; j < firstSeg.end; j++) {
+                output += corpus.sentences[j].text + "\n";
             }
             output += "```\n\n";
 
@@ -204,8 +227,7 @@ function formatResults(corpus: Corpus, results: SegmentGroup[][]): string {
     }
 
     if (!found) {
-        output += "未找到重复段落。\n";
+        output += "未找到重复段。\n";
     }
     return output;
 }
-

@@ -64,8 +64,14 @@ function textNormalize(key: string) {
 const similarTextCache = new Map<string, vscode.DecorationOptions[]>();
 const exactMatchCache = new Map<string, vscode.DecorationOptions[]>();
 let lastCheckTime = 0;
+let checkTimeout: NodeJS.Timeout | undefined;
 
 export async function checkSimilarText(context: vscode.ExtensionContext) {
+    if (checkTimeout) {
+        clearTimeout(checkTimeout);
+        checkTimeout = undefined;
+    }
+
     const documentUris = await vscode.workspace.findFiles('**/*.{txt,TXT}', '**/.*/**', undefined, undefined)
     if (!documentUris) {
         return;
@@ -79,88 +85,97 @@ export async function checkSimilarText(context: vscode.ExtensionContext) {
 
     const exactMatchStyle = DecoManager.getExactMatchDecorationType();
     const similarTextStyle = DecoManager.getSimilarTextDecorationType();
-    activeEditor.setDecorations(exactMatchStyle, []);
-    activeEditor.setDecorations(similarTextStyle, []);
     const currentDoc = activeEditor.document;
-    const currentTime = Date.now();
-    if ((currentTime - lastCheckTime < 0) && similarTextCache.has(currentDoc.uri.fsPath) && exactMatchCache.has(currentDoc.uri.fsPath)) {
+
+    if (similarTextCache.has(currentDoc.uri.fsPath) && exactMatchCache.has(currentDoc.uri.fsPath)) {
         activeEditor.setDecorations(similarTextStyle, similarTextCache.get(currentDoc.uri.fsPath)!);
         activeEditor.setDecorations(exactMatchStyle, exactMatchCache.get(currentDoc.uri.fsPath)!);
-        return;
+    } else {
+        activeEditor.setDecorations(exactMatchStyle, []);
+        activeEditor.setDecorations(similarTextStyle, []);
     }
 
-    await InMemProjectIndex.update(context, documentUris);
+    const DEBOUNCE_TIMEOUT = 5000; // 5 seconds
 
-    const tokenizer = await Tokenizer.getAsync(context);
-    const jtexts: string[] = [];
-    const jLineNumbers: number[] = [];
-    DocumentParser.processPairedLines(currentDoc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {   
-        const jtext = tokenizer.tokenize(textNormalize(jgrps.text));
-        jtexts.push(jtext);
-        jLineNumbers.push(j_index);
+    checkTimeout = setTimeout(async () => {
+        const stillActiveEditor = vscode.window.activeTextEditor;
+        if (!stillActiveEditor || stillActiveEditor.document.uri.fsPath !== currentDoc.uri.fsPath) {
+            return;
+        }
+
+        await InMemProjectIndex.update(context, documentUris);
+
+        const tokenizer = await Tokenizer.getAsync(context);
+        const jtexts: string[] = [];
+        const jLineNumbers: number[] = [];
+        DocumentParser.processPairedLines(currentDoc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {   
+            const jtext = tokenizer.tokenize(textNormalize(jgrps.text));
+            jtexts.push(jtext);
+            jLineNumbers.push(j_index);
+            
+        });
+
+        const lineNumberAndRefs: Tuple3<number, LineSearchResult[], number>[] = [];
+        const config = vscode.workspace.getConfiguration("dltxt");
+        const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
+        const limit = config.get<number>('appearance.z.similarTextLimit', 10);
+        const t0 = Date.now();
         
+        const blockSize = 64;
+        for (let i = 0; i < jtexts.length; i += blockSize) {
+            const allPromises: Promise<void>[] = [];
+            for (let j = i; j < i + blockSize && j < jtexts.length; j++) {
+                allPromises.push(InMemProjectIndex.search(context, jtexts[j], threshold, limit, currentDoc.uri.fsPath, jLineNumbers[j]).then(([similarLines, exactCount]) => {
+                    if (exactCount < limit && similarLines.length > 0) {
+                        lineNumberAndRefs.push([jLineNumbers[j], similarLines, exactCount]);
+                    }
+                }));
+            }
+            await Promise.all(allPromises);
+        }
+        channel.appendLine(`search time: ${Date.now() - t0} ms for ${jtexts.length} lines in total.`);
+
+        const exactMatchDecos = [] as vscode.DecorationOptions[];
+        const similarTextDecos = [] as vscode.DecorationOptions[];
+        const tableHeaders = `#### 相似文本\n\n| 文件 | 相似度 | 原文 | 译文 |`;
+        const tableSeparator = `|---|---|---|---|`;
+        for (const [line, refs, exactCount] of lineNumberAndRefs) {
+            const lineRange = new vscode.Range(line, 0, line, 1000);
+            // Generate all the table rows by mapping over your refs array
+            const tableRows = refs.map(r => {
+                const shortFileName = `${path.basename(r.lineInfo.fileName)}:${r.lineInfo.lineNumber+1}`;
+                const escapedFullPathForTooltip = r.lineInfo.fileName.replace(/"/g, '&quot;');
+                const fileUriWithLine = vscode.Uri.file(r.lineInfo.fileName).with({ 
+        fragment: `L${r.lineInfo.lineNumber + 1}` 
     });
 
-    const lineNumberAndRefs: Tuple3<number, LineSearchResult[], number>[] = [];
-    const config = vscode.workspace.getConfiguration("dltxt");
-    const threshold = config.get<number>('appearance.z.similarTextThreshold', 80);
-    const limit = config.get<number>('appearance.z.similarTextLimit', 10);
-    const t0 = Date.now();
-    
-    const blockSize = 64;
-    for (let i = 0; i < jtexts.length; i += blockSize) {
-        const allPromises: Promise<void>[] = [];
-        for (let j = i; j < i + blockSize && j < jtexts.length; j++) {
-            allPromises.push(InMemProjectIndex.search(context, jtexts[j], threshold, limit, currentDoc.uri.fsPath, jLineNumbers[j]).then(([similarLines, exactCount]) => {
-                if (exactCount < limit && similarLines.length > 0) {
-                    lineNumberAndRefs.push([jLineNumbers[j], similarLines, exactCount]);
-                }
-            }));
+                // This is the content for the first column (File)
+                const fileNameCellContent = `[${shortFileName}](${fileUriWithLine.toString()} "${escapedFullPathForTooltip}")`;
+
+                // Your existing copy command
+                const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.lineInfo.trLine)}"})`;
+
+                // Construct a single table row for the current reference
+                // Each part is a cell, separated by '|'
+                return `| ${fileNameCellContent} | ${r.score.toFixed(3)} | ${removeSpace(r.lineInfo.jpLine)} | ${r.lineInfo.trLine} ${copyCommand} |`;
+            }).join('\n');
+            const fullMarkdown = `${tableHeaders}\n${tableSeparator}\n${tableRows}`;
+            const msg = new vscode.MarkdownString(fullMarkdown);
+            msg.isTrusted = true;
+            const deco = { range: lineRange, hoverMessage: msg };
+
+            if (exactCount > 0) {
+                exactMatchDecos.push(deco);
+            } else if (refs.length > 0) {
+                similarTextDecos.push(deco);
+            }
         }
-        await Promise.all(allPromises);
-    }
-    channel.appendLine(`search time: ${Date.now() - t0} ms for ${jtexts.length} lines in total.`);
-
-    const exactMatchDecos = [] as vscode.DecorationOptions[];
-    const similarTextDecos = [] as vscode.DecorationOptions[];
-    const tableHeaders = `#### 相似文本\n\n| 文件 | 相似度 | 原文 | 译文 |`;
-    const tableSeparator = `|---|---|---|---|`;
-    for (const [line, refs, exactCount] of lineNumberAndRefs) {
-        const lineRange = new vscode.Range(line, 0, line, 1000);
-        // Generate all the table rows by mapping over your refs array
-        const tableRows = refs.map(r => {
-            const shortFileName = `${path.basename(r.lineInfo.fileName)}:${r.lineInfo.lineNumber+1}`;
-            const escapedFullPathForTooltip = r.lineInfo.fileName.replace(/"/g, '&quot;');
-            const fileUriWithLine = vscode.Uri.file(r.lineInfo.fileName).with({ 
-    fragment: `L${r.lineInfo.lineNumber + 1}` 
-});
-
-            // This is the content for the first column (File)
-            const fileNameCellContent = `[${shortFileName}](${fileUriWithLine.toString()} "${escapedFullPathForTooltip}")`;
-
-            // Your existing copy command
-            const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.lineInfo.trLine)}"})`;
-
-            // Construct a single table row for the current reference
-            // Each part is a cell, separated by '|'
-            return `| ${fileNameCellContent} | ${r.score.toFixed(3)} | ${removeSpace(r.lineInfo.jpLine)} | ${r.lineInfo.trLine} ${copyCommand} |`;
-        }).join('\n');
-        const fullMarkdown = `${tableHeaders}\n${tableSeparator}\n${tableRows}`;
-        const msg = new vscode.MarkdownString(fullMarkdown);
-        msg.isTrusted = true;
-        const deco = { range: lineRange, hoverMessage: msg };
-
-        if (exactCount > 0) {
-            exactMatchDecos.push(deco);
-        } else if (refs.length > 0) {
-            similarTextDecos.push(deco);
-        }
-    }
-    lastCheckTime = Date.now();
-    activeEditor.setDecorations(exactMatchStyle, exactMatchDecos);
-    activeEditor.setDecorations(similarTextStyle, similarTextDecos);
-    exactMatchCache.set(currentDoc.uri.fsPath, exactMatchDecos);
-    similarTextCache.set(currentDoc.uri.fsPath, similarTextDecos);
+        lastCheckTime = Date.now();
+        stillActiveEditor.setDecorations(exactMatchStyle, exactMatchDecos);
+        stillActiveEditor.setDecorations(similarTextStyle, similarTextDecos);
+        exactMatchCache.set(currentDoc.uri.fsPath, exactMatchDecos);
+        similarTextCache.set(currentDoc.uri.fsPath, similarTextDecos);
+    }, DEBOUNCE_TIMEOUT);
 }
 
 class DecoManager {

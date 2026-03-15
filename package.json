@@ -206,7 +206,7 @@
 			},
 			{
 				"command": "Extension.dltxt.text_analysis_folder",
-				"title": "文本分析",
+				"title": "文本重复项分析",
 				"category": "DLTXT"
 			},
 			{
