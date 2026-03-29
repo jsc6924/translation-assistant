@@ -364,6 +364,7 @@ DLTXT默认支持以下格式（用横线隔开）
   - 把……？/……！改成？/！（默认关闭）
   - 把！？，！！？改成？！，？！！
   - 在！和？后添加空格或删除空格（默认关闭）
+  - 在换行符之后添加或删除空格（默认关闭）
   - 自定义翻译表（例如自动翻译人名）
 
 ![demo-format](https://github.com/jsc6924/translation-assistant/blob/master/imgs/demo-format.gif?raw=true)
@@ -953,6 +954,8 @@ find ./src -type f -print0 | xargs -0 wc -l
 
 ---
 ## Release Notes
+#### 3.51 （2026/03/29）
+- 添加换行符之后的空格的格式化支持
 #### 3.50 （2026/03/14）
 - 人称表支持默认匹配（*），修复一些bug
 - 添加设置单行最大长度的快捷命令

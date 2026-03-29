@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "3.50.3",
+	"version": "3.51.0",
 	"engines": {
 		"vscode": "^1.80.0"
 	},
@@ -1491,7 +1491,17 @@
 						"删除空格"
 					],
 					"default": "无效",
-					"description": "格式化文本：在问号、感叹号后添加空格"
+					"description": "格式化文本：在问号、感叹号后的空格"
+				},
+				"dltxt.formatter.c.addSpaceAfterNewline": {
+					"type": "string",
+					"enum": [
+						"无效",
+						"添加空格",
+						"删除空格"
+					],
+					"default": "无效",
+					"description": "格式化文本：在对话的换行符后的空格"
 				},
 				"dltxt.formatter.d.customMapping": {
 					"type": "object",

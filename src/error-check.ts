@@ -23,6 +23,7 @@ export enum ErrorCode {
     UntranslatedKeyword = 11,
     LineTooLong = 12,
     MissingSpaceAfterQE = 13,
+    MissingSpaceAfterNewline = 14,
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -385,6 +386,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     const maxLineLength = config.get<number>('nestedLine.maxLen') as number;
 
     const spaceAfterQE = config.get<string>('formatter.c.addSpaceAfterQE') as string;
+    const spaceAfterNewline = config.get<string>('formatter.c.addSpaceAfterNewline') as string;
 
     const escapedLineSplitter = lineSplitter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -456,6 +458,23 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                 res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '？和！后面不要留空格', c_index, pre + m.index + 1, m[0].length - 1, ErrorCode.MissingSpaceAfterQE));
                 return false;
             });
+        }
+
+        if (spaceAfterNewline === "添加空格" || spaceAfterNewline === "删除空格") {
+            const shouldRemoveSpaces = spaceAfterNewline === "删除空格" || !/([「『])/.test(jgrps.white);
+            if (shouldRemoveSpaces) {
+                const regStr = `(?<=${escapedLineSplitter})([　 ]+)`;
+                findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
+                    res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '换行后不要留空格', c_index, pre + m.index, m[0].length, ErrorCode.MissingSpaceAfterNewline));
+                    return false;
+                });
+            } else {
+                const regStr = `(${escapedLineSplitter})(?!　)`;
+                findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
+                    res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '换行后应添加全角空格', c_index, pre + m.index, 1, ErrorCode.MissingSpaceAfterNewline));
+                    return false;
+                });
+            }
         }
 
         if (checkUnusualCharacter) {

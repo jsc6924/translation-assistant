@@ -217,6 +217,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
 
 
   const nestedLineToken = config.get("nestedLine.token") as string;
+  const escapedNestedLineToken = nestedLineToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const addSpaceAfterQE = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
     let texts = cgrps.text.split(nestedLineToken);
     texts = texts.map(text => {
@@ -232,6 +233,21 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     ops.push(addSpaceAfterQE);
   else if (spaceAfterQEOption == '删除空格')
     ops.push(removeSpaceAfterQE);
+
+  const createSpaceAfterNewlineOp = (option: string, jgrpsWhite: string) => (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
+    let text = cgrps.text as string;
+    if (option === '删除空格' || !/([「『])/.test(jgrps.white)) {
+      text = text.replace(new RegExp(`(${escapedNestedLineToken})[ 　]+`, 'g'), `$1`);
+    } else {
+      text = text.replace(new RegExp(`(${escapedNestedLineToken})(?![ 　])`, 'g'), `$1　`);
+    }
+    cgrps.text = text;
+  };
+  const spaceAfterNewlineOption = config.get("formatter.c.addSpaceAfterNewline")
+  if (spaceAfterNewlineOption == '添加空格' || spaceAfterNewlineOption == '删除空格') {
+    ops.push((jgrps: MatchedGroups, cgrps: MatchedGroups) => createSpaceAfterNewlineOp(spaceAfterNewlineOption as string, jgrps.white)(jgrps, cgrps));
+  }
+
 
 
   const customMappingFunc = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
@@ -300,6 +316,17 @@ export function repeatFirstChar(context: vscode.ExtensionContext, editor: vscode
   const newLine = `${cgrps?.prefix}${cgrps?.white}${cgrps?.text}${cgrps?.suffix}`
   editBuilder.replace(curLine.range, newLine);
 
+}
+
+async function updateSpaceConfigOption(config: vscode.WorkspaceConfiguration, configKey: string, placeHolder: string): Promise<void> {
+  const currentOption = config.get(configKey) as string;
+  const chosenOption = await vscode.window.showQuickPick(
+    ['无效', '添加空格', '删除空格'],
+    { placeHolder }
+  );
+  if (currentOption !== chosenOption) {
+    await config.update(configKey, chosenOption, vscode.ConfigurationTarget.Workspace);
+  }
 }
 
 export async function configureFormat() {
@@ -393,15 +420,7 @@ export async function configureFormat() {
       }
     }
 
-    let addSpaceAfterQEOption = config.get("formatter.c.addSpaceAfterQE") as string;
-    const chosenSpaceAfterQE = await vscode.window.showQuickPick(
-      ['无效', '添加空格', '删除空格'],
-      {
-        placeHolder: '在问号、感叹号后添加空格'
-      }
-    );
-    if (addSpaceAfterQEOption !== chosenSpaceAfterQE) {
-      await config.update("formatter.c.addSpaceAfterQE", chosenSpaceAfterQE, vscode.ConfigurationTarget.Workspace);
-    }
+    await updateSpaceConfigOption(config, 'formatter.c.addSpaceAfterQE', '在问号、感叹号后的空格');
+    await updateSpaceConfigOption(config, 'formatter.c.addSpaceAfterNewline', '在对话的换行符后的空格');
     vscode.window.showInformationMessage('格式化选项已更新');
   }
