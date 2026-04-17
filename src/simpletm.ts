@@ -5,6 +5,7 @@ import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat } from './utils';
 import { editorWriteString } from './motion';
 import { DocumentParser } from './parser';
+import { getLanguageClient, RequestSubscribeProject } from './lspclient';
 const AhoCorasick = require('ahocorasick');
 
 
@@ -300,6 +301,16 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 			await Promise.all([req1, req2]);
 			dictTree?.refresh(dictNode);
+
+			const client = getLanguageClient();
+			if (client) {
+				try {
+					const response = await client.sendRequest(RequestSubscribeProject, { project_id: gameTitle });
+					console.log(`Subscribed to project ${gameTitle} with response: ${response.project_id}`);
+				} catch (error) {
+					console.error(error);
+				}
+			}
 		}
 	}
 

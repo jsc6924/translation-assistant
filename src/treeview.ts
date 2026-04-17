@@ -12,6 +12,7 @@ import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace
 import { checkSimilarText } from './crossref';
 import { setNewlineToken } from './newline';
 import { configureFormat } from './formatter';
+import { getLanguageClient, RequestEcho } from './lspclient';
 
 
 export class BasicTreeItem extends vscode.TreeItem {
@@ -921,9 +922,30 @@ export namespace cc_view {
             batchNode.children.push(new CommandItem("将文本合并", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.dltransform.merge');
             }));
+            
             batchNode.children.push(new CommandItem("执行自定义批量文本操作", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.dltransform.transform');
             }));
+            batchNode.children.push(new CommandItem("test dltxt/echo", async () => {
+                // get user input
+                const input = await vscode.window.showInputBox({ prompt: '输入要发送到 dltxt/echo 的文本' });
+                if (!input) {
+                    return;
+                }
+                // send request to language server
+                const client = getLanguageClient();
+                if (!client) {
+                    vscode.window.showErrorMessage('语言服务器未启动');
+                    return;
+                }
+                try {
+                    const response = await client.sendRequest(RequestEcho, { message: input });
+                    vscode.window.showInformationMessage(`dltxt/echo response: ${response.result}`);
+                } catch (err) {
+                    vscode.window.showErrorMessage(`dltxt/echo 请求失败: ${err}`);
+                }
+            }));
+                
 
 
 
