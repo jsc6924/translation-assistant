@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { ClipBoardManager } from './clipboard';
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck, escapeHtml } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, DltxtDiagCollection, DltxtDiagCollectionMissionLine, DltxtDiagCollectionSpellcheck, escapeHtml, DictKeyInfo } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
@@ -226,6 +226,9 @@ export namespace dict_view {
             } else {
                 this.label = `${this.dictName}[x]`;
             }
+        }
+        getConnectionStatus(): boolean {
+            return this.connected;
         }
     }
 
@@ -630,7 +633,7 @@ export namespace dict_view {
                 const node = element as DictRootItem;
                 const type = DictSettings.getDictType(node.dictName);
 
-                let keywords: any[] = [];
+                let keywords: DictKeyInfo[] = [];
                 let namingRules: any = {};
                 if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
                     const game: string | undefined = DictSettings.getGameTitle(node.dictName);
@@ -647,8 +650,8 @@ export namespace dict_view {
                 const dictEntryItems = [];
                 for (let i = 0; i < keywords.length; i++) {
                     let v = keywords[i];
-                    if (v['raw']) {
-                        dictEntryItems.push(new DictEntryItem(this, node.dictName, v['raw'], v['translate']));
+                    if (v.raw) {
+                        dictEntryItems.push(new DictEntryItem(this, node.dictName, v.raw, v.translate));
                     }
                 }
                 dictEntryItems.sort((a, b) => {

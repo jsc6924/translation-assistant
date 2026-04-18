@@ -8,6 +8,7 @@ import {
 	StreamInfo,
 } from 'vscode-languageclient/node';
 import { channel } from './dlbuild';
+import { syncDatabase, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
 
 const SERVER_HOST = '127.0.0.1';
 const SERVER_PORT = 6009;
@@ -19,13 +20,30 @@ interface ServerNotificationParams {
 	payload?: unknown;
 }
 
-interface ProjectTranslationUpdatedNotification {
+export interface ProjectTranslationUpdatedNotification {
+	success: boolean;
 	project_id: string;
+	key: string;
+	value?: string;
+	comment?: string;
+	error?: string;
 }
 
-interface ProjectNamingUpdatedNotification {
+export interface ProjectBatchUpdatedNotification {
+	success: boolean;
 	project_id: string;
+	error?: string;
 }
+
+export interface ProjectNamingUpdatedNotification {
+	success: boolean;
+	project_id: string;
+	caller?: string;
+	called?: string;
+	transcaller?: string;
+	error?: string;
+}
+
 
 let languageClient: LanguageClient | undefined;
 
@@ -81,19 +99,33 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 	);
 
 	languageClient.onNotification("dltxt/notification", (params: ServerNotificationParams) => {
-		handleServerNotification(params);
+		handleServerHeartbeat(params);
 	});
 
-	languageClient.onNotification("simpletm/translationsUpdated", (params: ProjectTranslationUpdatedNotification) => {
-		vscode.window.showInformationMessage(`术语库词条更新通知: ${params.project_id}`);
+	languageClient.onNotification("simpletm/translationsUpdated", async (params: ProjectTranslationUpdatedNotification) => {
+		console.log(`simpletm/translationsUpdated received ${JSON.stringify(params)}`);
+		await updateDatabaseTranslationByGameTitle(params.project_id, params, false);
 	});
 
-	languageClient.onNotification("simpletm/namingUpdated", (params: ProjectNamingUpdatedNotification) => {
-		vscode.window.showInformationMessage(`术语库人称表更新通知: ${params.project_id}`);
+	languageClient.onNotification("simpletm/translationsDeleted", async (params: ProjectTranslationUpdatedNotification) => {
+		console.log(`simpletm/translationsDeleted received ${JSON.stringify(params)}`);
+		await updateDatabaseTranslationByGameTitle(params.project_id, params, true);
 	});
 
+	languageClient.onNotification("simpletm/namingUpdated", async (params: ProjectNamingUpdatedNotification) => {
+		console.log(`simpletm/namingUpdated received ${JSON.stringify(params)}`);
+		await updateDatabaseNamingByGameTitle(params.project_id, params, false);
+	});
 
+	languageClient.onNotification("simpletm/namingDeleted", async (params: ProjectNamingUpdatedNotification) => {
+		console.log(`simpletm/namingDeleted received ${JSON.stringify(params)}`);
+		await updateDatabaseNamingByGameTitle(params.project_id, params, true);
+	});
 
+	languageClient.onNotification("simpletm/projectUpdated", async (params: ProjectNamingUpdatedNotification) => {
+		console.log(`simpletm/projectUpdated received ${JSON.stringify(params)}`);
+		await vscode.commands.executeCommand('Extension.dltxt.sync_database_by_game_title', params.project_id);
+	});
 
 	languageClient.onDidChangeState((event) => {
 		switch (event.newState) {
@@ -141,11 +173,9 @@ export async function stopLanguageClient() {
 	}
 }
 
-function handleServerNotification(params: ServerNotificationParams | undefined) {
+function handleServerHeartbeat(params: ServerNotificationParams | undefined) {
 	const message = params?.message ?? formatPayload(params?.payload) ?? 'Received server notification';
 	channel.appendLine(`[LSP notification] ${message}`);
-
-	vscode.window.showInformationMessage(`Server notification: ${message}`);
 }
 
 function formatPayload(payload: unknown) {

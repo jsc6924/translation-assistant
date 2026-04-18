@@ -18,6 +18,18 @@ export function pathConcat(base: string, pathpart: string) {
   return base + pathpart;
 }
 
+export interface DictKeyInfo {
+  raw: string;
+  translate: string;
+  comment: string;
+}
+
+export interface DictNamingRule {
+  [caller: string]: {
+    [called: string]: string;
+  }
+}
+
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
   if (pattern.flags.indexOf('g') == -1) {
     vscode.window.showErrorMessage('pattern must have a "g" flag in findLastMatchIndex');
@@ -698,24 +710,25 @@ export class DictSettings {
   static setSimpleTMSharedURL(name: string, value: string | undefined) {
       ContextHolder.setWorkspaceState(`dltxt.dict.${name}.shared_url`, value);
   }
-  static getSimpleTMDictKeys(name: string, game: string) {
+  static getSimpleTMDictKeys(name: string, game: string): DictKeyInfo[] {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`) as Array<any>;
     if (!v) {
       return [];
     }
     return v;
   }
-  static setSimpleTMDictKeys(name: string, game: string, value: any) {
+  
+  static setSimpleTMDictKeys(name: string, game: string, value: DictKeyInfo[] | undefined) {
       return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`, value);
   }
-  static getSimpleTMNamingRules(name: string, game: string) {
-    const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`) as Array<any>;
+  static getSimpleTMNamingRules(name: string, game: string): DictNamingRule {
+    const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`) as DictNamingRule;
     if (!v) {
-      return [];
+      return {};
     }
     return v;
   }
-  static setSimpleTMNamingRules(name: string, game: string, value: any) {
+  static setSimpleTMNamingRules(name: string, game: string, value: DictNamingRule | undefined) {
       return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`, value);
   }
   static getLocalDictKeys(name: string) {

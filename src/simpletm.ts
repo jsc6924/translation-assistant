@@ -2,10 +2,10 @@ import * as vscode from 'vscode'
 import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo } from './utils';
 import { editorWriteString } from './motion';
 import { DocumentParser } from './parser';
-import { getLanguageClient, RequestSubscribeProject } from './lspclient';
+import { getLanguageClient, ProjectNamingUpdatedNotification, ProjectTranslationUpdatedNotification, RequestSubscribeProject } from './lspclient';
 const AhoCorasick = require('ahocorasick');
 
 
@@ -231,135 +231,6 @@ export function activate(context: vscode.ExtensionContext) {
 		if (callback) callback();
 	});
 
-	async function syncDatabase(name: string) {
-		if (!name) {
-			vscode.window.showErrorMessage("name不能为空");
-			return;
-		}
-		const type = DictSettings.getDictType(name);
-		if (type === DictType.Local) {
-			try {
-				const fsPath = DictSettings.getLocalDictPath(name);
-				if (!fsPath) {
-					dictTree?.getDictByName(name)?.setConnectionStatus(false);
-					return;
-				}
-				const content = fs.readFileSync(fsPath, { encoding: 'utf8'});
-				const contentObj = JSON.parse(content);
-				const values: any[] = contentObj['values'];
-				DictSettings.setLocalDictKeys(name, values);
-				const dictNode = dictTree?.getDictByName(name);
-				dictNode?.setConnectionStatus(true);
-				dictTree?.refresh(dictNode);
-			} catch (error) {
-				console.error(error);
-			}
-			return;
-		}
-		const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
-		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
-		const dictNode = dictTree?.getDictByName(name);
-		if (!username || !apiToken) {
-			dictNode?.setConnectionStatus(false);
-			dictTree?.refresh(dictNode);
-			return;
-		}
-		if (gameTitle) {
-			if (type === DictType.RemoteURL) {
-				DictSettings.setGameTitle(name, gameTitle);
-			}
-			let fullURL = pathConcat(BASE_URL, "/api/querybygame/" + gameTitle);
-			const req1 = axios.get(fullURL, {
-				auth: {
-					username: username, password: apiToken
-				}
-			}).then(result => {
-				//console.log(result);
-				if (result && gameTitle) {
-                    DictSettings.setSimpleTMDictKeys(name, gameTitle, result.data);
-					dictNode?.setConnectionStatus(true);
-				}
-			}).catch((err) => {
-				const dictNode = dictTree?.getDictByName(name);
-				dictNode?.setConnectionStatus(false);
-				if (gameTitle) {
-					DictSettings.setSimpleTMDictKeys(name, gameTitle, undefined);
-				}
-				console.error(err);
-			});
-
-			const req2 = axios.get(pathConcat(BASE_URL, "/api2/naming/" + gameTitle), {
-				auth: {
-					username: username, password: apiToken
-				}
-			}).then(result => {
-				if (result && gameTitle) {
-					DictSettings.setSimpleTMNamingRules(name, gameTitle, result.data.rules);
-				}
-			}).catch((err) => { 
-				console.error(err);
-			});
-			await Promise.all([req1, req2]);
-			dictTree?.refresh(dictNode);
-
-			const client = getLanguageClient();
-			if (client) {
-				try {
-					const response = await client.sendRequest(RequestSubscribeProject, { project_id: gameTitle });
-					console.log(`Subscribed to project ${gameTitle} with response: ${response.project_id}`);
-				} catch (error) {
-					console.error(error);
-				}
-			}
-		}
-	}
-
-	async function syncVscodeConfig(name: string) {
-		const config = vscode.workspace.getConfiguration();
-		const dictNode = dictTree?.getDictByName(name);
-		if (!dictNode) {
-			return;
-		}
-		const type = DictSettings.getDictType(name);
-		if (type === DictType.Local) {
-			return;
-		}
-		if (!config.get(autoSyncVSCodeSettingsConfigName)) {
-			return;
-		}
-		const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
-		const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
-		if (!username || !apiToken) {
-			vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
-			return;
-		}
-		if (!gameTitle) {
-			vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
-			return;
-		}
-		const fullURL = pathConcat(BASE_URL, "/api2/vscodeConfig/" + gameTitle);
-		const req1 = axios.get(fullURL, {
-			auth: {
-				username: username, password: apiToken
-			}
-		}).then(result => {
-			if (result && result.data) {
-				const config = vscode.workspace.getConfiguration();
-				for (const key in result.data) {
-					if (key === autoSyncVSCodeSettingsConfigName) {
-						continue;
-					}
-					const value = result.data[key];
-					config.update(key, value, vscode.ConfigurationTarget.Workspace);
-				}
-			}
-		}).catch((err) => {
-			console.error(err);
-		});
-	}
-
-
-
 	registerCommand(context, 'Extension.dltxt.sync_database', async function (name: string) {
 		await syncDatabase(name);
 		updateKeywordDecorations();
@@ -371,6 +242,11 @@ export function activate(context: vscode.ExtensionContext) {
 		updateKeywordDecorations();
 	});
 
+	registerCommand(context, 'Extension.dltxt.sync_database_by_game_title', async function (gameTitle: string) {
+		await syncDatabaseByGameTitle(gameTitle);
+	});
+
+
 	registerCommand(context, 'Extension.dltxt.sync_all_database', async function () {
 		const dictNames = DictSettings.getAllDictNames();
 		for (const name of dictNames) {
@@ -380,31 +256,6 @@ export function activate(context: vscode.ExtensionContext) {
 		updateKeywordDecorations();
 	});
 
-	async function remoteUserConnectionGetter(dictName: string): Promise<any> {
-		const username = DictSettings.getSimpleTMUsername(dictName);
-		const apiToken = DictSettings.getSimpleTMApiToken(dictName);
-		const BASE_URL = DictSettings.getSimpleTMUrl(dictName);
-		let gameTitle = DictSettings.getGameTitle(dictName);
-		return {username, apiToken, BASE_URL, gameTitle};
-	}
-
-	async function remoteURLConnectionGetter(dictName: string): Promise<any> {
-		let url = DictSettings.getSimpleTMSharedURL(dictName);
-		if (!url ||!url.startsWith("simpletm://")) {
-			return {};
-		}
-		url = url.substring("simpletm://".length);
-		const items = url.split('/');
-		if (items.length != 5) {
-			throw new Error("URL错误");
-		}
-		const protocal = items[0];
-		const BASE_URL = `${protocal}://${items[1]}`;
-		const username = items[2];
-		const apiToken = items[3];
-		let gameTitle = items[4];
-		return {username, apiToken, BASE_URL, gameTitle};
-	}
 
 	async function batchInsertLocal(dictName: string) {
 		const options: vscode.OpenDialogOptions = {
@@ -820,6 +671,292 @@ export function getDecorationsOnAllLines(uri: vscode.Uri): Map<number, any[]> {
 	return res;
 }
 
+async function remoteUserConnectionGetter(dictName: string): Promise<any> {
+	const username = DictSettings.getSimpleTMUsername(dictName);
+	const apiToken = DictSettings.getSimpleTMApiToken(dictName);
+	const BASE_URL = DictSettings.getSimpleTMUrl(dictName);
+	let gameTitle = DictSettings.getGameTitle(dictName);
+	return {username, apiToken, BASE_URL, gameTitle};
+}
+
+async function remoteURLConnectionGetter(dictName: string): Promise<any> {
+	let url = DictSettings.getSimpleTMSharedURL(dictName);
+	if (!url ||!url.startsWith("simpletm://")) {
+		return {};
+	}
+	url = url.substring("simpletm://".length);
+	const items = url.split('/');
+	if (items.length != 5) {
+		throw new Error("URL错误");
+	}
+	const protocal = items[0];
+	const BASE_URL = `${protocal}://${items[1]}`;
+	const username = items[2];
+	const apiToken = items[3];
+	let gameTitle = items[4];
+	return {username, apiToken, BASE_URL, gameTitle};
+}
+
+// handle insert/uodate/delete of a single key in local dict
+export async function updateDatabaseTranslationByGameTitle(gameTitle: string, params: ProjectTranslationUpdatedNotification, isDelete: boolean): Promise<void> {
+	const dictNames = DictSettings.getAllDictNames();
+	for (const name of dictNames) {
+		const dictGameTitle = DictSettings.getGameTitle(name);
+		if (dictGameTitle === gameTitle) {
+			await updateDatabaseTranslationByDictName(name, params, false, isDelete);
+		}
+	}
+	updateKeywordDecorations();
+}
+
+// handle insert/uodate/delete of a single key in local dict
+export async function updateDatabaseTranslationByDictName(name: string, params: ProjectTranslationUpdatedNotification, updateDecoration: boolean, isDelete: boolean): Promise<void> {
+	const type = DictSettings.getDictType(name);
+	if (type === DictType.Local) {
+		// skip local dict as this update comes from a remote server. 
+		return;
+	}
+	const dictNode = dictTree?.getDictByName(name);
+	if (!dictNode) {
+		return;
+	}
+    if (!dictNode.getConnectionStatus()) {
+		await syncDatabase(name);
+	}
+
+	const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+	const {gameTitle} = await connectionGetter(name);
+	const contents = DictSettings.getSimpleTMDictKeys(name, gameTitle);
+	if (isDelete) {
+		if (contents) {
+			const index = contents.findIndex((k: DictKeyInfo) => k.raw === params.key);
+			if (index >= 0) {
+				contents.splice(index, 1);
+			}
+		}
+	} else {
+		if (contents) {
+			const index = contents.findIndex((k: DictKeyInfo) => k.raw === params.key);
+			if (index >= 0) { 
+				//update
+				contents[index].translate = params.value ?? '';
+			} else {
+				// insert
+				contents.push({
+					raw: params.key, 
+					translate: params.value ?? '',
+					comment: params.comment ?? '',
+				});
+			}
+		}
+	}
+	DictSettings.setSimpleTMDictKeys(name, gameTitle, contents);
+
+	dictTree?.refresh(dictNode);
+
+	if (updateDecoration) {
+		updateKeywordDecorations();
+	}
+}
+
+export async function updateDatabaseNamingByGameTitle(gameTitle: string, params: ProjectNamingUpdatedNotification, isDelete: boolean): Promise<void> {
+	const dictNames = DictSettings.getAllDictNames();
+	for (const name of dictNames) {
+		const dictGameTitle = DictSettings.getGameTitle(name);
+		if (dictGameTitle === gameTitle) {
+			await updateDatabaseNamingByDictName(name, params, false, isDelete);
+		}
+	}
+	updateKeywordDecorations();
+}
+
+export async function updateDatabaseNamingByDictName(name: string, params: ProjectNamingUpdatedNotification, updateDecoration: boolean, isDelete: boolean): Promise<void> {
+	const type = DictSettings.getDictType(name);
+	if (type === DictType.Local) {
+		// skip local dict as this update comes from a remote server. 
+		return;
+	}
+	const dictNode = dictTree?.getDictByName(name);
+	if (!dictNode) {
+		return;
+	}
+    if (!dictNode.getConnectionStatus()) {
+		await syncDatabase(name);
+	}
+
+	const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+	const {gameTitle} = await connectionGetter(name);
+	let rules = DictSettings.getSimpleTMNamingRules(name, gameTitle);
+	if (isDelete) {
+		if (rules) {
+			if (params.caller && params.called) {
+				if (rules[params.caller]) {
+					delete rules[params.caller][params.called];
+					if (Object.keys(rules[params.caller]).length == 0) {
+						delete rules[params.caller];
+					}
+				}
+			} else if (params.caller) {
+				// delete all called for this caller
+				delete rules[params.caller];
+			}
+		}
+	} else {
+		if (!rules) {
+			rules = {};
+		}
+		if (params.caller && params.called) {
+			if (!rules[params.caller]) {
+				rules[params.caller] = {};
+			}
+			rules[params.caller][params.called] = params.transcaller ?? '';
+		}
+	}
+	DictSettings.setSimpleTMNamingRules(name, gameTitle, rules);
+	dictTree?.refresh(dictNode);
+	if (updateDecoration) {
+		updateKeywordDecorations();
+	}
+}
+
+export async function syncDatabase(name: string) {
+	if (!name) {
+		vscode.window.showErrorMessage("name不能为空");
+		return;
+	}
+	const type = DictSettings.getDictType(name);
+	if (type === DictType.Local) {
+		try {
+			const fsPath = DictSettings.getLocalDictPath(name);
+			if (!fsPath) {
+				dictTree?.getDictByName(name)?.setConnectionStatus(false);
+				return;
+			}
+			const content = fs.readFileSync(fsPath, { encoding: 'utf8'});
+			const contentObj = JSON.parse(content);
+			const values: any[] = contentObj['values'];
+			DictSettings.setLocalDictKeys(name, values);
+			const dictNode = dictTree?.getDictByName(name);
+			dictNode?.setConnectionStatus(true);
+			dictTree?.refresh(dictNode);
+		} catch (error) {
+			console.error(error);
+		}
+		return;
+	}
+	const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+	const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
+	const dictNode = dictTree?.getDictByName(name);
+	if (!username || !apiToken) {
+		dictNode?.setConnectionStatus(false);
+		dictTree?.refresh(dictNode);
+		return;
+	}
+	if (gameTitle) {
+		if (type === DictType.RemoteURL) {
+			DictSettings.setGameTitle(name, gameTitle);
+		}
+		let fullURL = pathConcat(BASE_URL, "/api/querybygame/" + gameTitle);
+		const req1 = axios.get(fullURL, {
+			auth: {
+				username: username, password: apiToken
+			}
+		}).then(result => {
+			if (result && gameTitle) {
+				DictSettings.setSimpleTMDictKeys(name, gameTitle, result.data);
+				dictNode?.setConnectionStatus(true);
+			}
+		}).catch((err) => {
+			const dictNode = dictTree?.getDictByName(name);
+			dictNode?.setConnectionStatus(false);
+			if (gameTitle) {
+				DictSettings.setSimpleTMDictKeys(name, gameTitle, undefined);
+			}
+			console.error(err);
+		});
+
+		const req2 = axios.get(pathConcat(BASE_URL, "/api2/naming/" + gameTitle), {
+			auth: {
+				username: username, password: apiToken
+			}
+		}).then(result => {
+			if (result && gameTitle) {
+				DictSettings.setSimpleTMNamingRules(name, gameTitle, result.data.rules);
+			}
+		}).catch((err) => { 
+			console.error(err);
+		});
+		await Promise.all([req1, req2]);
+		dictTree?.refresh(dictNode);
+
+		const client = getLanguageClient();
+		if (client) {
+			try {
+				const response = await client.sendRequest(RequestSubscribeProject, { project_id: gameTitle });
+				console.log(`Subscribed to project ${gameTitle} with response: ${response.project_id}`);
+			} catch (error) {
+				console.error(error);
+			}
+		}
+	}
+}
+
+async function syncVscodeConfig(name: string) {
+	const config = vscode.workspace.getConfiguration();
+	const dictNode = dictTree?.getDictByName(name);
+	if (!dictNode) {
+		return;
+	}
+	const type = DictSettings.getDictType(name);
+	if (type === DictType.Local) {
+		return;
+	}
+	if (!config.get(autoSyncVSCodeSettingsConfigName)) {
+		return;
+	}
+	const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+	const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(name);
+	if (!username || !apiToken) {
+		vscode.window.showErrorMessage("请在设置中填写账号与API Token后再使用同步功能");
+		return;
+	}
+	if (!gameTitle) {
+		vscode.window.showErrorMessage("请在设置中填写项目名后再使用同步功能");
+		return;
+	}
+	const fullURL = pathConcat(BASE_URL, "/api2/vscodeConfig/" + gameTitle);
+	const req1 = axios.get(fullURL, {
+		auth: {
+			username: username, password: apiToken
+		}
+	}).then(result => {
+		if (result && result.data) {
+			const config = vscode.workspace.getConfiguration();
+			for (const key in result.data) {
+				if (key === autoSyncVSCodeSettingsConfigName) {
+					continue;
+				}
+				const value = result.data[key];
+				config.update(key, value, vscode.ConfigurationTarget.Workspace);
+			}
+		}
+	}).catch((err) => {
+		console.error(err);
+	});
+}
+
+async function syncDatabaseByGameTitle(gameTitle: string) {
+	const dictNames = DictSettings.getAllDictNames();
+	for (const name of dictNames) {
+		const dictGameTitle = DictSettings.getGameTitle(name);
+		if (dictGameTitle === gameTitle) {
+			await syncDatabase(name);
+			await syncVscodeConfig(name);
+		}
+	}
+	updateKeywordDecorations();
+}
+
 export function updateKeywordDecorations() {
 
     let activeEditor = vscode.window.activeTextEditor;
@@ -849,7 +986,7 @@ export function updateKeywordDecorations() {
 			activeEditor.setDecorations(oldDeco, []);
 		}
 
-		let keywords = [];
+		let keywords: DictKeyInfo[] = [];
 		let naming: any = {};
 		if (type === DictType.Local) {
 			keywords = DictSettings.getLocalDictKeys(dictName);
@@ -864,7 +1001,7 @@ export function updateKeywordDecorations() {
 		const testArray: Array<String> = [];
 		for (let i = 0; i < keywords.length; i++) {
 			let v = keywords[i];
-			let vr = String(v['raw']);
+			let vr = String(v.raw);
 			if(vr)
 				testArray.push(vr);
 		}
@@ -872,9 +1009,9 @@ export function updateKeywordDecorations() {
 			let dict = new Map<String, string>();
 			const comments = new Map<String, string>();
 			keywords.forEach(v => {
-				dict.set(v['raw'], v['translate']);
-				if (v['comment']) {
-					comments.set(v['raw'], v['comment']);
+				dict.set(v.raw, v.translate);
+				if (v.comment) {
+					comments.set(v.raw, v.comment);
 				}
 			});
 
@@ -968,9 +1105,10 @@ export function updateKeywordDecorations() {
 					namingDecos.push(decoration);
 				}
 			}
-			if (namingDecoType) {
-				activeEditor.setDecorations(namingDecoType, namingDecos);
-			}
+		} 
+		
+		if (namingDecoType) {
+			activeEditor.setDecorations(namingDecoType, namingDecos);
 		}
 
 		DecorationMemoryStorage.set(decoID, keywordsDecos.concat(namingDecos));
