@@ -1285,7 +1285,8 @@
 					"default": "行前",
 					"enum": [
 						"行前",
-						"行中"
+						"行中",
+						"行后"
 					],
 					"description": "对话角色名的位置"
 				},
@@ -1293,11 +1294,6 @@
 					"type": "string",
 					"default": "^☆\\d+N☆(?<name>.*)$",
 					"description": "对话角色名的正则表达式"
-				},
-				"dltxt.core.name.default": {
-					"type": "string",
-					"default": "",
-					"description": "默认角色名（主角的名字）"
 				},
 				"dltxt.core.textBlock.pattern": {
 					"type": "string",

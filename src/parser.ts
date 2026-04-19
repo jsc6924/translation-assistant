@@ -93,53 +93,92 @@ class StandardDocumentParser implements DocumentParser {
         }
         const namePosition = getTalkingNamePosition();
         const nameRegex = getTalkingNameRegex();
-        const defaultTalkingName = getDefaultTalkingName();
-        let beforeName = defaultTalkingName;
+        let beforeName: string | undefined = undefined;
 
         let lines = getLines(text);
         let jgrps: MatchedGroups | undefined;
         let j_index = -1;
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i];
-            line = line.trimRight();
-            const m = jreg.exec(line);
+        if (namePosition === NamePosition.Before || namePosition === NamePosition.Inline || !nameRegex) {
+          for (let i = 0; i < lines.length; i++) {
+              let line = lines[i];
+              line = line.trimRight();
+              const m = jreg.exec(line);
 
-            if (namePosition === NamePosition.Before && nameRegex) {
-                const nameMatch = nameRegex.exec(line);
-                if (nameMatch && nameMatch.groups) {
-                    beforeName = nameMatch.groups.name || defaultTalkingName;
-                }
-            }
+              if (namePosition === NamePosition.Before && nameRegex) {
+                  const nameMatch = nameRegex.exec(line);
+                  if (nameMatch && nameMatch.groups) {
+                      beforeName = nameMatch.groups.name;
+                  }
+              }
 
-            if (m && m.groups) {
-                if (!!jgrps) {
-                    throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
-                }
-                jgrps = m.groups as any as MatchedGroups;
-                j_index = i;
-            } else {
-                const m = creg.exec(line);
-                if (m && m.groups && jgrps) {
-                    const cgrps = m.groups as any as MatchedGroups;
-                    adjust(jgrps, cgrps);
-                    let talkingName = beforeName;
-                    if (namePosition === NamePosition.Inline) {
-                      talkingName = defaultTalkingName;
-                        const inlineMatch = nameRegex?.exec(cgrps.text);
-                        if (inlineMatch && inlineMatch.groups) {
-                            talkingName = inlineMatch.groups.name || defaultTalkingName;
-                        }
-                    }
-                    cb(jgrps, cgrps, j_index, i, talkingName);
+              if (m && m.groups) {
+                  if (!!jgrps) {
+                      throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
+                  }
+                  jgrps = m.groups as any as MatchedGroups;
+                  j_index = i;
+              } else {
+                  const m = creg.exec(line);
+                  if (m && m.groups && jgrps) {
+                      const cgrps = m.groups as any as MatchedGroups;
+                      adjust(jgrps, cgrps);
+                      let talkingName: string | undefined = undefined;
+                      if (namePosition === NamePosition.Before) {
+                          talkingName = beforeName;
+                      } else if (namePosition === NamePosition.Inline) {
+                          const inlineMatch = nameRegex?.exec(line);
+                          if (inlineMatch && inlineMatch.groups) {
+                              talkingName = inlineMatch.groups.name;
+                          }
+                      }
+                      cb(jgrps, cgrps, j_index, i, talkingName);
 
-                    if (namePosition === NamePosition.Before && jgrps?.suffix?.includes('」')) {
-                        beforeName = defaultTalkingName;
-                    }
+                      if (namePosition === NamePosition.Before && jgrps?.suffix?.includes('」')) {
+                          beforeName = undefined;
+                      }
 
-                    jgrps = undefined;
-                    j_index = -1;
-                }
-            }
+                      jgrps = undefined;
+                      j_index = -1;
+                  }
+              }
+          }
+        } else { // NamePosition.After
+          let callQueue: { jgrps: MatchedGroups, j_index: number, cgrps: MatchedGroups, c_index: number}[] = [];
+          for (let i = 0; i < lines.length; i++) {
+              let line = lines[i];
+              line = line.trimRight();
+              const m = jreg.exec(line);
+              if (m && m.groups) {
+                  if (!!jgrps) {
+                      throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
+                  }
+                  jgrps = m.groups as any as MatchedGroups;
+                  j_index = i;
+              } else {
+                  const m = creg.exec(line);
+                  if (m && m.groups && jgrps) {
+                      const cgrps = m.groups as any as MatchedGroups;
+                      adjust(jgrps, cgrps);
+                      const nameMatch = nameRegex.exec(line);
+                      let talkingName: string | undefined = undefined;
+                      if (nameMatch && nameMatch.groups && nameMatch.groups.name) {
+                          talkingName = nameMatch.groups.name;
+                          for (let item of callQueue) {
+                            cb(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
+                          }
+                          callQueue = [];
+                          cb(jgrps, cgrps, j_index, i, talkingName);
+                      } else {
+                        callQueue.push({ jgrps, j_index, cgrps, c_index: i });
+                      }
+                      jgrps = undefined;
+                      j_index = -1;
+                  }
+              }
+          }
+          for (const item of callQueue) {
+              cb(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
+          }
 
         }
     }
@@ -603,14 +642,22 @@ function reloadDocumentParser() {
 
 export enum NamePosition {
   Before = '行前',
-  After = '行后', // TODO: implement
-  Inline = '行内',
+  Inline = '行中',
+  After = '行后',
 }
 
 export function getTalkingNamePosition(): NamePosition {
   const config = vscode.workspace.getConfiguration("dltxt.core.name");
   const pos = config.get<string>('position');
-  return NamePosition[pos as keyof typeof NamePosition] || NamePosition.Before;
+  if (pos === NamePosition.Before) {
+    return NamePosition.Before;
+  } else if (pos === NamePosition.Inline) {
+    return NamePosition.Inline;
+  } else if (pos === NamePosition.After) {
+    return NamePosition.After;
+  } else {
+    return NamePosition.Before;
+  }
 }
 
 export function getTalkingNameRegex(): RegExp| undefined {
@@ -620,10 +667,4 @@ export function getTalkingNameRegex(): RegExp| undefined {
     return new RegExp(namePattern);
   }
   return undefined;
-}
-
-export function getDefaultTalkingName(): string {
-  const config = vscode.workspace.getConfiguration("dltxt.core.name");
-  const defaultName = config.get<string>('default');
-  return defaultName || '';
 }

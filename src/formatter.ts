@@ -27,7 +27,7 @@ function editTranslation(
     if (debugMode) {
       const curLineText = `${jgrps?.prefix}{${talkingName}}{${jgrps?.white}}{${jgrps?.text}}{${jgrps?.suffix}}`
       result.push(vscode.TextEdit.replace(line.range, curLineText));
-      nextLineText = `${cgrps?.prefix}{${talkingName}}{${cgrps?.white}}{${cgrps?.text}}{${cgrps?.suffix}}`
+      nextLineText = `${cgrps?.prefix}{${talkingName}}{${cgrps?.white}}{${cgrps?.text}}{${cgrps?.suffix}} talking:[${talkingName}]`;
       result.push(vscode.TextEdit.replace(nextLine.range, nextLineText));
     } else {
       nextLineText = `${cgrps?.prefix}${cgrps?.white}${cgrps?.text}${cgrps?.suffix}`
