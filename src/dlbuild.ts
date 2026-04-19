@@ -14,6 +14,7 @@ import { DocumentParser, getRegex, MatchedGroups } from './parser';
 
 
 export const channel = vscode.window.createOutputChannel("DLTXT");
+export const channelBridge = vscode.window.createOutputChannel("DLTXT Bridge");
 
 // Read YAML from a file
 function readYamlFile(filePath: string): any {

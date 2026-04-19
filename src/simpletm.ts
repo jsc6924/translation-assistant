@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as fs from 'fs';
 import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo } from './utils';
-import { editorWriteString } from './motion';
+import { editorWriteString, translateCurrentLine } from './motion';
 import { DocumentParser } from './parser';
 import { getLanguageClient, ProjectNamingUpdatedNotification, ProjectTranslationUpdatedNotification, RequestSubscribeProject } from './lspclient';
 const AhoCorasick = require('ahocorasick');
@@ -14,6 +14,15 @@ export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com";
 export let dictTree: dict_view.DictTreeView | undefined = undefined; 
 export const autoSyncVSCodeSettingsConfigName = "dltxt.config.autoSyncVSCodeSettings";
 
+let activePullMode = true;
+export const isActivePullMode = () => activePullMode;
+export function setActivePullMode(value: boolean) {
+	activePullMode = value;
+}
+
+let lastPullTime = 0;
+const lazyPullInterval = 60 * 60 * 1000; // 1 hours
+
 export function activate(context: vscode.ExtensionContext) {
 	const configInit = vscode.workspace.getConfiguration("dltxt");
 
@@ -23,7 +32,11 @@ export function activate(context: vscode.ExtensionContext) {
 		setInterval(() => {
 			const config = vscode.workspace.getConfiguration("dltxt");
 			if (vscode.window.activeTextEditor && config.get("simpleTM.project")) {
-				vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
+				const now = Date.now();
+				if (activePullMode || now - lastPullTime > lazyPullInterval) {
+					vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
+					lastPullTime = now;
+				}
 			}
 		}, syncIntervalMS);
 	}

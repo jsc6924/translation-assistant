@@ -1,5 +1,7 @@
 import * as net from 'net';
 import * as vscode from 'vscode';
+import * as path from 'path';
+import { spawn } from 'child_process';
 import {
 	LanguageClient,
 	LanguageClientOptions,
@@ -7,17 +9,16 @@ import {
 	RevealOutputChannelOn,
 	StreamInfo,
 } from 'vscode-languageclient/node';
-import { channel } from './dlbuild';
-import { syncDatabase, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
+import { channel, channelBridge } from './dlbuild';
+import { isActivePullMode, setActivePullMode, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
 
 const SERVER_HOST = '127.0.0.1';
 const SERVER_PORT = 6009;
-const SERVER_NOTIFICATION_METHOD = 'dltxt/notification';
+
 
 interface ServerNotificationParams {
-	message?: string;
-	type?: 'info' | 'warn' | 'error' | 'log';
-	payload?: unknown;
+	message: string;
+	remote_available: boolean;
 }
 
 export interface ProjectTranslationUpdatedNotification {
@@ -137,6 +138,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 				break;
 			case 3: // Stopped
 				channel.appendLine('LSP client has stopped');
+				setActivePullMode(true);
 				break;
 			default:
 				break;
@@ -149,12 +151,69 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		},
 	});
 
+	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_bridge.exe");
+
 	try {
+		await ensureBridgeRunning(SERVER_BIN_PATH);
 		await languageClient.start();
 	} catch (error) {
 		channel.appendLine(`Failed to start LSP client: ${String(error)}`);
-		languageClient = undefined;
+		vscode.window.showErrorMessage(`Failed to start language server: ${String(error)}`);
+		setActivePullMode(true);
 	}
+}
+
+async function ensureBridgeRunning(serverBinPath: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		// check if it can connect to the server
+		const socket = net.createConnection(SERVER_PORT, SERVER_HOST);
+		socket.once('connect', () => {
+			socket.end();
+			resolve();
+		});
+		socket.once('error', (err: NodeJS.ErrnoException) => {
+			if (err.code === 'ECONNREFUSED') {
+				// start the server
+				const serverProcess = spawn(serverBinPath, [], {
+					detached: true,
+					stdio: ['ignore', 'pipe', 'pipe'],
+				});
+				serverProcess.unref();
+				serverProcess.once('spawn', () => {
+					channelBridge.appendLine(`spawned pid=${serverProcess.pid}`);
+					// Wait a moment for the server to start
+					setTimeout(() => {
+						resolve();
+					}, 500);
+				});
+
+				serverProcess.once('error', (err: Error) => {
+					channelBridge.appendLine(`spawn error: ${err.message}`);
+					reject(err);
+				});
+
+				serverProcess.stdout?.on('data', (data: Buffer) => {
+					channelBridge.append(`[bridge] ${data.toString()}`);
+				});
+
+				serverProcess.stderr?.on('data', (data: Buffer) => {
+					channelBridge.append(`[bridge] ${data.toString()}`);
+				});
+
+				serverProcess.on('exit', (code: number | null, signal: string | null) => {
+					channelBridge.show();
+					channelBridge.appendLine(`bridge exited with code ${code} and signal ${signal}`);
+				});
+
+				serverProcess.on('close', (code: number | null, signal: string | null) => {
+					channelBridge.show();
+					channelBridge.appendLine(`bridge closed with code ${code} and signal ${signal}`);
+				});
+			} else {
+				reject(err);
+			}
+		});
+	});
 }
 
 export async function stopLanguageClient() {
@@ -174,8 +233,14 @@ export async function stopLanguageClient() {
 }
 
 function handleServerHeartbeat(params: ServerNotificationParams | undefined) {
-	const message = params?.message ?? formatPayload(params?.payload) ?? 'Received server notification';
-	channel.appendLine(`[LSP notification] ${message}`);
+	channel.appendLine(`[LSP notification] ${JSON.stringify(params)}`);
+	if (params) {
+		if (isActivePullMode() && params.remote_available) {
+			vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
+			vscode.window.showInformationMessage("已切换到订阅模式");
+			setActivePullMode(false);
+		}
+	}
 }
 
 function formatPayload(payload: unknown) {
@@ -190,4 +255,19 @@ function formatPayload(payload: unknown) {
 	} catch {
 		return String(payload);
 	}
+}
+
+export async function activate(context: vscode.ExtensionContext) {
+	await startLanguageClient(context);
+
+    const lspWatchdog = setInterval(async () => {
+        if (!getLanguageClient()) {
+            await startLanguageClient(context);
+        }
+    }, 30_000);
+
+    context.subscriptions.push({
+        dispose: () => clearInterval(lspWatchdog),
+    });
+
 }

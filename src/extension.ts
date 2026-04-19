@@ -24,7 +24,7 @@ import * as parser from './parser';
 import * as batch from './batch';
 import * as crossref from './crossref';
 import * as error_check from './error-check';
-import { startLanguageClient, stopLanguageClient } from './lspclient';
+import * as lsp from './lspclient';
 import { getRegex } from './parser';
 
 
@@ -38,7 +38,7 @@ import { getRegex } from './parser';
 // this method is called when your extension is activated
 export async function activate(context: vscode.ExtensionContext) {
 	ContextHolder.set(context);
-	await startLanguageClient(context);
+	await lsp.activate(context);
 	parser.activate(context);
 
 	if (!fs.existsSync(context.globalStorageUri.fsPath)) {
@@ -238,7 +238,7 @@ var tempDisableStrictEditing = false;
 
 // this method is called when your extension is deactivated
 export async function deactivate() {
-	await stopLanguageClient();
+	await lsp.stopLanguageClient();
 }
 
 async function migration(context: vscode.ExtensionContext) {
