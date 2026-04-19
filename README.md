@@ -920,9 +920,9 @@ vars.get(string): any;
 ## 开发
 ```
 npm run compile && npm run esbuild
-npx @vscode/vsce login <username of dev.azure.com>
-npx @vscode/vsce package
-npx @vscode/vsce publish
+vsce login <username of dev.azure.com>
+vsce package
+vsce publish
 ```
 
 upgrade vscode api version
