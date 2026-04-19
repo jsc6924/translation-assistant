@@ -174,7 +174,7 @@ async function ensureBridgeRunning(serverBinPath: string): Promise<void> {
 		socket.once('error', (err: NodeJS.ErrnoException) => {
 			if (err.code === 'ECONNREFUSED') {
 				// start the server
-				const serverProcess = spawn(serverBinPath, [], {
+				const serverProcess = spawn(serverBinPath, ['--remote-host', 'simpletm.jscrosoft.com', '--remote-port', '443'], {
 					detached: true,
 					stdio: ['ignore', 'pipe', 'pipe'],
 				});
@@ -237,7 +237,6 @@ function handleServerHeartbeat(params: ServerNotificationParams | undefined) {
 	if (params) {
 		if (isActivePullMode() && params.remote_available) {
 			vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
-			vscode.window.showInformationMessage("已切换到订阅模式");
 			setActivePullMode(false);
 		}
 	}

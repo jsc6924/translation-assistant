@@ -929,7 +929,7 @@ upgrade vscode api version
 ```
 package.json
 "engines": {
-		"vscode": "^1.80.0"
+		"vscode": "^1.90.0"
 },
 
 npm install --save @types/vscode@1.80
