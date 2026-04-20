@@ -105,13 +105,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	vscode.workspace.onDidChangeTextDocument(event => {
 		let activeEditor = vscode.window.activeTextEditor;
+		const document = event.document;
 		const config = vscode.workspace.getConfiguration("dltxt.core");
 		const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo || 
 				event.reason === vscode.TextDocumentChangeReason.Redo);
 		// Skip non-file documents (terminal, output, etc.) and non-.txt files
-		if (event.document.uri.scheme !== 'file' || !event.document.uri.fsPath.endsWith('.txt')) {
+		if (event.document.uri.scheme !== 'file' 
+			|| !event.document.uri.fsPath.endsWith('.txt')
+		    || event.document.uri.fsPath.includes('CMakeLists.txt')) {
 			return;
 		}
+
 		if (config.get<boolean>('strictEditing') && !noStrict && !tempDisableStrictEditing) {
 			for (const change of event.contentChanges) {
 				const startLine = change.range.start.line;

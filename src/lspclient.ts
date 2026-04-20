@@ -13,7 +13,7 @@ import { channel, channelBridge } from './dlbuild';
 import { isActivePullMode, setActivePullMode, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
 
 const SERVER_HOST = '127.0.0.1';
-const SERVER_PORT = 6009;
+const SERVER_PORT = 6010;
 
 
 interface ServerNotificationParams {
@@ -151,7 +151,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		},
 	});
 
-	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_bridge.exe");
+	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_bridge_v2.exe");
 
 	try {
 		await ensureBridgeRunning(SERVER_BIN_PATH);

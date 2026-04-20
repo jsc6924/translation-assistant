@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.0.2",
+	"version": "4.0.3",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -1552,7 +1552,7 @@
 				},
 				"dltxt.y.searchWord.dictserver.baseURL": {
 					"type": "string",
-					"default": "http://localhost:9285/",
+					"default": "http://localhost:9286/",
 					"description": "辞典服务器的网址（包括端口号）"
 				},
 				"dltxt.y.searchWord.dictserver.executable.path": {
