@@ -9,7 +9,8 @@ import {
 } from "./formatter";
 import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
 import * as dlbuild from './dlbuild';
-import { trdb_view, cc_view } from './treeview';
+import { trdb_view } from './treeview';
+import { cc_view } from './command-center';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import { updateErrorDecorations, updateNewlineDecorations } from './error-check';
 import * as mode from './mode';
@@ -25,7 +26,7 @@ import * as batch from './batch';
 import * as crossref from './crossref';
 import * as error_check from './error-check';
 import * as lsp from './lspclient';
-import { getRegex } from './parser';
+import * as word_count from './word-count';
 
 
 
@@ -40,6 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	ContextHolder.set(context);
 	await lsp.activate(context);
 	parser.activate(context);
+	word_count.activate(context);
 
 	if (!fs.existsSync(context.globalStorageUri.fsPath)) {
 		fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });

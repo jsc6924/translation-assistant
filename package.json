@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.0.3",
+	"version": "4.1.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -207,6 +207,11 @@
 			{
 				"command": "Extension.dltxt.text_analysis_folder",
 				"title": "文本重复项分析",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batch_word_count_folder",
+				"title": "字数统计",
 				"category": "DLTXT"
 			},
 			{
@@ -972,6 +977,11 @@
 					"when": "explorerResourceIsFolder",
 					"command": "Extension.dltxt.text_analysis_folder",
 					"group": "dltxt.t.menu@3"
+				},
+				{
+					"when": "explorerResourceIsFolder",
+					"command": "Extension.dltxt.batch_word_count_folder",
+					"group": "dltxt.t.menu@4"
 				}
 			],
 			"dltxt-explorer-submenu": [

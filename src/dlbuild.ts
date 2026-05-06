@@ -548,7 +548,6 @@ async function wordcount(context: vscode.ExtensionContext) {
     
     const inputPath = path.join(rootDir, yamlData.wordcount.input.path);
     let total = 0;
-    let success = 0;
     let jcount = 0, ccount = 0;
 
     await readFolderRecursively(inputPath, [], async (file, relativeDir) => {

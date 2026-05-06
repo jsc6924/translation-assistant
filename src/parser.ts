@@ -3,7 +3,8 @@ import { createErrorDiagnostic, createErrorDiagnosticMultiLine, createDiagnostic
 import * as utils from './utils';
 import { AutoDetector, NoopAutoDetector, StandardParserAutoDetector, TextBlockAutoDetector } from './auto-format';
 import { findAllAndProcess } from './utils';
-import { get } from 'http';
+import { integer } from 'vscode-languageclient';
+import { WordCountListener } from './word-count';
 
 export function getRegex() {
     const config = vscode.workspace.getConfiguration("dltxt.core");
@@ -53,10 +54,23 @@ export interface MatchedGroups {
 
 ////////////////////////Start standard parser///////////////////////////////
 
-interface DocumentParser {
+export interface DocumentProcessor {
+  startProcess(): void;
+  processLine(jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string): void;
+  endProcess(): void;
+}
+export interface DocumentProcessedListener {
+  getProcessor(doc: vscode.TextDocument): DocumentProcessor | null;
+}
+
+export interface IDocumentParser {
   processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void): void;
 
   processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void): void;
+
+  listenCurrentDocumentProcessed(cb: DocumentProcessedListener): integer;
+
+  clearCurrentDocumentProcessedListener(id: integer): void;
 
   getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
 
@@ -71,9 +85,19 @@ interface DocumentParser {
   isUneditable(lineText: string): boolean;
 }
 
+function isTextDocument(value: unknown): value is vscode.TextDocument {
+  return !!value
+    && typeof value === 'object'
+    && typeof (value as vscode.TextDocument).getText === 'function'
+    && typeof (value as vscode.TextDocument).lineAt === 'function'
+    && typeof (value as vscode.TextDocument).lineCount === 'number'
+    && !!(value as vscode.TextDocument).uri;
+}
 
 
-class StandardDocumentParser implements DocumentParser {
+class StandardDocumentParser implements IDocumentParser {
+    private processedListeners: Map<integer, DocumentProcessedListener> = new Map();
+    private listenerIdCounter: integer = 0;
     constructor() {
 
     }
@@ -86,6 +110,18 @@ class StandardDocumentParser implements DocumentParser {
       return jreg.test(lineText);
     }
 
+    listenCurrentDocumentProcessed(cb: DocumentProcessedListener): integer {
+        const id = this.listenerIdCounter++;
+        this.processedListeners.set(id, cb);
+        return id;
+    }
+
+    clearCurrentDocumentProcessedListener(id: integer): void {
+        this.processedListeners.delete(id);
+    }
+
+    
+
     processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void) {
         const [jreg, creg] = getRegex();
         if (!jreg || !creg) {
@@ -94,6 +130,22 @@ class StandardDocumentParser implements DocumentParser {
         const namePosition = getTalkingNamePosition();
         const nameRegex = getTalkingNameRegex();
         let beforeName: string | undefined = undefined;
+
+        let processors: DocumentProcessor[] = [];
+        if (isTextDocument(text)) {
+          for (const listener of this.processedListeners.values()) {
+              const processor = listener.getProcessor(text as vscode.TextDocument);
+              if (processor) {
+                  processor.startProcess();
+                  processors.push(processor);
+              }
+          }
+        }
+        let callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => {
+          for (const processor of processors) {
+            processor.processLine(jgrps, cgrps, j_index, c_index, talkingName);
+          }
+        };
 
         let lines = getLines(text);
         let jgrps: MatchedGroups | undefined;
@@ -132,6 +184,7 @@ class StandardDocumentParser implements DocumentParser {
                           }
                       }
                       cb(jgrps, cgrps, j_index, i, talkingName);
+                      callListener(jgrps, cgrps, j_index, i, talkingName);
 
                       if (namePosition === NamePosition.Before && jgrps?.suffix?.includes('」')) {
                           beforeName = undefined;
@@ -165,9 +218,11 @@ class StandardDocumentParser implements DocumentParser {
                           talkingName = nameMatch.groups.name;
                           for (let item of callQueue) {
                             cb(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
+                            callListener(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
                           }
                           callQueue = [];
                           cb(jgrps, cgrps, j_index, i, talkingName);
+                          callListener(jgrps, cgrps, j_index, i, talkingName);
                       } else {
                         callQueue.push({ jgrps, j_index, cgrps, c_index: i });
                       }
@@ -178,8 +233,12 @@ class StandardDocumentParser implements DocumentParser {
           }
           for (const item of callQueue) {
               cb(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
+              callListener(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
           }
+        }
 
+        for (const processor of processors) {
+          processor.endProcess();
         }
     }
 
@@ -394,11 +453,25 @@ function adjust(jgrps: MatchedGroups, cgrps: MatchedGroups) {
 
 ////////////////////////////TextBlock////////////////////////////////
 
-export class TextBlockDocumentParser implements DocumentParser {
+export class TextBlockDocumentParser implements IDocumentParser {
   jreg: RegExp;
   creg: RegExp;
   jLineReg: RegExp;
   cLineReg: RegExp;
+
+  private processedListeners: Map<integer, DocumentProcessedListener> = new Map();
+  private listenerIdCounter: integer = 0;
+
+  listenCurrentDocumentProcessed(cb: DocumentProcessedListener): integer {
+    const id = this.listenerIdCounter++;
+    this.processedListeners.set(id, cb);
+    return id;
+  }
+
+  clearCurrentDocumentProcessedListener(id: integer): void {
+    this.processedListeners.delete(id);
+  }
+
   constructor() {
     const [reg, jreg, creg] = getTextBlockRegex();
     if (!reg || !jreg || !creg) {
@@ -423,6 +496,22 @@ export class TextBlockDocumentParser implements DocumentParser {
     const text = getText(input);
     const lineMap = generateLineMap(text);
 
+    const processors: DocumentProcessor[] = [];
+    if (isTextDocument(input)) {
+      for (const listener of this.processedListeners.values()) {
+          const processor = listener.getProcessor(input as vscode.TextDocument);
+          if (processor) {
+              processor.startProcess();
+              processors.push(processor);
+          }
+      }
+    }
+    const callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
+      for (const processor of processors) {
+        processor.processLine(jgrps, cgrps, j_index, c_index);
+      }
+    };
+
     findAllAndProcess(reg, text, (match => {
       if (match.groups?.jp && match.groups?.cn) {
         const jm = this.jreg.exec(match.groups?.jp);
@@ -436,10 +525,15 @@ export class TextBlockDocumentParser implements DocumentParser {
           const cgrps = cm.groups as any as MatchedGroups;
           adjust(jgrps, cgrps);
           cb(jgrps, cgrps, blockIndex + j_offset, blockIndex + c_offset);
+          callListener(jgrps, cgrps, blockIndex + j_offset, blockIndex + c_offset);
         }
       }
       return false;
     }))
+
+    for (const processor of processors) {
+      processor.endProcess();
+    }
   }
 
   processTranslatedLines(input: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void): void {
@@ -619,7 +713,7 @@ function getLineOffset(catchReg: RegExp, block: string): number {
   return block.substring(0, m.index).split("\n").length - 1;
 }
 
-export let DocumentParser: DocumentParser = new StandardDocumentParser();
+export let DocumentParser: IDocumentParser = new StandardDocumentParser();
 export function activate(context: vscode.ExtensionContext) {
   reloadDocumentParser();
 
@@ -638,6 +732,7 @@ function reloadDocumentParser() {
   } else {
     DocumentParser = new StandardDocumentParser();
   }
+  DocumentParser.listenCurrentDocumentProcessed(new WordCountListener());
 }
 
 export enum NamePosition {

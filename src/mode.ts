@@ -15,14 +15,14 @@ export function getNextMode(mode: string): string {
     }
     return 'Normal';
 }
-export const StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-StatusBarItem.command = 'Extension.dltxt.toggleMode';
-StatusBarItem.tooltip = 'Click to toggle mode'
+export const ModeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+ModeStatusBarItem.command = 'Extension.dltxt.toggleMode';
+ModeStatusBarItem.tooltip = 'Click to toggle mode'
 
 export function setMode(newMode: Mode) {
     VSCodeContext.set('dltxt.mode', Mode[newMode]);
-    StatusBarItem.text = `DLTXT Mode: ${Mode[newMode]}`;
-    StatusBarItem.show();
+    ModeStatusBarItem.text = `DLTXT Mode: ${Mode[newMode]}`;
+    ModeStatusBarItem.show();
 }
 
 export function setModeStr(newMode: string) {
@@ -35,6 +35,6 @@ export function setModeStr(newMode: string) {
         }
         VSCodeContext.set('dltxt.modeSwitchedMsgShowed', true);
     }
-    StatusBarItem.text = `DLTXT Mode: ${newMode}`;
-    StatusBarItem.show();
+    ModeStatusBarItem.text = `DLTXT Mode: ${newMode}`;
+    ModeStatusBarItem.show();
 }

@@ -284,46 +284,12 @@ async function batch_special_translate(documentUris: vscode.Uri[]) {
     vscode.window.showInformationMessage(`已处理 ${file_processed}/${total_file} 个文件`);
 }
 
-
-export async function batchCheckCommand() {
-    const documentUris = await selectBatchRange(true, '{txt,TXT}');
-    if (!documentUris) {
-        return;
-    }
-    await batch_check(documentUris);
-}
-
-export async function batchReportCommand() {
-    const documentUris = await selectBatchRange(false, '{txt,TXT}');
-    if (!documentUris) {
-        return;
-    }
-    await batch_report(documentUris);
-}
-
-export async function batchInsertNewline() {
-    const documentUris = await selectBatchRange(true, '{txt,TXT}');
-    if (!documentUris) {
-        return;
-    }
-    await batch_insert_newline(documentUris);
-}
-
-export async function batchRemoveNewline() {
-    const documentUris = await selectBatchRange(true, '{txt,TXT}');
-    if (!documentUris) {
-        return;
-    }
-    await batch_remove_newline(documentUris);
-}
-
-export async function batchSpecialTranslate() {
-    const documentUris = await selectBatchRange(true, '{txt,TXT}');
-    if (!documentUris) {
-        return;
-    }
-    await batch_special_translate(documentUris);
-}
+export const batchCheckCommand = withSelectRange(batch_check);
+export const batchReportCommand = withSelectRange(batch_report);
+export const batchInsertNewline = withSelectRange(batch_insert_newline);
+export const batchRemoveNewline = withSelectRange(batch_remove_newline);
+export const batchSpecialTranslate = withSelectRange(batch_special_translate);
+export const batchWordCountCommand = withSelectRange(batch_word_count);
 
 export async function batchReplace(rawText: string) {
     const replaced = await vscode.window.showInputBox({ placeHolder: '输入替换的文本' });
@@ -365,6 +331,19 @@ export async function batchReplace(rawText: string) {
     }
 }
 
+async function batch_word_count(documentUris: vscode.Uri[]) {
+    let total = 0;
+    let jcount = 0, ccount = 0;
+    await batchProcess(documentUris, doc => {
+        DocumentParser.processPairedLines(doc, (jgrps, cgrps) => {
+            jcount += jgrps.text.length;
+            ccount += cgrps.text.length;
+        });
+        total++;
+    });
+    vscode.window.showInformationMessage(`字数统计：共${total}个文件, 原文${jcount}字，译文${ccount}字`);
+}
+
 let ExcludedPaths: string[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
@@ -394,19 +373,27 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     registerCommand(context, 'Extension.dltxt.batch_check', batchCheckCommand);
-    registerCommand(context, 'Extension.dltxt.batch_check_folder', async (arg) => {
-        const folderPath = arg.fsPath;
-        if (!fs.statSync(folderPath).isDirectory()) {
-            vscode.window.showInformationMessage('请选中一个文件夹');
-            return;
-        }
-        const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
-        const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
-        await batch_check(documentUris);
-    });
-
+    registerCommand(context, 'Extension.dltxt.batch_check_folder', withSelectFolder(batch_check));
     registerCommand(context, 'Extension.dltxt.batch_report', batchReportCommand);
-    registerCommand(context, 'Extension.dltxt.batch_report_folder', async (arg) => {
+    registerCommand(context, 'Extension.dltxt.batch_report_folder', withSelectFolder(batch_report));
+    registerCommand(context, 'Extension.dltxt.text_analysis_folder', withSelectFolder(TextAnalysis));
+    registerCommand(context, 'Extension.dltxt.batch_word_count_folder', withSelectFolder(batch_word_count));
+
+}
+
+
+function withSelectRange(batch_function: (documentUris: vscode.Uri[]) => Promise<void>) {
+    return async () => {
+        const documentUris = await selectBatchRange(false, '{txt,TXT}');
+        if (!documentUris) {
+            return;
+        }
+        await batch_function(documentUris);
+    };
+}
+
+function withSelectFolder(batch_function: (documentUris: vscode.Uri[]) => Promise<void>) {
+    return async (arg: vscode.Uri) => {
         const folderPath = arg.fsPath;
         if (!fs.statSync(folderPath).isDirectory()) {
             vscode.window.showInformationMessage('请选中一个文件夹');
@@ -414,18 +401,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
         const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
         const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
-        await batch_report(documentUris);
-    });
-
-    registerCommand(context, 'Extension.dltxt.text_analysis_folder', async (arg) => {
-        const folderPath = arg.fsPath;
-        if (!fs.statSync(folderPath).isDirectory()) {
-            vscode.window.showInformationMessage('请选中一个文件夹');
-            return;
-        }
-        const globPattern = new vscode.RelativePattern(folderPath, '**/*.{txt,TXT}');
-        const documentUris = await vscode.workspace.findFiles(globPattern, '**/.*/**', undefined, undefined)
-        await TextAnalysis(documentUris);
-    });
-
+        await batch_function(documentUris);
+    };
 }
