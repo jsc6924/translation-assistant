@@ -36,12 +36,9 @@ async function dictServerSearch(context: vscode.ExtensionContext, word: string) 
     const config = vscode.workspace.getConfiguration("dltxt.y.searchWord.dictserver");
     const baseURL = config.get('baseURL') as string;
     const maxLen = config.get('displayCount') as number;
-    console.log(baseURL)
     let response = await axios.post(resolve(baseURL, 'search'), {
         query: word
     });
-
-    //console.log(response.data)
 
     let objectIds = [];
 

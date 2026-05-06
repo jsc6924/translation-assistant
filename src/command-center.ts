@@ -109,7 +109,7 @@ export namespace cc_view {
             checkingNode.children.push(new CommandItem("识别文本编码", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.detectEncoding');
             }));
-            checkingNode.children.push(new CommandItem("检查相似的文本", async () => {
+            checkingNode.children.push(new CommandItem("字数统计", async () => {
                 await batchWordCountCommand();
             }));
 
