@@ -537,8 +537,13 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             }
             for (let i = 0; i < lineList.length; i++) {
                 const line = lineList[i];
+                if (line.length <= maxLineLength) {
+                    // suppose each character is full-width, and every character is displayed, if it is obviously shorter than the limit, then skip the display width calculation
+                    continue;
+                }
                 const actualWidth = calcDisplayWidth(line);
 
+                // actualWidth is in terms of half-width characters, so we need to multiply maxLineLength by 2 for comparison
                 if (actualWidth > 2 * maxLineLength) {
                     const startChar = prevLengths[i];
                     const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `单行长度超过 ${maxLineLength} 字符, 实际长度为 ${actualWidth / 2} 字符`, c_index, startChar, lineLengths[i], ErrorCode.LineTooLong);
