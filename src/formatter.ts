@@ -3,6 +3,7 @@ import { repeatStr, toAscii, toDBC } from './utils';
 import { getTextDelimiter } from './motion';
 import { findLastMatchIndex } from './utils';
 import { DocumentParser, MatchedGroups, getRegex } from './parser';
+import { Position, Range, Selection } from 'vscode';
 
 
 
@@ -40,7 +41,7 @@ function editTranslation(
   return result;
 }
 
-export function formatter(context: vscode.ExtensionContext, document: vscode.TextDocument): vscode.TextEdit[] {
+function getStandardFormatSpec(): Array<CallableFunction> {
   const config = vscode.workspace.getConfiguration("dltxt");
   const ops: Array<CallableFunction> = [];
   const padding = (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
@@ -235,13 +236,7 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     ops.push(removeSpaceAfterQE);
 
   const createSpaceAfterNewlineOp = (option: string, jgrpsWhite: string) => (jgrps: MatchedGroups, cgrps: MatchedGroups) => {
-    let text = cgrps.text as string;
-    if (option === '删除空格' || !/([「『])/.test(jgrps.white)) {
-      text = text.replace(new RegExp(`(${escapedNestedLineToken})[ 　]+`, 'g'), `$1`);
-    } else {
-      text = text.replace(new RegExp(`(${escapedNestedLineToken})(?![ 　])`, 'g'), `$1　`);
-    }
-    cgrps.text = text;
+    return formatNewlineInLine(option, escapedNestedLineToken, jgrps, cgrps);
   };
   const spaceAfterNewlineOption = config.get("formatter.c.addSpaceAfterNewline")
   if (spaceAfterNewlineOption == '添加空格' || spaceAfterNewlineOption == '删除空格') {
@@ -259,10 +254,23 @@ export function formatter(context: vscode.ExtensionContext, document: vscode.Tex
     }
   }
   ops.push(customMappingFunc);
+  return ops;
+}
 
-
+export function formatter(context: vscode.ExtensionContext, document: vscode.TextDocument): vscode.TextEdit[] {
+  const ops = getStandardFormatSpec();
   return editTranslation(context, document, ops);
 }
+
+export function formatNewlineInLine(option: string, escapedNestedLineToken: string, jgrps: MatchedGroups, cgrps: MatchedGroups) {
+  let text = cgrps.text as string;
+  if (option === '删除空格' || !/([「『（])/.test(jgrps.white)) {
+    cgrps.text = text.replace(new RegExp(`(${escapedNestedLineToken})[ 　]+`, 'g'), `$1`);
+  } else {
+    cgrps.text = text.replace(new RegExp(`(${escapedNestedLineToken})(?![ 　])`, 'g'), `$1　`);
+  }
+}
+
 
 export function copyOriginalToTranslation(context: vscode.ExtensionContext, document: vscode.TextDocument, editBuilder: vscode.TextEditorEdit) {
   const ops: Array<CallableFunction> = [];

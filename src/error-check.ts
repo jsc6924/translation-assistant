@@ -6,6 +6,7 @@ import { getTextDelimiter } from './motion';
 import * as iconv from "iconv-lite";
 import { dictTree, getDecorationsOnAllLines } from './simpletm';
 import { group } from 'console';
+import { calcDisplayWidth } from './newline';
 const AhoCorasick = require('ahocorasick');
 
 // not used yet, can be used to diagnostic 
@@ -531,15 +532,16 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
             const lineList = lines.split(lineSplitter);
             const lineLengths = lineList.map(l => l.length);
             const prevLengths = [cgrps.prefix.length + cgrps.white.length];
-            for (let i = 1; i < lineLengths.length; i++) {
-                prevLengths.push(prevLengths[i - 1] + lineSplitter.length + lineLengths[i - 1]);
+            for (let i = 0; i < lineLengths.length; i++) {
+                prevLengths.push(prevLengths[i] + lineSplitter.length + lineLengths[i]);
             }
             for (let i = 0; i < lineList.length; i++) {
                 const line = lineList[i];
+                const actualWidth = calcDisplayWidth(line);
 
-                if (displayLength(line) > 2 * maxLineLength) {
+                if (actualWidth > 2 * maxLineLength) {
                     const startChar = prevLengths[i];
-                    const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `单行长度超过 ${maxLineLength} 字符`, c_index, startChar, lineLengths[i], ErrorCode.LineTooLong);
+                    const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `单行长度超过 ${maxLineLength} 字符, 实际长度为 ${actualWidth / 2} 字符`, c_index, startChar, lineLengths[i], ErrorCode.LineTooLong);
                     res.push(d);
                 }
             }
@@ -580,25 +582,4 @@ export function clearAllWarnings() {
     DltxtDiagCollection.clear();
     DltxtDiagCollectionMissionLine.clear();
     DltxtDiagCollectionSpellcheck.clear();
-}
-
-function displayLength(str: string): number {
-    // simple implementation: count full-width chars as 2, half-width as 1
-    let len = 0;
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
-        if ((code >= 0x1100 && code <= 0x115F) || // Hangul Jamo
-            (code >= 0x2E80 && code <= 0xA4CF && code !== 0x303F) || // CJK Radicals Supplement .. Yi Radicals
-            (code >= 0xAC00 && code <= 0xD7A3) || // Hangul Syllables
-            (code >= 0xF900 && code <= 0xFAFF) || // CJK Compatibility Ideographs
-            (code >= 0xFE10 && code <= 0xFE19) || // Vertical Forms
-            (code >= 0xFE30 && code <= 0xFE6F) || // CJK Compatibility Forms
-            (code >= 0xFF00 && code <= 0xFF60) || // Fullwidth Forms
-            (code >= 0xFFE0 && code <= 0xFFE6)) { // Fullwidth Forms
-            len += 2;
-        } else {
-            len += 1;
-        }
-    }
-    return len;
 }

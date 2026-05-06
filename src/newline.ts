@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import isFullwidthCodePoint from 'is-fullwidth-code-point';
 import * as utils from './utils';
 import { updateNewlineDecorations } from './error-check';
+import { MatchedGroups } from './parser';
+import { formatNewlineInLine } from './formatter';
 
 const tagStatusNormal = 0;
 const tagStatusTag = 1;
@@ -33,6 +35,12 @@ function tagStatus(text: string): number[] {
             }
             lastIndexAfterTag = i + 1;
             continue;
+        } else if (text[i] === '\\') {
+            status[i] = tagStatusTag;
+            if (i + 1 < text.length) {
+                status[i+1] = tagStatusTag;
+                i++;
+            }
         } else {
             status[i] = tagStatusNormal;
         }
@@ -52,7 +60,7 @@ function widthArr(text: string, tagStatusArr: number[]): number[] {
             width += 2;
             arr[i] = width;
             continue;
-        }        
+        }
         const c = text.charCodeAt(i);
         // if c is a fullwidth character   
         if (isFullwidthCodePoint(c)) {
@@ -65,33 +73,55 @@ function widthArr(text: string, tagStatusArr: number[]): number[] {
     return arr;
 }
 
-export function insert_newline_for_line(text: string, insertNewline: string, deleteNewlineRegex: RegExp, maxlen: number): string {
+export function calcDisplayWidth(text: string): number {
+    const widths = widthArr(text, tagStatus(text));
+    return widths.length > 0 ? widths[widths.length - 1] : 0;
+}
+
+// return the replaced full line
+export function insert_newline_for_line(jgrps: MatchedGroups, cgrps: MatchedGroups, newline: string, deleteNewlineRegex: RegExp, maxlen: number): string {
+    const insertNewline = newline + utils.repeatStr('　', cgrps.white.length, false);
+
+    const margin = calcDisplayWidth(cgrps.white) + calcDisplayWidth(cgrps.suffix);
+    const adjustedMaxLen = Math.max(maxlen - margin, 5); // set a lower bound for maxlen to avoid too aggressive splitting
+
     // remove all newlineRegex in text
     deleteNewlineRegex.lastIndex = 0;
+    let text = cgrps.text;
     text = text.replace(deleteNewlineRegex, '');
-    text = text.replace(/(?<=[？！])[\s　]/g, '');
+    // text = text.replace(/(?<=[？！])[\s　]/g, '');
 
     const MAX_LINE = 3;
-    const wantedMaxLen = Math.min(maxlen, 24);
+    const preferredMaxLen = Math.min(adjustedMaxLen, 24);
     const tagStatusArr = tagStatus(text);
     const widths = widthArr(text, tagStatusArr);
 
     // no need to split
-    if (!text || widths[widths.length - 1] <= wantedMaxLen) {
-        return assembleLines([text], insertNewline);
+    if (!text || widths[widths.length - 1] <= preferredMaxLen) {
+        return assembleLines(jgrps, cgrps, [text], insertNewline);
     }
 
-    const [valid, lines] = split_to_lines(text, widths, tagStatusArr, wantedMaxLen, MAX_LINE, [0.6]);
+    const [valid, lines] = split_to_lines(text, widths, tagStatusArr, preferredMaxLen, MAX_LINE, [0.6, 0.2]);
     if (valid) {
-        return assembleLines(lines, insertNewline);
+        return assembleLines(jgrps, cgrps, lines, insertNewline);
     }
 
-    const [valid3, lines3] = split_to_lines(text, widths, tagStatusArr, maxlen, MAX_LINE, [0.6, 0.4, 0.1, 0]);
+    const [valid3, lines3] = split_to_lines(text, widths, tagStatusArr, adjustedMaxLen, MAX_LINE, [0.6, 0.4, 0.1, 0]);
     if (valid3) {
-        return assembleLines(lines3, insertNewline);
+        return assembleLines(jgrps, cgrps, lines3, insertNewline);
     }
 
-    return assembleLines([text], insertNewline);
+    const [valid32, lines32] = split_to_lines(text, widths, tagStatusArr, maxlen, MAX_LINE, [0.1, 0]);
+    if (valid32) {
+        return assembleLines(jgrps, cgrps, lines32, insertNewline);
+    }
+
+    const [valid4, lines4] = split_to_lines(text, widths, tagStatusArr, maxlen, 4, [0]);
+    if (valid4) {
+        return assembleLines(jgrps, cgrps, lines4, insertNewline);
+    }
+
+    return assembleLines(jgrps, cgrps, [text], insertNewline);
 }
 
 function split_to_lines(text: string, widths: number[], tagStatusArr: number[], maxLen: number, maxline: number, alphas: number[]): [boolean, string[]] {
@@ -128,9 +158,9 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
             strength[i] += 10.0; // backslash is usually used for escaping, therefore not a good split point
         } else if (isPunc[i]) {
             if (isPunc[i+1]) {
-                strength[i] += 1.0; // p -> p
+                strength[i] += 1.0; // punc -> punc
             } else {
-                // p -> a/n
+                // punc -> alpha/normal
                 if(periodPuncs.test(text[i])) {
                     strength[i] -= 1.0;
                 } else {
@@ -139,17 +169,17 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
             }
         } else if (alphanum.test(text[i])) {
             if (alphanum.test(text[i+1])) {
-                strength[i] += 3.0;// n -> n
+                strength[i] += 3.0;// normal -> normal
             } else if (isPunc[i+1]) {
-                strength[i] += 1.0; // n -> p
+                strength[i] += 1.0; // normal -> punc
             } else {
-                // n -> a
+                // normal -> alpha
             }
         } else {
             if (isPunc[i+1]) {
-                strength[i] += 1.0; // a -> p
+                strength[i] += 1.0; // alpha -> punc
             } else {
-                // a -> a/n
+                // alpha -> alpha/normal
             }
         }
     }
@@ -199,11 +229,15 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
     return [false, []];
 }
 
-function assembleLines(lines: string[], insertNewline: string): string {
-    let text = lines.join(insertNewline);
-    return text.replace(/[！？](?!$|[！？　\s「」『』（）\(\)\\])/g, (match) => {
-        return match + '　';
-    });
+function assembleLines(jgrps: MatchedGroups, cgrps: MatchedGroups, lines: string[], insertNewline: string): string {
+    const raw = lines.join(insertNewline);
+    cgrps.text = raw;
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const nestedLineToken = config.get("nestedLine.token") as string;
+    const escapedNestedLineToken = nestedLineToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const spaceAfterNewlineOption = config.get("formatter.c.addSpaceAfterNewline") as string;
+    formatNewlineInLine(spaceAfterNewlineOption, escapedNestedLineToken, jgrps, cgrps);
+    return `${cgrps.prefix}${cgrps.white}${cgrps.text}${cgrps.suffix}`;
 }
 
 

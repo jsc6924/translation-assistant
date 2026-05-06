@@ -3,12 +3,11 @@ import { registerCommand } from './utils';
 import * as utils from './utils';
 import * as fs from "fs";
 import * as path from "path";
-import { DocumentParser, MatchedGroups } from './parser';
+import { DocumentParser } from './parser';
 import { channel } from './dlbuild';
 import { performance } from 'perf_hooks';
-import { createDiagnostic, ErrorCode, filterUntranslatedLines, updateNewlineDecorations, warningCheck } from './error-check';
+import { createDiagnostic, warningCheck } from './error-check';
 import { insert_newline_for_line } from './newline';
-import { Pair } from './utils';
 import { translateString } from './motion';
 import { TextAnalysis } from './text-analysis';
 
@@ -214,16 +213,10 @@ async function batch_insert_newline(documentUris: vscode.Uri[]) {
     const total_file = documentUris.length;
     let file_processed = 0;
     await batchProcess(documentUris, doc => {
-        DocumentParser.processTranslatedLines(doc, (groups, i) => {
-            const target = groups.white + groups.text + groups.suffix;
-            const insertNewline = newline + utils.repeatStr('　', groups.white.length, false);
-            const replaced = insert_newline_for_line(target, insertNewline, deleteNewlineRegex, maxlen);
-            if (replaced != target) {
-                const line = doc.lineAt(i);
-                const start = line.range.start.with({ character: groups.prefix.length });
-                const end = line.range.end;
-                workspaceEdit.replace(doc.uri, new vscode.Range(start, end), replaced);
-            }
+        DocumentParser.processPairedLines(doc, (jgrps, cgrps, j_index, c_index) => {
+            const replaced = insert_newline_for_line(jgrps, cgrps, newline, deleteNewlineRegex, maxlen);
+            const line = doc.lineAt(c_index);
+            workspaceEdit.replace(doc.uri, line.range, replaced);
         });
         file_processed++;
     });
