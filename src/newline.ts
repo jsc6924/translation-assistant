@@ -3,10 +3,51 @@ import isFullwidthCodePoint from 'is-fullwidth-code-point';
 import * as utils from './utils';
 import { updateNewlineDecorations } from './error-check';
 
-function widthArr(text: string): number[] {
+const tagStatusNormal = 0;
+const tagStatusTag = 1;
+const tagStatusInTag = 2;
+function tagStatus(text: string): number[] {
+    const status = new Array(text.length).fill(0);
+    let lastIndexAfterTag = -1;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '<') {
+            status[i] = tagStatusTag;
+            if (i + 1 >= text.length) {
+                break;
+            }
+
+            if (text[i+1] === '/') {
+                status[i] = tagStatusTag;
+                if (lastIndexAfterTag >= 0) {
+                    for (let j = lastIndexAfterTag; j < i; j++) {
+                        status[j] = tagStatusInTag;
+                    }
+                }
+            }
+
+            for (; i < text.length && text[i] !== '>'; i++) {
+                status[i] = tagStatusTag;
+            }
+            if (i < text.length) {
+                status[i] = tagStatusTag; // the '>' char
+            }
+            lastIndexAfterTag = i + 1;
+            continue;
+        } else {
+            status[i] = tagStatusNormal;
+        }
+    }
+    return status;
+}
+
+function widthArr(text: string, tagStatusArr: number[]): number[] {
     const arr = new Array(text.length).fill(0);
     let width = 0;
     for (let i = 0; i < text.length; i++) {
+        if (tagStatusArr[i] === tagStatusTag) {
+            arr[i] = width;
+            continue;
+        }
         if (text[i] === '—' || text[i] === '…') {
             width += 2;
             arr[i] = width;
@@ -32,19 +73,20 @@ export function insert_newline_for_line(text: string, insertNewline: string, del
 
     const MAX_LINE = 3;
     const wantedMaxLen = Math.min(maxlen, 24);
-    const widths = widthArr(text);
+    const tagStatusArr = tagStatus(text);
+    const widths = widthArr(text, tagStatusArr);
 
     // no need to split
     if (!text || widths[widths.length - 1] <= wantedMaxLen) {
         return assembleLines([text], insertNewline);
     }
 
-    const [valid, lines] = split_to_lines(text, widths, wantedMaxLen, MAX_LINE, [0.6]);
+    const [valid, lines] = split_to_lines(text, widths, tagStatusArr, wantedMaxLen, MAX_LINE, [0.6]);
     if (valid) {
         return assembleLines(lines, insertNewline);
     }
 
-    const [valid3, lines3] = split_to_lines(text, widths, maxlen, MAX_LINE, [0.6, 0.4, 0.1, 0]);
+    const [valid3, lines3] = split_to_lines(text, widths, tagStatusArr, maxlen, MAX_LINE, [0.6, 0.4, 0.1, 0]);
     if (valid3) {
         return assembleLines(lines3, insertNewline);
     }
@@ -52,7 +94,7 @@ export function insert_newline_for_line(text: string, insertNewline: string, del
     return assembleLines([text], insertNewline);
 }
 
-function split_to_lines(text: string, widths: number[], maxLen: number, maxline: number, alphas: number[]): [boolean, string[]] {
+function split_to_lines(text: string, widths: number[], tagStatusArr: number[], maxLen: number, maxline: number, alphas: number[]): [boolean, string[]] {
     if (!text) {
         return [false, []];
     }   
@@ -69,14 +111,22 @@ function split_to_lines(text: string, widths: number[], maxLen: number, maxline:
     if (n < 2) {
         return [true, [text]];
     }
-    const strength = new Array(n-1).fill(0.0);
+    const strength = new Array(n-1).fill(0.0); // difficulty of splitting at position i (between i and i+1), smaller is easier to split
     const alphanum = /[a-zA-Z0-9]/;
     const puncs = /[。？！，、—…」』]/;
     const periodPuncs = /[。？！]/;
 
     const isPunc = new Array(n).fill(0.0).map((_, i) => puncs.test(text[i]));
     for (let i = 0; i < n - 1; i++) {
-        if (isPunc[i]) {
+        if (tagStatusArr[i] === tagStatusTag || tagStatusArr[i] === tagStatusInTag) {
+            if (tagStatusArr[i+1] === tagStatusTag) {
+                strength[i] += 10000.0; // split tag is not valid
+            } else if (tagStatusArr[i+1] === tagStatusInTag) {
+                strength[i] += 10000.0; // split in tag is not valid either
+            }
+        } else if (text[i] === '\\') {
+            strength[i] += 10.0; // backslash is usually used for escaping, therefore not a good split point
+        } else if (isPunc[i]) {
             if (isPunc[i+1]) {
                 strength[i] += 1.0; // p -> p
             } else {
