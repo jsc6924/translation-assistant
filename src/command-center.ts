@@ -8,7 +8,6 @@ import { checkSimilarText } from './crossref';
 import { getLanguageClient, RequestEcho } from './lspclient';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
-import { setNewlineToken } from './newline';
 
 export namespace cc_view {
     class CCDirectory extends TreeItem<CCTreeView> {
@@ -39,12 +38,6 @@ export namespace cc_view {
             configCommands.children.push(new CommandItem("设置文本格式规范", async () => {
                 await configureFormat();
             }, 'settings-gear'));
-            configCommands.children.push(new CommandItem("设置换行符", async () => {
-                await setNewlineToken();
-            }, 'settings-gear'));
-            configCommands.children.push(new CommandItem("设置单行最大长度", async () => {
-                await vscode.commands.executeCommand('dltxt.setting.setLineMaxLength');
-            }, 'settings-gear'))
             configCommands.children.push(new CommandItem("切换换行符显示", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.switchNewlineTokenDisplay');
             }, 'settings-gear'));

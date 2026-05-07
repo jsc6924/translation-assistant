@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { repeatStr, toAscii, toDBC } from './utils';
 import { getTextDelimiter } from './motion';
 import { findLastMatchIndex } from './utils';
 import { DocumentParser, MatchedGroups, getRegex } from './parser';
+import { ContextHolder } from './utils';
 import { Position, Range, Selection } from 'vscode';
 
 
@@ -337,9 +340,36 @@ async function updateSpaceConfigOption(config: vscode.WorkspaceConfiguration, co
   }
 }
 
-export async function configureFormat() {
-   const config = vscode.workspace.getConfiguration("dltxt");
-   const choices = [
+interface FormatChoice {
+  label: string;
+  configKey: string;
+  specifyKey?: string;
+  specifyOptions?: string[];
+}
+
+interface FormatChoiceState extends FormatChoice {
+  enabled: boolean;
+  specifiedValue?: string;
+}
+
+interface FormatConfigWebviewState {
+  choices: FormatChoiceState[];
+  newlineToken: string;
+  newlineMaxLen: number;
+  spaceAfterQE: string;
+  spaceAfterNewline: string;
+}
+
+interface FormatConfigSubmitPayload {
+  choices: Array<{ configKey: string; enabled: boolean; specifyKey?: string; specifyValue?: string }>;
+  newlineToken: string;
+  newlineMaxLen: number;
+  spaceAfterQE: string;
+  spaceAfterNewline: string;
+}
+
+function getFormatChoices(): FormatChoice[] {
+  return [
     {
       label: '统一省略号',
       configKey: 'formatter.a.ellipsis.enable',
@@ -360,7 +390,7 @@ export async function configureFormat() {
       label: '统一双引号',
       configKey: 'formatter.b.formatQuote.enable',
       specifyKey: 'formatter.b.formatQuote.specify',
-      specifyOptions: ["“中文双引号”", "『日语双引号』"]
+      specifyOptions: ['“中文双引号”', '『日语双引号』']
     },
     {
       label: '将？！替换为！？',
@@ -386,49 +416,107 @@ export async function configureFormat() {
       label: '把……？/……！改成？/！',
       configKey: 'formatter.c.removeEllipsisQE',
     },
-   ];
-   const items: (vscode.QuickPickItem & { configKey: string, specifyKey?: string, specifyOptions?: string[] })[] = choices.map(choice => {
-    return {
-      label: choice.label,
-      configKey: choice.configKey,
-      picked: config.get(choice.configKey) as boolean,
-    };
-   });
-   let res = await vscode.window.showQuickPick(items, {
-    canPickMany: true,
-    placeHolder: '选择需要应用的格式化选项（可多选）'
-   });
-    if (!res) {
-      return;
-    }
+  ];
+}
 
-    const prevSelected = new Set<string>();
-    for (let item of items) {
-      if (item.picked) {
-        prevSelected.add(item.configKey);
+function buildFormatConfigState(config: vscode.WorkspaceConfiguration): FormatConfigWebviewState {
+  const choices = getFormatChoices().map(choice => ({
+    ...choice,
+    enabled: config.get(choice.configKey) as boolean,
+    specifiedValue: choice.specifyKey ? config.get(choice.specifyKey) as string : undefined,
+  }));
+
+  return {
+    choices,
+    newlineToken: (config.get('nestedLine.token') as string) || '',
+    newlineMaxLen: (config.get('nestedLine.maxLen') as number) || 24,
+    spaceAfterQE: (config.get('formatter.c.addSpaceAfterQE') as string) || '无效',
+    spaceAfterNewline: (config.get('formatter.c.addSpaceAfterNewline') as string) || '无效',
+  };
+}
+
+function getConfigureFormatWebviewHtml(panel: vscode.WebviewPanel, state: FormatConfigWebviewState): string {
+  const extensionUri = ContextHolder.get().extensionUri;
+  const htmlPath = path.join(ContextHolder.get().extensionPath, 'src', 'webview', 'format-config.html');
+  const template = fs.readFileSync(htmlPath, 'utf8');
+  const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'format-config.css'));
+  const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'format-config.js'));
+  const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
+
+  return template
+    .replace('{{styleUri}}', cssUri.toString())
+    .replace('{{scriptUri}}', scriptUri.toString())
+    .replace('{{state}}', serializedState);
+}
+
+export async function configureFormat() {
+  const config = vscode.workspace.getConfiguration('dltxt');
+  const panel = vscode.window.createWebviewPanel(
+    'dltxt-format-config',
+    '设置文本格式规范',
+    vscode.ViewColumn.Active,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: false,
+    }
+  );
+
+  panel.webview.html = getConfigureFormatWebviewHtml(panel, buildFormatConfigState(config));
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) {
+        return;
       }
-    }
+      settled = true;
+      messageDisposable.dispose();
+      closeDisposable.dispose();
+      resolve();
+    };
 
-    for (let item of res) {
-      if (!prevSelected.has(item.configKey)) {
-        await config.update(item.configKey, true, vscode.ConfigurationTarget.Workspace);
-        if (item.specifyKey) {
-          const specifyOption = await vscode.window.showQuickPick(item.specifyOptions || [], {
-            placeHolder: `"${item.label}"`
-          });
-          if (specifyOption) {
-            await config.update(item.specifyKey, specifyOption, vscode.ConfigurationTarget.Workspace);
-          }
+    const messageDisposable = panel.webview.onDidReceiveMessage(async (message) => {
+      if (message?.type === 'config-cancel') {
+        panel.dispose();
+        finish();
+        return;
+      }
+
+      if (message?.type !== 'config-submit' || !message.payload) {
+        return;
+      }
+
+      const payload = message.payload as FormatConfigSubmitPayload;
+
+      if (!payload.newlineToken) {
+        vscode.window.showErrorMessage('换行符不能为空');
+        return;
+      }
+
+      if (!Number.isInteger(payload.newlineMaxLen) || payload.newlineMaxLen <= 0) {
+        vscode.window.showErrorMessage('单行最大长度必须是正整数');
+        return;
+      }
+
+      for (const choice of payload.choices) {
+        await config.update(choice.configKey, choice.enabled, vscode.ConfigurationTarget.Workspace);
+        if (choice.specifyKey && choice.specifyValue) {
+          await config.update(choice.specifyKey, choice.specifyValue, vscode.ConfigurationTarget.Workspace);
         }
       }
-    }
-    for (let item of items) {
-      if (item.picked && !res.find(r => r.configKey === item.configKey)) {
-        await config.update(item.configKey, false, vscode.ConfigurationTarget.Workspace);
-      }
-    }
 
-    await updateSpaceConfigOption(config, 'formatter.c.addSpaceAfterQE', '在问号、感叹号后的空格');
-    await updateSpaceConfigOption(config, 'formatter.c.addSpaceAfterNewline', '在对话的换行符后的空格');
-    vscode.window.showInformationMessage('格式化选项已更新');
-  }
+      await config.update('nestedLine.token', payload.newlineToken, vscode.ConfigurationTarget.Workspace);
+      await config.update('nestedLine.maxLen', payload.newlineMaxLen, vscode.ConfigurationTarget.Workspace);
+      await config.update('formatter.c.addSpaceAfterQE', payload.spaceAfterQE, vscode.ConfigurationTarget.Workspace);
+      await config.update('formatter.c.addSpaceAfterNewline', payload.spaceAfterNewline, vscode.ConfigurationTarget.Workspace);
+      vscode.window.showInformationMessage('格式化选项已更新');
+      panel.dispose();
+      finish();
+    });
+
+    const closeDisposable = panel.onDidDispose(() => {
+      finish();
+    });
+  });
+}
