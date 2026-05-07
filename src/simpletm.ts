@@ -1,8 +1,10 @@
 import * as vscode from 'vscode'
 import axios from 'axios';
 import * as fs from 'fs';
+import * as path from 'path';
+import { parse, ParseError, printParseErrorCode } from 'jsonc-parser/lib/esm/main';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo, getCurrentWorkspaceFolder } from './utils';
 import { editorWriteString, translateCurrentLine } from './motion';
 import { DocumentParser } from './parser';
 import { getLanguageClient, ProjectNamingUpdatedNotification, ProjectTranslationUpdatedNotification, RequestSubscribeProject } from './lspclient';
@@ -13,6 +15,7 @@ export const SimpleTMDefaultURL = "https://simpletm.jscrosoft.com";
 
 export let dictTree: dict_view.DictTreeView | undefined = undefined; 
 export const autoSyncVSCodeSettingsConfigName = "dltxt.config.autoSyncVSCodeSettings";
+export const ignoredVSCodeSettingsConfigName = "dltxt.config.ignoredVSCodeSettingsForSync";
 
 let activePullMode = true;
 export const isActivePullMode = () => activePullMode;
@@ -267,6 +270,10 @@ export function activate(context: vscode.ExtensionContext) {
 			await syncVscodeConfig(name);
 		}
 		updateKeywordDecorations();
+	});
+
+	registerCommand(context, 'Extension.dltxt.upload_workspace_vscode_settings', async function (name?: string) {
+		await uploadWorkspaceVSCodeSettings(name);
 	});
 
 
@@ -956,6 +963,120 @@ async function syncVscodeConfig(name: string) {
 	}).catch((err) => {
 		console.error(err);
 	});
+}
+
+function getIgnoredVSCodeSettingsForSync(): string[] {
+	const config = vscode.workspace.getConfiguration();
+	const ignored = config.get<string[]>(ignoredVSCodeSettingsConfigName) ?? [];
+	return Array.from(new Set([autoSyncVSCodeSettingsConfigName, ...ignored]));
+}
+
+function getFilteredWorkspaceVSCodeSettings(): Record<string, unknown> {
+	const workspaceFolder = getCurrentWorkspaceFolder();
+	if (!workspaceFolder) {
+		throw new Error('当前没有打开工作区文件夹');
+	}
+
+	const settingsPath = path.join(workspaceFolder, '.vscode', 'settings.json');
+	if (!fs.existsSync(settingsPath)) {
+		return {};
+	}
+
+	const rawText = fs.readFileSync(settingsPath, 'utf8');
+	const errors: ParseError[] = [];
+	const parsed = parse(rawText, errors, {
+		allowTrailingComma: true,
+		disallowComments: false,
+	});
+
+	if (errors.length > 0) {
+		const details = errors.map(err => printParseErrorCode(err.error)).join(', ');
+		throw new Error(`无法解析工作区设置: ${details}`);
+	}
+
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+		throw new Error('工作区设置必须是一个 JSON 对象');
+	}
+
+	const ignored = new Set(getIgnoredVSCodeSettingsForSync());
+	return Object.fromEntries(
+		Object.entries(parsed as Record<string, unknown>).filter(([key]) => !ignored.has(key))
+	);
+}
+
+async function pickRemoteDictName(): Promise<string | undefined> {
+	const remoteDicts = DictSettings.getAllDictNames().filter(name => DictSettings.getDictType(name) !== DictType.Local);
+	if (remoteDicts.length === 0) {
+		vscode.window.showInformationMessage('需要先连接远程术语库');
+		return undefined;
+	}
+	if (remoteDicts.length === 1) {
+		return remoteDicts[0];
+	}
+	return await vscode.window.showQuickPick(remoteDicts, {
+		canPickMany: false,
+		placeHolder: '选择一个远程术语库上传工作区设置'
+	});
+}
+
+export async function uploadWorkspaceVSCodeSettings(name?: string): Promise<void> {
+	const dictName = name ?? await pickRemoteDictName();
+	if (!dictName) {
+		return;
+	}
+
+	const dictNode = dictTree?.getDictByName(dictName);
+	if (!dictNode) {
+		return;
+	}
+
+	const type = DictSettings.getDictType(dictName);
+	if (type === DictType.Local) {
+		vscode.window.showErrorMessage('本地术语库不支持上传工作区设置');
+		return;
+	}
+
+	const connectionGetter = type === DictType.RemoteURL ? remoteURLConnectionGetter : remoteUserConnectionGetter;
+	const {username, apiToken, BASE_URL, gameTitle} = await connectionGetter(dictName);
+	if (!username || !apiToken) {
+		vscode.window.showErrorMessage('请在设置中填写账号与API Token后再使用同步功能');
+		return;
+	}
+	if (!gameTitle) {
+		vscode.window.showErrorMessage('请在设置中填写项目名后再使用同步功能');
+		return;
+	}
+
+	let filteredSettings: Record<string, unknown>;
+	try {
+		filteredSettings = getFilteredWorkspaceVSCodeSettings();
+	} catch (error) {
+		vscode.window.showErrorMessage(`${error}`);
+		return;
+	}
+
+	const payload = JSON.stringify(filteredSettings);
+	if (Buffer.byteLength(payload, 'utf8') > 64 * 1024) {
+		vscode.window.showErrorMessage('工作区设置过大，无法上传（最大 64KB）');
+		return;
+	}
+
+	const fullURL = pathConcat(BASE_URL, '/api2/vscodeConfig/' + gameTitle);
+	try {
+		await axios.post(fullURL, filteredSettings, {
+			auth: {
+				username: username,
+				password: apiToken
+			},
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+		vscode.window.showInformationMessage(`已上传当前工作区设置到 ${gameTitle}`);
+	} catch (error) {
+		console.error(error);
+		vscode.window.showErrorMessage(`上传工作区设置失败: ${error}`);
+	}
 }
 
 async function syncDatabaseByGameTitle(gameTitle: string) {

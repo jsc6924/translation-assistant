@@ -8,6 +8,7 @@ import { checkSimilarText } from './crossref';
 import { getLanguageClient, RequestEcho } from './lspclient';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
+import { uploadWorkspaceVSCodeSettings } from './simpletm';
 
 export namespace cc_view {
     class CCDirectory extends TreeItem<CCTreeView> {
@@ -37,6 +38,9 @@ export namespace cc_view {
             }, 'settings-gear'));
             configCommands.children.push(new CommandItem("设置文本格式规范", async () => {
                 await configureFormat();
+            }, 'settings-gear'));
+            configCommands.children.push(new CommandItem("上传当前工作区设置到远程术语库", async () => {
+                await uploadWorkspaceVSCodeSettings();
             }, 'settings-gear'));
             configCommands.children.push(new CommandItem("切换换行符显示", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.switchNewlineTokenDisplay');

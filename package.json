@@ -1350,6 +1350,16 @@
 					"default": true,
 					"description": "自动将VSCode的相关设置同步到DLTXT设置中（会覆盖DLTXT设置中已有的相关设置）"
 				},
+				"dltxt.config.ignoredVSCodeSettingsForSync": {
+					"type": "array",
+					"default": [
+						"dltxt.config.autoSyncVSCodeSettings"
+					],
+					"items": {
+						"type": "string"
+					},
+					"description": "上传工作区 VSCode 设置到远程服务器时需要忽略的配置项键名"
+				},
 				"dltxt.appearance.showKeywordHighlight": {
 					"type": "boolean",
 					"default": true,
@@ -1625,6 +1635,7 @@
 		"iconv-lite": "^0.6.3",
 		"is-fullwidth-code-point": "^5.0.0",
 		"js-yaml": "^4.1.0",
+		"jsonc-parser": "^3.3.1",
 		"kuromoji": "^0.1.2",
 		"open": "^7.4.2",
 		"request": "^2.88.2",
