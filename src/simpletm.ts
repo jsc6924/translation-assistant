@@ -1274,13 +1274,10 @@ class CalledTranslationResolver {
 	}
 	resolve(called: string, position: vscode.Position): NamingResolution {
 		const talkingName = this.lineNumberToTalker.get(position.line);
-		if (!talkingName) {
-			return {};
-		}
 		let trans = '';
 		let ruleComment = undefined;
-		const directRule = this.naming[talkingName]?.[called];
-		if (directRule) {
+		if (talkingName && this.naming[talkingName]?.[called]) {
+			const directRule = this.naming[talkingName][called];
 			trans = getDictNamingTranslation(directRule).replace(/"/g, '');
 			ruleComment = getDictNamingComment(directRule);
 		}
