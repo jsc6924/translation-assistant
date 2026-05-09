@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
-import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, escapeHtml, DictKeyInfo } from './utils';
+import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, escapeHtml, DictKeyInfo, getDictNamingTranslation } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
 import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
@@ -658,7 +658,7 @@ export namespace dict_view {
                     const callerItem = new DictNamingCallerItem(this, node.dictName, caller);
                     const calleds = namingRules[caller];
                     for (const called in calleds) {
-                        const translation = calleds[called];
+                        const translation = getDictNamingTranslation(calleds[called]);
                         const calledItem = new DictNamingCalledItem(this, node.dictName, caller, called, translation);
                         callerItem.children.push(calledItem);
                     }

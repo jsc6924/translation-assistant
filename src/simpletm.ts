@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parse, ParseError, printParseErrorCode } from 'jsonc-parser/lib/esm/main';
 import { dict_view } from './treeview';
-import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo, getCurrentWorkspaceFolder } from './utils';
+import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo, getCurrentWorkspaceFolder, DictNamingRule, DictNamingValue, getDictNamingComment, getDictNamingTranslation } from './utils';
 import { editorWriteString, translateCurrentLine } from './motion';
 import { DocumentParser } from './parser';
 import { getLanguageClient, ProjectNamingUpdatedNotification, ProjectTranslationUpdatedNotification, RequestSubscribeProject } from './lspclient';
@@ -829,7 +829,10 @@ export async function updateDatabaseNamingByDictName(name: string, params: Proje
 			if (!rules[params.caller]) {
 				rules[params.caller] = {};
 			}
-			rules[params.caller][params.called] = params.transcaller ?? '';
+			rules[params.caller][params.called] = {
+				transcaller: params.transcaller ?? '',
+				comment: params.comment,
+			};
 		}
 	}
 	DictSettings.setSimpleTMNamingRules(name, gameTitle, rules);
@@ -1217,15 +1220,16 @@ export function updateKeywordDecorations() {
 					const index = endIndex + 1 - keyword.length;
 					const startPos = activeEditor.document.positionAt(index);
 					const endPos = activeEditor.document.positionAt(index + keyword.length);
-					let [trans, comment] = calledTranslationResolver.resolve(keyword, startPos);
-					if (!trans) {
+					const resolution = calledTranslationResolver.resolve(keyword, startPos);
+					if (!resolution.trans) {
 						continue;
 					}
 					const called = keyword.replace(/"/g, '') as string;
-					const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(trans)}"})`;
-					const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(called)}","new_text":"${encodeURIComponent(trans)}","line":${startPos.line}})`;
-					const formatComment = comment ? ` (${comment})` : '';
-					const hoverMarkdown = new vscode.MarkdownString(`${trans}${formatComment} ${copyCommand} ${replaceCommand}`);
+					const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(resolution.trans)}"})`;
+					const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(called)}","new_text":"${encodeURIComponent(resolution.trans)}","line":${startPos.line}})`;
+					const fallbackComment = resolution.fallbackComment ? ` (${resolution.fallbackComment})` : '';
+					const ruleComment = resolution.ruleComment ? ` 备注：${resolution.ruleComment}` : '';
+					const hoverMarkdown = new vscode.MarkdownString(`${resolution.trans}${fallbackComment} ${copyCommand} ${replaceCommand}${ruleComment}`);
 					hoverMarkdown.isTrusted = true;
 					const decoration = {
 						range: new vscode.Range(startPos, endPos),
@@ -1233,7 +1237,7 @@ export function updateKeywordDecorations() {
 						renderOptions: {},
 						__dltxt: {
 							old_text: called,
-							new_text: trans
+							new_text: resolution.trans
 						}
 					}
 					namingDecos.push(decoration);
@@ -1250,9 +1254,15 @@ export function updateKeywordDecorations() {
     
 }
 
+interface NamingResolution {
+	trans?: string;
+	fallbackComment?: string;
+	ruleComment?: string;
+}
+
 class CalledTranslationResolver {
-	private inversed = new Map<string, Map<string, string>>(); // called -> caller -> trans
-	constructor(private naming: any, private lineNumberToTalker: Map<number, string>) {
+	private inversed = new Map<string, Map<string, DictNamingValue>>(); // called -> caller -> rule
+	constructor(private naming: DictNamingRule, private lineNumberToTalker: Map<number, string>) {
 		for (const caller in naming) {
 			for (const called in naming[caller]) {
 				if (!this.inversed.has(called)) {
@@ -1262,38 +1272,45 @@ class CalledTranslationResolver {
 			}
 		}
 	}
-	resolve(called: string, position: vscode.Position): [string | undefined, string | undefined] {
+	resolve(called: string, position: vscode.Position): NamingResolution {
 		const talkingName = this.lineNumberToTalker.get(position.line);
 		if (!talkingName) {
-			return [undefined, undefined];
+			return {};
 		}
 		let trans = '';
-		if (this.naming[talkingName] && this.naming[talkingName][called]) {
-			trans = this.naming[talkingName][called].replace(/"/g, '') as string;
+		let ruleComment = undefined;
+		const directRule = this.naming[talkingName]?.[called];
+		if (directRule) {
+			trans = getDictNamingTranslation(directRule).replace(/"/g, '');
+			ruleComment = getDictNamingComment(directRule);
 		}
-		let comment = undefined;
+		let fallbackComment = undefined;
 		if (!trans) {
 			const MatchAnyTalker = '*';
-			trans = this.naming[MatchAnyTalker][called]?.replace(/"/g, '') as string;
+			const fallbackRule = this.naming[MatchAnyTalker]?.[called];
+			trans = getDictNamingTranslation(fallbackRule).replace(/"/g, '');
+			ruleComment = getDictNamingComment(fallbackRule);
 		}
 		if (!trans) {
-			const possibleTrans = [];
+			const possibleTrans: string[] = [];
 			const callerMap = this.inversed.get(called);
 			if (callerMap) {
-				for (const [caller, callerTrans] of callerMap) {
+				for (const [caller, callerRule] of callerMap) {
+					const callerTrans = getDictNamingTranslation(callerRule);
 					if (callerTrans) {
 						possibleTrans.push(`${caller}: ${callerTrans}`);
 						if (!trans) {
 							trans = callerTrans.replace(/"/g, '') as string;
+							ruleComment = getDictNamingComment(callerRule);
 						}
 					}
 				}
 			}
 			if (possibleTrans.length > 0) {
-				comment = possibleTrans.join(', ');
+				fallbackComment = possibleTrans.join(', ');
 			}
 		}
-		return [trans, comment];
+		return { trans, fallbackComment, ruleComment };
 	}
 }
 

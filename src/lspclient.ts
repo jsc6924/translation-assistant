@@ -42,6 +42,7 @@ export interface ProjectNamingUpdatedNotification {
 	caller?: string;
 	called?: string;
 	transcaller?: string;
+	comment?: string;
 	error?: string;
 }
 

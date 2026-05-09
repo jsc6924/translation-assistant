@@ -24,10 +24,31 @@ export interface DictKeyInfo {
   comment: string;
 }
 
+export interface DictNamingInfo {
+  transcaller: string;
+  comment?: string;
+}
+
+export type DictNamingValue = string | DictNamingInfo;
+
 export interface DictNamingRule {
   [caller: string]: {
-    [called: string]: string;
+    [called: string]: DictNamingValue;
   }
+}
+
+export function getDictNamingTranslation(value: DictNamingValue | undefined): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  return value?.transcaller ?? '';
+}
+
+export function getDictNamingComment(value: DictNamingValue | undefined): string | undefined {
+  if (!value || typeof value === 'string') {
+    return undefined;
+  }
+  return value.comment;
 }
 
 export function findLastMatchIndex(pattern: RegExp, text: string): number {
