@@ -29,6 +29,42 @@ export function getRegex() {
     }
 }
 
+
+export interface ParserRegexConfigPayload {
+  originalPrefixRegex: string;
+  translatedPrefixRegex: string;
+  otherPrefixRegex: string;
+  originalWhiteRegex: string;
+  translatedWhiteRegex: string;
+  originalSuffixRegex: string;
+  translatedSuffixRegex: string;
+}
+
+export function getRegexConfigPayload(): ParserRegexConfigPayload | undefined {
+  const config = vscode.workspace.getConfiguration("dltxt.core");
+  const originalPrefixRegex = config.get('originalTextPrefixRegex') as string;
+  const translatedPrefixRegex = config.get('translatedTextPrefixRegex') as string;
+  const otherPrefixRegex = (config.get('otherPrefixRegex') as string) || '';
+  const originalWhiteRegex = (config.get('x.originalTextWhite') as string) || '';
+  const translatedWhiteRegex = (config.get('x.translatedTextWhite') as string) || '';
+  const originalSuffixRegex = (config.get('y.originalTextSuffix') as string) || '';
+  const translatedSuffixRegex = (config.get('y.translatedTextSuffix') as string) || '';
+
+  if (!originalPrefixRegex || !translatedPrefixRegex) {
+    return undefined;
+  }
+
+  return {
+    originalPrefixRegex,
+    translatedPrefixRegex,
+    otherPrefixRegex,
+    originalWhiteRegex,
+    translatedWhiteRegex,
+    originalSuffixRegex,
+    translatedSuffixRegex,
+  };
+}
+
 function getTextBlockRegex() {
   const config = vscode.workspace.getConfiguration("dltxt.core");
   const regStr = config.get('textBlock.pattern') as string;

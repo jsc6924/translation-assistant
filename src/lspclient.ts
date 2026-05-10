@@ -11,6 +11,8 @@ import {
 } from 'vscode-languageclient/node';
 import { channel, channelBridge } from './dlbuild';
 import { isActivePullMode, setActivePullMode, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
+import { getRegexConfigPayload, ParserRegexConfigPayload } from './parser';
+import * as crossref from './crossref';
 
 const SERVER_HOST = '127.0.0.1';
 const SERVER_PORT = 6010;
@@ -46,6 +48,40 @@ export interface ProjectNamingUpdatedNotification {
 	error?: string;
 }
 
+export interface ResGetDocumentContent {
+	content: string;
+}
+
+export type ResGetParserRegex = ParserRegexConfigPayload | null;
+
+export interface SimilarTextLineInfo {
+	fileName: string;
+	lineNumber: number;
+	jpLine: string;
+	trLine: string;
+}
+
+export interface SimilarTextRef {
+	lineInfo: SimilarTextLineInfo;
+	score: number;
+}
+
+export interface SimilarTextMatch {
+	lineNumber: number;
+	exactCount: number;
+	refs: SimilarTextRef[];
+}
+
+export interface ResGetSimilarText {
+	matches: SimilarTextMatch[];
+}
+
+export interface GetSimilarTextParams {
+	uri: string;
+	threshold: number;
+	limit: number;
+}
+
 
 let languageClient: LanguageClient | undefined;
 let bridgeProcess: ChildProcessWithoutNullStreams | undefined;
@@ -55,6 +91,29 @@ export function getLanguageClient(): LanguageClient | undefined {
 }
 export const RequestEcho = new RequestType<{ message: string }, { result: string }, void>('dltxt/echo');
 export const RequestSubscribeProject = new RequestType<{ project_id: string }, { project_id: string }, void>('simpletm/subscribeProject');
+export const RequestGetDocumentContent = new RequestType<{ uri: string }, ResGetDocumentContent, void>('dltxt/get_document_content');
+export const RequestGetSimilarText = new RequestType<GetSimilarTextParams, ResGetSimilarText, void>('dltxt/get_similar_text');
+
+async function pushParserRegexConfigToBridge() {
+	if (!languageClient) {
+		return;
+	}
+
+	const parserRegex = getRegexConfigPayload();
+	if (!parserRegex) {
+		channel.appendLine('skip pushing parser regex config because it is unavailable');
+		return;
+	}
+
+	await languageClient.sendNotification('dltxt/set_parser_regex', {
+		parserRegex,
+	});
+}
+
+async function notifyBridgeCrossrefIndexReady() {
+	channel.appendLine('received crossref index ready notification');
+	await vscode.commands.executeCommand('Extension.dltxt.internal.onBridgeCrossrefIndexReady');
+}
 
 export async function startLanguageClient(context: vscode.ExtensionContext) {
 	if (languageClient) {
@@ -86,6 +145,18 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 
 	client.onNotification("dltxt/notification", (params: ServerNotificationParams) => {
 		handleServerHeartbeat(params);
+	});
+
+	client.onNotification("dltxt/crossref_index_ready", async () => {
+		try {
+			await notifyBridgeCrossrefIndexReady();
+		} catch (error) {
+			channel.appendLine(`Failed to handle crossref index ready notification: ${String(error)}`);
+		}
+	});
+
+	client.onRequest('dltxt/get_parser_regex', async (): Promise<ResGetParserRegex> => {
+		return getRegexConfigPayload() ?? null;
 	});
 
 	client.onNotification("simpletm/translationsUpdated", async (params: ProjectTranslationUpdatedNotification) => {
@@ -136,9 +207,18 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		},
 	});
 
+	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async (event) => {
+		if (!event.affectsConfiguration('dltxt.core')) {
+			return;
+		}
+
+		// TODO: push regex to bridge
+	}));
+
 	try {
 		await client.start();
 		languageClient = client;
+		await pushParserRegexConfigToBridge();
 	} catch (error) {
 		channel.appendLine(`Failed to start LSP client: ${String(error)}`);
 		vscode.window.showErrorMessage(`Failed to start language server: ${String(error)}`);
@@ -147,6 +227,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 	}
 }
 
+const channelBridgeStderr = vscode.window.createOutputChannel("DLTXT Bridge stderr");
 
 async function spawnBridgeProcess(serverBinPath: string): Promise<StreamInfo> {
 	return new Promise((resolve, reject) => {
@@ -173,7 +254,7 @@ async function spawnBridgeProcess(serverBinPath: string): Promise<StreamInfo> {
 		});
 
 		serverProcess.stderr.on('data', (data: Buffer) => {
-			channelBridge.append(`[bridge] ${data.toString()}`);
+			channelBridgeStderr.append(`${data.toString()}\n`);
 		});
 
 		serverProcess.on('exit', (code: number | null, signal: string | null) => {
@@ -274,5 +355,8 @@ function handleServerHeartbeat(params: ServerNotificationParams | undefined) {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+	context.subscriptions.push(vscode.commands.registerCommand('Extension.dltxt.internal.onBridgeCrossrefIndexReady', async () => {
+		await crossref.handleBridgeCrossrefIndexReady(context);
+	}));
 	await startLanguageClient(context);
 }

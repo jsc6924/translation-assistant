@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.2.2",
+	"version": "4.3.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -1399,6 +1399,15 @@
 					"type": "boolean",
 					"default": true,
 					"description": "外观：在切换标签页时检查相似文本"
+				},
+				"dltxt.appearance.z.similarTextImplementation": {
+					"type": "string",
+					"default": "bridge",
+					"enum": [
+						"bridge",
+						"legacy"
+					],
+					"description": "外观：相似文本实现方式"
 				},
 				"dltxt.appearance.warning.checkUntranslatedKeyword": {
 					"type": "boolean",
