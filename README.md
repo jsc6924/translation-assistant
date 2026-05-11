@@ -1,6 +1,6 @@
 # DLTXT：双行文本翻译解决方案 v4
 
-注：目前v4为测试版，如有bug请回退到v3.51
+注：目前v4为测试版，仅供windows用户使用，如有问题请回退到v3.51
 
 文字游戏汉化时通常会采用一种叫“双行文本”的格式。这种格式没有固定的语法，但是大多数符合以下特征
 ```
@@ -441,6 +441,9 @@ DLTXT默认支持以下格式（用横线隔开）
 该操作会把当前文本中，在当前目录（包换子目录）中多次出现的原文行加高亮
 默认会在切换标签页时自动执行。
 也可以通过设置`dltxt.appearance.z.checkSimilarTextOnSwitchTab`关闭后，使用侧边栏命令“检查相似的文本”手动执行
+目前该功能已经迁移到c++语言服务器中实现，性能大幅提升。可以通过`dltxt.appearance.z.similarTextImplementation`选择实现，不过如果bridge能用则不推荐选择legacy（非windows用户只能选择legacy）
+
+语言服务器查找相似句子时会跳过.gitignore和.dltxt/ignore中列出的路径。
 
 ### 全文本重复段分析
 在资源管理器中，右键一个文件夹，点`文本重复项分析`，即可显示文本中所有重复段。
@@ -971,10 +974,12 @@ find ./src -type f -print0 | xargs -0 wc -l
 
 ---
 ## Release Notes
-#### 4.3-preview (2026/05/10)
+#### 4.3   (2026/05/11)
 - 把查找相似句子功能迁移到c++语言服务器实现
-  - 格式支持有点少，但执行速度大约快20倍且不卡UI
-  - 可以通过"dltxt.appearance.z.similarTextImplementation"选择实现，不过不管选哪个语言服务器都会扫描目录建立索引
+  - 执行速度大约快20倍且不卡UI
+  - 内存使用量仅为以前的五分之一
+  - 可以通过"dltxt.appearance.z.similarTextImplementation"选择实现，不过如果bridge能用则不推荐选择legacy（非windows用户只能选择legacy）
+  - 语言服务器查找相似句子时会跳过.gitignore和.dltxt/ignore中列出的路径
 #### 4.2   (2026/05/09)
 - dltxt-bridge改为每个插件一个进程，不再监听本地端口
 - 设置向导使用Webview重写，整合换行符和每行最大长度设置
