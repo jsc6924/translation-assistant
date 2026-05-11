@@ -5,7 +5,7 @@ import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace
 import { clearAllWarnings } from './error-check';
 import { ContextHolder } from './utils';
 import { checkSimilarText } from './crossref';
-import { getLanguageClient, RequestEcho, RequestGetDocumentContent } from './lspclient';
+import { getLanguageClient, RequestEcho, RequestGetDocumentContent, RequestGetParsedDocument } from './lspclient';
 import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { uploadWorkspaceVSCodeSettings } from './simpletm';
@@ -169,6 +169,23 @@ export namespace cc_view {
                     await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Two });
                 } catch (err) {
                     vscode.window.showErrorMessage(`RequestOpenedDocuments 请求失败: ${err}`);
+                }
+            }));
+
+            batchNode.children.push(new CommandItem("get parsed document", async () => {
+                const client = getLanguageClient();
+                if (!client) {
+                    vscode.window.showErrorMessage('语言服务器未启动');
+                    return;
+                }
+                try {
+                    const response = await client.sendRequest(RequestGetParsedDocument, { uri: vscode.window.activeTextEditor?.document.uri.toString() || '' });
+                    // show content in a new tab
+                    const content = response.content.map(line => `原文行 ${line.originalLineIndex}: ${line.original}\n译文行 ${line.translatedLineIndex}: ${line.translated}\n`).join('\n');
+                    const doc = await vscode.workspace.openTextDocument({ content, language: 'plaintext' });
+                    await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Two });
+                } catch (err) {
+                    vscode.window.showErrorMessage(`RequestGetParsedDocument 请求失败: ${err}`);
                 }
             }));
                 

@@ -52,6 +52,15 @@ export interface ResGetDocumentContent {
 	content: string;
 }
 
+export interface ResGetParsedDocument {
+	content: {
+		originalLineIndex: number;
+		translatedLineIndex: number;
+		original: string;
+		translated: string;
+	}[];
+}
+
 export type ResGetParserRegex = ParserRegexConfigPayload | null;
 
 export interface SimilarTextLineInfo {
@@ -92,6 +101,7 @@ export function getLanguageClient(): LanguageClient | undefined {
 export const RequestEcho = new RequestType<{ message: string }, { result: string }, void>('dltxt/echo');
 export const RequestSubscribeProject = new RequestType<{ project_id: string }, { project_id: string }, void>('simpletm/subscribeProject');
 export const RequestGetDocumentContent = new RequestType<{ uri: string }, ResGetDocumentContent, void>('dltxt/get_document_content');
+export const RequestGetParsedDocument = new RequestType<{ uri: string }, ResGetParsedDocument, void>('dltxt/get_parsed_document');
 export const RequestGetSimilarText = new RequestType<GetSimilarTextParams, ResGetSimilarText, void>('dltxt/get_similar_text');
 
 async function pushParserRegexConfigToBridge() {
