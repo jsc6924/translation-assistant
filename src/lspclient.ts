@@ -11,7 +11,7 @@ import {
 } from 'vscode-languageclient/node';
 import { channel, channelBridge } from './dlbuild';
 import { isActivePullMode, setActivePullMode, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
-import { getRegexConfigPayload, ParserRegexConfigPayload } from './parser';
+import { getParserConfigPayload, ParserConfigPayload } from './parser';
 import * as crossref from './crossref';
 
 const SERVER_HOST = '127.0.0.1';
@@ -61,7 +61,7 @@ export interface ResGetParsedDocument {
 	}[];
 }
 
-export type ResGetParserRegex = ParserRegexConfigPayload | null;
+export type ResGetParserRegex = ParserConfigPayload | null;
 
 export interface SimilarTextLineInfo {
 	fileName: string;
@@ -109,7 +109,7 @@ async function pushParserRegexConfigToBridge() {
 		return;
 	}
 
-	const parserRegex = getRegexConfigPayload();
+	const parserRegex = getParserConfigPayload();
 	if (!parserRegex) {
 		channel.appendLine('skip pushing parser regex config because it is unavailable');
 		return;
@@ -166,7 +166,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 	});
 
 	client.onRequest('dltxt/get_parser_regex', async (): Promise<ResGetParserRegex> => {
-		return getRegexConfigPayload() ?? null;
+		return getParserConfigPayload() ?? null;
 	});
 
 	client.onNotification("simpletm/translationsUpdated", async (params: ProjectTranslationUpdatedNotification) => {
@@ -222,7 +222,11 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		// TODO: push regex to bridge
+		try {
+			await pushParserRegexConfigToBridge();
+		} catch (error) {
+			channel.appendLine(`Failed to push parser regex config to bridge: ${String(error)}`);
+		}
 	}));
 
 	try {

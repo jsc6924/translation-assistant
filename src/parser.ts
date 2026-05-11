@@ -40,6 +40,23 @@ export interface ParserRegexConfigPayload {
   translatedSuffixRegex: string;
 }
 
+export interface TextBlockConfigPayload {
+  pattern: string;
+  originalPrefixRegex: string;
+  translatedPrefixRegex: string;
+  originalWhiteRegex: string;
+  translatedWhiteRegex: string;
+  originalSuffixRegex: string;
+  translatedSuffixRegex: string;
+}
+
+export type ParserType = 'standard' | 'text-block';
+
+export interface ParserConfigPayload {
+  parserType: ParserType;
+  parserConfig: ParserRegexConfigPayload | TextBlockConfigPayload;
+}
+
 export function getRegexConfigPayload(): ParserRegexConfigPayload | undefined {
   const config = vscode.workspace.getConfiguration("dltxt.core");
   const originalPrefixRegex = config.get('originalTextPrefixRegex') as string;
@@ -63,6 +80,47 @@ export function getRegexConfigPayload(): ParserRegexConfigPayload | undefined {
     originalSuffixRegex,
     translatedSuffixRegex,
   };
+}
+
+export function getTextBlockConfigPayload(): TextBlockConfigPayload | undefined {
+  const config = vscode.workspace.getConfiguration("dltxt.core");
+  const pattern = config.get('textBlock.pattern') as string;
+  const originalPrefixRegex = (config.get('x.textBlock.originalPrefix') as string) || '';
+  const translatedPrefixRegex = (config.get('x.textBlock.translatedPrefix') as string) || '';
+  const originalWhiteRegex = (config.get('x.originalTextWhite') as string) || '';
+  const translatedWhiteRegex = (config.get('x.translatedTextWhite') as string) || '';
+  const originalSuffixRegex = (config.get('y.originalTextSuffix') as string) || '';
+  const translatedSuffixRegex = (config.get('y.translatedTextSuffix') as string) || '';
+
+  if (!pattern) {
+    return undefined;
+  }
+
+  return {
+    pattern,
+    originalPrefixRegex,
+    translatedPrefixRegex,
+    originalWhiteRegex,
+    translatedWhiteRegex,
+    originalSuffixRegex,
+    translatedSuffixRegex,
+  };
+}
+
+export function getCurrentParserType(): ParserType {
+  const config = vscode.workspace.getConfiguration("dltxt.core");
+  return config.get("a.documentParser") === 'text-block' ? 'text-block' : 'standard';
+}
+
+export function getParserConfigPayload(): ParserConfigPayload | undefined {
+  const parserType = getCurrentParserType();
+  if (parserType === 'text-block') {
+    const parserConfig = getTextBlockConfigPayload();
+    return parserConfig ? { parserType, parserConfig } : undefined;
+  }
+
+  const parserConfig = getRegexConfigPayload();
+  return parserConfig ? { parserType, parserConfig } : undefined;
 }
 
 function getTextBlockRegex() {
