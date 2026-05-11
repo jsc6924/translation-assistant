@@ -219,7 +219,7 @@ const exactMatchCache = new Map<string, vscode.DecorationOptions[]>();
 let lastCheckTime = 0;
 let checkTimeout: NodeJS.Timeout | undefined;
 
-async function runSimilarTextCheck(context: vscode.ExtensionContext, debounceTimeoutMs: number) {
+async function runSimilarTextCheck(context: vscode.ExtensionContext) {
     if (checkTimeout) {
         clearTimeout(checkTimeout);
         checkTimeout = undefined;
@@ -276,19 +276,20 @@ async function runSimilarTextCheck(context: vscode.ExtensionContext, debounceTim
         lastCheckTime = Date.now();
         renderAndCacheDecorations(stillActiveEditor, currentDoc, backendUsed, matches);
     };
-
-    if (debounceTimeoutMs <= 0) {
+    
+    if (configuredBackend === 'bridge') {
         await executeCheck();
         return;
     }
 
+    // for legacy backend, if the check takes too long, delay it to avoid blocking UI
     checkTimeout = setTimeout(() => {
         void executeCheck();
-    }, debounceTimeoutMs);
+    }, 5000);
 }
 
 export async function checkSimilarText(context: vscode.ExtensionContext) {
-    await runSimilarTextCheck(context, 100);
+    await runSimilarTextCheck(context);
 }
 
 export async function handleBridgeCrossrefIndexReady(context: vscode.ExtensionContext) {
@@ -301,7 +302,7 @@ export async function handleBridgeCrossrefIndexReady(context: vscode.ExtensionCo
         return;
     }
 
-    await runSimilarTextCheck(context, 0);
+    await runSimilarTextCheck(context);
 }
 
 class DecoManager {
