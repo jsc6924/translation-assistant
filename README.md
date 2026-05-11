@@ -973,7 +973,7 @@ find ./src -type f -print0 | xargs -0 wc -l
 ## Release Notes
 #### 4.3-preview (2026/05/10)
 - 把查找相似句子功能迁移到c++语言服务器实现
-  - 格式支持有点少，但执行速度大约快十几倍且不卡UI
+  - 格式支持有点少，但执行速度大约快20倍且不卡UI
   - 可以通过"dltxt.appearance.z.similarTextImplementation"选择实现，不过不管选哪个语言服务器都会扫描目录建立索引
 #### 4.2   (2026/05/09)
 - dltxt-bridge改为每个插件一个进程，不再监听本地端口
