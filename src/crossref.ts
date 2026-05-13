@@ -6,7 +6,7 @@ import { LineInfo, LineSearchResult, MemoryCrossrefIndex, SearchIndex, Tokenizer
 import { path } from './user-script-api';
 import { Semaphore } from 'async-mutex';
 import { channel } from './dlbuild';
-import { getLanguageClient, RequestGetSimilarText, ResGetSimilarText, SimilarTextMatch } from './lspclient';
+import { getLanguageClient, isBridgeSupportedPlatform, RequestGetSimilarText, ResGetSimilarText, SimilarTextMatch } from './lspclient';
 import { getRegexConfigPayload } from './parser';
 
 class TextLocation {
@@ -81,6 +81,10 @@ type SimilarTextMatchLike = {
 };
 
 function getSimilarTextBackend(): SimilarTextBackend {
+	if (!isBridgeSupportedPlatform()) {
+		return 'legacy';
+	}
+
     const config = vscode.workspace.getConfiguration("dltxt");
     const backend = config.get<string>('appearance.z.similarTextImplementation', 'legacy');
     return backend === 'bridge' ? 'bridge' : 'legacy';

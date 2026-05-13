@@ -18,6 +18,7 @@ import * as crossref from './crossref';
 const SIMPLETM_WS_URL = 'wss://simpletm.jscrosoft.com/ws';
 const SIMPLETM_RECONNECT_DELAY_MS = 3000;
 const SIMPLETM_REQUEST_TIMEOUT_MS = 10000;
+const SIMILAR_TEXT_IMPLEMENTATION_SETTING = 'appearance.z.similarTextImplementation';
 
 interface ServerNotificationParams {
 	message: string;
@@ -113,6 +114,38 @@ export interface GetSimilarTextParams {
 let languageClient: LanguageClient | undefined;
 let bridgeProcess: ChildProcessWithoutNullStreams | undefined;
 let simpleTMWebSocketClient: SimpleTMWebSocketClient | undefined;
+
+export function isBridgeSupportedPlatform(): boolean {
+	return process.platform === 'win32';
+}
+
+async function forceLegacySimilarTextImplementation(): Promise<void> {
+	const config = vscode.workspace.getConfiguration('dltxt');
+	const inspect = config.inspect<string>(SIMILAR_TEXT_IMPLEMENTATION_SETTING);
+	const updates: Thenable<void>[] = [];
+
+	if (inspect?.workspaceValue === 'bridge') {
+		updates.push(config.update(SIMILAR_TEXT_IMPLEMENTATION_SETTING, 'legacy', vscode.ConfigurationTarget.Workspace));
+	}
+
+	if (inspect?.globalValue === 'bridge') {
+		updates.push(config.update(SIMILAR_TEXT_IMPLEMENTATION_SETTING, 'legacy', vscode.ConfigurationTarget.Global));
+	}
+
+	if (updates.length === 0 && config.get<string>(SIMILAR_TEXT_IMPLEMENTATION_SETTING, 'legacy') === 'bridge') {
+		const target = vscode.workspace.workspaceFile
+			? vscode.ConfigurationTarget.Workspace
+			: vscode.ConfigurationTarget.Global;
+		updates.push(config.update(SIMILAR_TEXT_IMPLEMENTATION_SETTING, 'legacy', target));
+	}
+
+	if (updates.length === 0) {
+		return;
+	}
+
+	await Promise.all(updates);
+	channel.appendLine('Non-Windows platform detected, forced similar text backend to legacy');
+}
 
 export function getLanguageClient(): LanguageClient | undefined {
 	return languageClient;
@@ -450,6 +483,10 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		return;
 	}
 
+	if (!isBridgeSupportedPlatform()) {
+		return;
+	}
+
 	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_lsp_server.exe");
 
 	const serverOptions = async (): Promise<StreamInfo> => {
@@ -673,5 +710,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('Extension.dltxt.internal.onBridgeCrossrefIndexReady', async () => {
 		await crossref.handleBridgeCrossrefIndexReady(context);
 	}));
+
+	if (!isBridgeSupportedPlatform()) {
+		await forceLegacySimilarTextImplementation();
+		channel.appendLine('DLTXT bridge is disabled on non-Windows platforms; skipping LSP server startup');
+		return;
+	}
+
 	await startLanguageClient(context);
 }
