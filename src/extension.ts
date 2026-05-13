@@ -20,6 +20,7 @@ import * as simpletm from './simpletm';
 import * as singleline from './singleline';
 import * as auto_format from './auto-format';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as mojidict from './mojidict';
 import * as parser from './parser';
 import * as batch from './batch';
@@ -27,7 +28,51 @@ import * as crossref from './crossref';
 import * as error_check from './error-check';
 import * as lsp from './lspclient';
 import * as word_count from './word-count';
-var nodejieba = require("nodejieba");
+import { ensureNodeJiebaLoaded } from './nodejieba';
+
+const startupChannel = vscode.window.createOutputChannel('DLTXT Startup');
+let startupLogFilePath: string | undefined;
+
+function formatStartupError(error: unknown): string {
+	if (error instanceof Error) {
+		return error.stack || error.message;
+	}
+	return String(error);
+}
+
+function appendStartupLog(line: string) {
+	startupChannel.appendLine(line);
+	console.log(line);
+	if (startupLogFilePath) {
+		fs.appendFileSync(startupLogFilePath, `${line}\n`, 'utf8');
+	}
+}
+
+function logStartup(message: string, error?: unknown) {
+	const line = `[${new Date().toISOString()}] ${message}`;
+	appendStartupLog(line);
+	if (error !== undefined) {
+		const details = formatStartupError(error);
+		appendStartupLog(details);
+		console.error(details);
+	}
+}
+
+function initializeStartupLog(context: vscode.ExtensionContext) {
+	if (!fs.existsSync(context.logUri.fsPath)) {
+		fs.mkdirSync(context.logUri.fsPath, { recursive: true });
+	}
+	startupLogFilePath = path.join(context.logUri.fsPath, 'startup.log');
+	logStartup(`startup log file: ${startupLogFilePath}`);
+}
+
+process.on('uncaughtException', (error) => {
+	logStartup('uncaughtException', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+	logStartup('unhandledRejection', reason);
+});
 
 
 
@@ -39,32 +84,48 @@ var nodejieba = require("nodejieba");
 //https://gist.github.com/ryanmcgrath/982242
 // this method is called when your extension is activated
 export async function activate(context: vscode.ExtensionContext) {
-	ContextHolder.set(context);
-	await lsp.activate(context);
-	parser.activate(context);
-	word_count.activate(context);
+	let stage = 'startup';
+	initializeStartupLog(context);
+	logStartup('activate begin');
 
-	if (!fs.existsSync(context.globalStorageUri.fsPath)) {
-		fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });
-	}
+	try {
+		stage = 'set extension context';
+		ContextHolder.set(context);
 
-	let timeout: NodeJS.Timer | undefined = undefined;
+		stage = 'activate lsp';
+		logStartup(stage);
+		await lsp.activate(context);
 
-	mode.setMode(mode.Mode.Normal);
-	registerCommand(context, "Extension.dltxt.setMode", (args) => {
-		mode.setModeStr(args.arg);
-	});
-	registerCommand(context, "Extension.dltxt.toggleMode", () => {
-		const m = VSCodeContext.get('dltxt.mode') as string;
-		mode.setModeStr(mode.getNextMode(m));
-	});
+		stage = 'activate parser and word count';
+		logStartup(stage);
+		parser.activate(context);
+		word_count.activate(context);
 
-	registerCommand(context, 'Extension.dltxt.executeFunction', async (args) => {
-		const callback = args.callback;
-		if (callback) callback();
-	});
+		stage = 'prepare global storage';
+		logStartup(stage);
+		if (!fs.existsSync(context.globalStorageUri.fsPath)) {
+			fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });
+		}
 
-	registerCommand(context, 'Extension.dltxt.copyToClipboard', (arg) => {
+		let timeout: NodeJS.Timer | undefined = undefined;
+
+		stage = 'register commands';
+		logStartup(stage);
+		mode.setMode(mode.Mode.Normal);
+		registerCommand(context, "Extension.dltxt.setMode", (args) => {
+			mode.setModeStr(args.arg);
+		});
+		registerCommand(context, "Extension.dltxt.toggleMode", () => {
+			const m = VSCodeContext.get('dltxt.mode') as string;
+			mode.setModeStr(mode.getNextMode(m));
+		});
+
+		registerCommand(context, 'Extension.dltxt.executeFunction', async (args) => {
+			const callback = args.callback;
+			if (callback) callback();
+		});
+
+		registerCommand(context, 'Extension.dltxt.copyToClipboard', (arg) => {
         vscode.env.clipboard.writeText(arg.text).then(
 			() => {
 				vscode.window.showInformationMessage(`已复制`);
@@ -75,38 +136,42 @@ export async function activate(context: vscode.ExtensionContext) {
 		)
     });
 
-	let activeEditor = vscode.window.activeTextEditor;
+		let activeEditor = vscode.window.activeTextEditor;
 
-	function triggerUpdateDecorations() {
-		if (timeout) {
-			clearTimeout(timeout);
-			timeout = undefined;
+		function triggerUpdateDecorations() {
+			if (timeout) {
+				clearTimeout(timeout);
+				timeout = undefined;
+			}
+			timeout = setTimeout(() => {
+				updateNewlineDecorations();
+				updateErrorDecorations();
+				simpletm.updateKeywordDecorations();
+			}, 200);
 		}
-		timeout = setTimeout(() => {
-			updateNewlineDecorations();
-			updateErrorDecorations();
-			simpletm.updateKeywordDecorations();
-		}, 200);
-	}
 
-	if (activeEditor) {
-		triggerUpdateDecorations();
-	}
-
-	registerCommand(context, 'Extension.dltxt.internal.updateDecorations', () => {
-		triggerUpdateDecorations();
-	});
-
-	simpletm.activate(context);
-
-	vscode.window.onDidChangeActiveTextEditor(editor => {
-		activeEditor = editor;
-		if (editor) {
+		if (activeEditor) {
 			triggerUpdateDecorations();
 		}
-	}, null, context.subscriptions);
 
-	vscode.workspace.onDidChangeTextDocument(event => {
+		registerCommand(context, 'Extension.dltxt.internal.updateDecorations', () => {
+			triggerUpdateDecorations();
+		});
+
+		stage = 'activate simpletm';
+		logStartup(stage);
+		simpletm.activate(context);
+
+		stage = 'register editor listeners';
+		logStartup(stage);
+		vscode.window.onDidChangeActiveTextEditor(editor => {
+			activeEditor = editor;
+			if (editor) {
+				triggerUpdateDecorations();
+			}
+		}, null, context.subscriptions);
+
+		vscode.workspace.onDidChangeTextDocument(event => {
 		let activeEditor = vscode.window.activeTextEditor;
 		const document = event.document;
 		const config = vscode.workspace.getConfiguration("dltxt.core");
@@ -153,9 +218,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		if (activeEditor && event.document === activeEditor.document) {
 			triggerUpdateDecorations();
 		}
-	}, null, context.subscriptions);
+		}, null, context.subscriptions);
 
-	registerCommand(context, 'Extension.dltxt.copy_original', () => {
+		registerCommand(context, 'Extension.dltxt.copy_original', () => {
 		const editor = vscode.window.activeTextEditor;
 		const document = editor?.document;
 		if (!editor || !document) {
@@ -165,11 +230,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		editor.edit(editBuilder => {
 			copyOriginalToTranslation(context, document, editBuilder);
 		});
-	});
+		});
 
-	motion.activate(context);
+		stage = 'activate motion';
+		logStartup(stage);
+		motion.activate(context);
 
-	const repeatFirstFunc = () => {
+		const repeatFirstFunc = () => {
 		let editor = vscode.window.activeTextEditor;
 		let document = editor?.document;
 		if (!editor || !document) 
@@ -178,67 +245,89 @@ export async function activate(context: vscode.ExtensionContext) {
 			repeatFirstChar(context, editor as vscode.TextEditor, editBuilder);
 		})
 		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
-	};
-	registerCommand(context, 'Extension.dltxt.repeatFirst', repeatFirstFunc);
+		};
+		registerCommand(context, 'Extension.dltxt.repeatFirst', repeatFirstFunc);
 	
-	registerCommand(context, 'Extension.dltxt.convertToEncoding', batchConvertFilesEncoding);
+		registerCommand(context, 'Extension.dltxt.convertToEncoding', batchConvertFilesEncoding);
 
-	registerCommand(context, 'Extension.dltxt.spellCheck', () => {
-		spellCheck(context);
-	});
+		registerCommand(context, 'Extension.dltxt.spellCheck', () => {
+			spellCheck(context);
+		});
 
-	registerCommand(context, 'Extension.dltxt.spellCheckClear', () => {
-		clearSpellCheck();
-	});
+		registerCommand(context, 'Extension.dltxt.spellCheckClear', () => {
+			clearSpellCheck();
+		});
 
-	registerCommand(context, 'Extension.dltxt.customWriteKey', (args) => {
-		const k = args.arg1;
-		const s = clipboard.ClipBoardManager.get(context, k);
-		motion.editorWriteString(s);
-	});
+		registerCommand(context, 'Extension.dltxt.customWriteKey', (args) => {
+			const k = args.arg1;
+			const s = clipboard.ClipBoardManager.get(context, k);
+			motion.editorWriteString(s);
+		});
 
-	registerCommand(context, "Extension.dltxt.writeNewlineToken", () => {
-		const config = vscode.workspace.getConfiguration("dltxt");
-		const token = config.get<string>("nestedLine.token") || "\\r\\n";
-		motion.editorWriteString(token);
-	})
+		registerCommand(context, "Extension.dltxt.writeNewlineToken", () => {
+			const config = vscode.workspace.getConfiguration("dltxt");
+			const token = config.get<string>("nestedLine.token") || "\\r\\n";
+			motion.editorWriteString(token);
+		})
 	
-	registerCommand(context, 'Extension.dltxt.detectEncoding', async () => {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
-		const encoding = await detectFileEncoding(editor.document.uri.fsPath);
-		vscode.window.showInformationMessage(`encoding: ${encoding}`);
-	});
+		registerCommand(context, 'Extension.dltxt.detectEncoding', async () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) return;
+			const encoding = await detectFileEncoding(editor.document.uri.fsPath);
+			vscode.window.showInformationMessage(`encoding: ${encoding}`);
+		});
 
-	dlbuild.activate(context);
-	singleline.activate(context);
-	clipboard.activate(context);
+		stage = 'activate feature modules';
+		logStartup(stage);
+		dlbuild.activate(context);
+		singleline.activate(context);
+		clipboard.activate(context);
 
-	const trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);
-	trdb.activate(context, trdb_tree);
-	vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
-	const cc_tree = new cc_view.CCTreeView(context);
-	vscode.window.registerTreeDataProvider('dltxt-configs-commands', cc_tree);
+		const trdb_tree = new trdb_view.TRDBTreeView(context, trdb.TRDBIndex);
+		trdb.activate(context, trdb_tree);
+		vscode.window.registerTreeDataProvider('dltxt-trdb', trdb_tree);
+		const cc_tree = new cc_view.CCTreeView(context);
+		vscode.window.registerTreeDataProvider('dltxt-configs-commands', cc_tree);
 
-	auto_format.activate(context);
-	mojidict.activate(context);
-	batch.activate(context);
-	crossref.activate(context);
-	error_check.activate(context);
+		auto_format.activate(context);
+		mojidict.activate(context);
+		batch.activate(context);
+		crossref.activate(context);
+		error_check.activate(context);
 	
-	vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
-		provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
-			try {
-				return formatter(context, document);
-			} catch (e) {
-				vscode.window.showErrorMessage(`${e}`);
-				return [];
+		stage = 'register formatting provider';
+		logStartup(stage);
+		vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
+			provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.TextEdit[] {
+				try {
+					return formatter(context, document);
+				} catch (e) {
+					vscode.window.showErrorMessage(`${e}`);
+					return [];
+				}
 			}
-		}
-	});
+		});
 
-	migration(context);
-	nodejieba.load();
+		stage = 'migration';
+		logStartup(stage);
+		migration(context);
+
+		stage = 'load nodejieba';
+		logStartup(stage);
+		ensureNodeJiebaLoaded();
+
+		logStartup('activate completed');
+	} catch (error) {
+		logStartup(`activate failed during ${stage}`, error);
+		startupChannel.show(true);
+		void vscode.window.showErrorMessage(`DLTXT 启动失败：${String(error)}`, '打开启动日志').then((selection) => {
+			if (selection === '打开启动日志' && startupLogFilePath) {
+				return vscode.commands.executeCommand('vscode.open', vscode.Uri.file(startupLogFilePath));
+			}
+			return undefined;
+		});
+		throw error;
+	}
 
 }
 

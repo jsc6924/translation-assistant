@@ -2,7 +2,8 @@
 .vscode-test/**
 imgs/
 data/
-node_modules
+node_modules/**
+!node_modules/nodejieba/**
 .gitignore
 vsc-extension-quickstart.md
 **/tsconfig.json

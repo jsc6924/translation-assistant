@@ -7,7 +7,7 @@ import { findLastMatchIndex } from './utils';
 import { DocumentParser, MatchedGroups, getRegex } from './parser';
 import { ContextHolder } from './utils';
 import { Position, Range, Selection } from 'vscode';
-const nodejieba = require("nodejieba");
+import { getNodeJieba } from './nodejieba';
 
 
 
@@ -32,7 +32,7 @@ function editTranslation(
     if (debugMode) {
       const curLineText = `${jgrps?.prefix}{${talkingName}}{${jgrps?.white}}{${jgrps?.text}}{${jgrps?.suffix}}`
       result.push(vscode.TextEdit.replace(line.range, curLineText));
-      const cuttedText = nodejieba.cut(cgrps?.text ?? '', true).join('/');
+      const cuttedText = getNodeJieba().cut(cgrps?.text ?? '', true).join('/');
       nextLineText = `${cgrps?.prefix}{${talkingName}}{${cgrps?.white}}{${cuttedText}}{${cgrps?.suffix}} talking:[${talkingName}]`;
       result.push(vscode.TextEdit.replace(nextLine.range, nextLineText));
     } else {
