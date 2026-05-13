@@ -221,7 +221,7 @@
 			},
 			{
 				"command": "Extension.dltxt.dictserver.editor.searchWord",
-				"title": "使用辞典服务器搜索",
+				"title": "使用 Mojidict 搜索",
 				"category": "DLTXT"
 			},
 			{
@@ -1577,27 +1577,12 @@
 				"dltxt.y.searchWord.dictserver.displayCount": {
 					"type": "number",
 					"default": 5,
-					"description": "辞典服务显示的词条数（最大5）"
-				},
-				"dltxt.y.searchWord.dictserver.baseURL": {
-					"type": "string",
-					"default": "http://localhost:9286/",
-					"description": "辞典服务器的网址（包括端口号）"
-				},
-				"dltxt.y.searchWord.dictserver.executable.path": {
-					"type": "string",
-					"default": "",
-					"description": "辞典服务器的路径（在网址连不上时使用）"
-				},
-				"dltxt.y.searchWord.dictserver.executable.arguments": {
-					"type": "string",
-					"default": "",
-					"description": "辞典服务器的命令行参数（在网址连不上时使用）"
+					"description": "Mojidict 搜索显示的词条数（最大5）"
 				},
 				"dltxt.y.searchWord.dictserver.hover.show": {
 					"type": "boolean",
 					"default": true,
-					"description": "是否在鼠标停留在选中的单词上时使用辞典服务器查询"
+					"description": "是否在鼠标停留在选中的单词上时使用 Mojidict 查询"
 				}
 			}
 		}

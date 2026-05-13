@@ -10,7 +10,7 @@ import {
 	RevealOutputChannelOn,
 	StreamInfo,
 } from 'vscode-languageclient/node';
-import { channel, channelBridge } from './dlbuild';
+import { channel } from './dlbuild';
 import { isActivePullMode, setActivePullMode, updateDatabaseNamingByGameTitle, updateDatabaseTranslationByGameTitle } from './simpletm';
 import { getParserConfigPayload, ParserConfigPayload } from './parser';
 import * as crossref from './crossref';
@@ -450,7 +450,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		return;
 	}
 
-	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_bridge_v3.exe");
+	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_lsp_server.exe");
 
 	const serverOptions = async (): Promise<StreamInfo> => {
 		await stopBridgeProcess();
@@ -543,7 +543,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 	}
 }
 
-const channelBridgeStderr = vscode.window.createOutputChannel("DLTXT Bridge stderr");
+const channelLSPStderr = vscode.window.createOutputChannel("DLTXT LSP stderr");
 
 async function spawnBridgeProcess(serverBinPath: string): Promise<StreamInfo> {
 	return new Promise((resolve, reject) => {
@@ -559,28 +559,28 @@ async function spawnBridgeProcess(serverBinPath: string): Promise<StreamInfo> {
 		};
 
 		serverProcess.once('spawn', () => {
-			channelBridge.appendLine(`spawned pid=${serverProcess.pid}`);
+			channel.appendLine(`[LSP] spawned pid=${serverProcess.pid}`);
 			resolve({ reader: serverProcess.stdout, writer: serverProcess.stdin });
 		});
 
 		serverProcess.once('error', (error: Error) => {
 			clearBridgeProcess();
-			channelBridge.appendLine(`spawn error: ${error.message}`);
+			channel.appendLine(`[LSP] spawn error: ${error.message}`);
 			reject(error);
 		});
 
 		serverProcess.stderr.on('data', (data: Buffer) => {
-			channelBridgeStderr.append(`${data.toString()}\n`);
+			channelLSPStderr.append(`${data.toString()}\n`);
 		});
 
 		serverProcess.on('exit', (code: number | null, signal: string | null) => {
 			clearBridgeProcess();
-			channelBridge.appendLine(`bridge exited with code ${code} and signal ${signal}`);
+			channel.appendLine(`[LSP] bridge exited with code ${code} and signal ${signal}`);
 		});
 
 		serverProcess.on('close', (code: number | null, signal: string | null) => {
 			clearBridgeProcess();
-			channelBridge.appendLine(`bridge closed with code ${code} and signal ${signal}`);
+			channel.appendLine(`[LSP] bridge closed with code ${code} and signal ${signal}`);
 		});
 	});
 }

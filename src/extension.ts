@@ -20,7 +20,7 @@ import * as simpletm from './simpletm';
 import * as singleline from './singleline';
 import * as auto_format from './auto-format';
 import * as fs from 'fs';
-import * as dictserver from './dictserver';
+import * as mojidict from './mojidict';
 import * as parser from './parser';
 import * as batch from './batch';
 import * as crossref from './crossref';
@@ -220,7 +220,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.window.registerTreeDataProvider('dltxt-configs-commands', cc_tree);
 
 	auto_format.activate(context);
-	dictserver.activate(context);
+	mojidict.activate(context);
 	batch.activate(context);
 	crossref.activate(context);
 	error_check.activate(context);

@@ -6,7 +6,6 @@ import { clearAllWarnings } from './error-check';
 import { ContextHolder } from './utils';
 import { checkSimilarText } from './crossref';
 import { getLanguageClient, RequestEcho, RequestGetDocumentContent, RequestGetParsedDocument } from './lspclient';
-import { downloadDefaultServer, stopDictServer } from './dictserver';
 import { channel } from './dlbuild';
 import { uploadWorkspaceVSCodeSettings } from './simpletm';
 
@@ -191,22 +190,6 @@ export namespace cc_view {
                 
 
 
-
-            const dictServerNode = new CCDirectory(this, "辞典服务器", vscode.TreeItemCollapsibleState.Collapsed);
-            this.roots.push(dictServerNode);
-            dictServerNode.children.push(new CommandItem("关闭辞典服务器", () => {
-                if (!stopDictServer()) {
-                    vscode.window.showInformationMessage("当前没有辞典服务器在运行，或者辞典服务器不是由vscode启动的");
-                } else {
-                    vscode.window.showInformationMessage("已关闭辞典服务器");
-                }
-            }));
-
-            dictServerNode.children.push(new CommandItem("更新辞典服务器", async () => {
-                stopDictServer();
-                channel.show();
-                await downloadDefaultServer(ContextHolder.get());
-            }));
 
             const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);
             baiduAPINode.children.push(new ConfigEntryItem(this, baiduAPINode, "AccessKey", "dltxt.config.baidu.accesskey", true, false));
