@@ -27,6 +27,7 @@ import * as crossref from './crossref';
 import * as error_check from './error-check';
 import * as lsp from './lspclient';
 import * as word_count from './word-count';
+var nodejieba = require("nodejieba");
 
 
 
@@ -237,6 +238,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	migration(context);
+	nodejieba.load();
 
 }
 

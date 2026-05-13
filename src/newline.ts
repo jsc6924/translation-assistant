@@ -4,6 +4,7 @@ import * as utils from './utils';
 import { updateNewlineDecorations } from './error-check';
 import { MatchedGroups } from './parser';
 import { formatNewlineInLine } from './formatter';
+const nodejieba = require("nodejieba");
 
 const tagStatusNormal = 0;
 const tagStatusTag = 1;
@@ -124,6 +125,22 @@ export function insert_newline_for_line(jgrps: MatchedGroups, cgrps: MatchedGrou
     return assembleLines(jgrps, cgrps, [text], insertNewline);
 }
 
+function cut_force_by_word(text: string): Int8Array {
+    const wordLengths = nodejieba.cut(text, true).map((w: string) => w.length);
+    const res = Int8Array.from({length: text.length}, () => 0);
+
+    const sumLength = wordLengths.reduce((a: number, b: number) => a + b, 0);
+    if (sumLength !== text.length) {
+        return res;
+    }
+    let pos = 0;
+    for (const len of wordLengths) {
+        res[pos + len - 1] = 1; // the space after a word is a preferred split point
+        pos += len;
+    }
+    return res;
+}
+
 function split_to_lines(text: string, widths: number[], tagStatusArr: number[], maxLen: number, maxline: number, alphas: number[]): [boolean, string[]] {
     if (!text) {
         return [false, []];
@@ -147,6 +164,7 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
     const periodPuncs = /[。？！]/;
 
     const isPunc = new Array(n).fill(0.0).map((_, i) => puncs.test(text[i]));
+    const wordCutForce = cut_force_by_word(text);
     for (let i = 0; i < n - 1; i++) {
         if (tagStatusArr[i] === tagStatusTag || tagStatusArr[i] === tagStatusInTag) {
             if (tagStatusArr[i+1] === tagStatusTag) {
@@ -162,14 +180,14 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
             } else {
                 // punc -> alpha/normal
                 if(periodPuncs.test(text[i])) {
-                    strength[i] -= 1.0;
+                    strength[i] -= 1.0; // 句号等
                 } else {
-                    strength[i] -= 0.75;
+                    strength[i] -= 0.75; // 其他标点，比如逗号
                 }
             }
         } else if (alphanum.test(text[i])) {
             if (alphanum.test(text[i+1])) {
-                strength[i] += 3.0;// normal -> normal
+                strength[i] += 3.0; // normal -> normal
             } else if (isPunc[i+1]) {
                 strength[i] += 1.0; // normal -> punc
             } else {
@@ -180,6 +198,7 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
                 strength[i] += 1.0; // alpha -> punc
             } else {
                 // alpha -> alpha/normal
+                strength[i] -= 0.5 * wordCutForce[i]; // 词的末尾
             }
         }
     }
