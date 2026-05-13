@@ -7,7 +7,7 @@ import { dict_view } from './treeview';
 import { registerCommand, DictSettings, ContextHolder, DictType, pathConcat, DictKeyInfo, getCurrentWorkspaceFolder, DictNamingRule, DictNamingValue, getDictNamingComment, getDictNamingTranslation } from './utils';
 import { editorWriteString, translateCurrentLine } from './motion';
 import { DocumentParser } from './parser';
-import { getLanguageClient, ProjectNamingUpdatedNotification, ProjectTranslationUpdatedNotification, RequestSubscribeProject } from './lspclient';
+import { ProjectNamingUpdatedNotification, ProjectTranslationUpdatedNotification, subscribeProjectNotifications } from './lspclient';
 const AhoCorasick = require('ahocorasick');
 
 
@@ -760,6 +760,7 @@ export async function updateDatabaseTranslationByDictName(name: string, params: 
 			if (index >= 0) { 
 				//update
 				contents[index].translate = params.value ?? '';
+				contents[index].comment = params.comment ?? '';
 			} else {
 				// insert
 				contents.push({
@@ -912,14 +913,11 @@ export async function syncDatabase(name: string) {
 		await Promise.all([req1, req2]);
 		dictTree?.refresh(dictNode);
 
-		const client = getLanguageClient();
-		if (client) {
-			try {
-				const response = await client.sendRequest(RequestSubscribeProject, { project_id: gameTitle });
-				console.log(`Subscribed to project ${gameTitle} with response: ${response.project_id}`);
-			} catch (error) {
-				console.error(error);
-			}
+		try {
+			await subscribeProjectNotifications(gameTitle);
+			console.log(`Subscribed to project ${gameTitle} via SimpleTM websocket`);
+		} catch (error) {
+			console.error(error);
 		}
 	}
 }

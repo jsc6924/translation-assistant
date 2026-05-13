@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.3.4",
+	"version": "4.4.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -1621,6 +1621,7 @@
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
 		"@types/vscode": "1.90",
+		"@types/ws": "^8.18.1",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
 		"esbuild": "^0.17.19",
@@ -1650,6 +1651,7 @@
 		"request": "^2.88.2",
 		"typed-rest-client": "^1.8.11",
 		"vscode-languageclient": "^8.1.0",
+		"ws": "^8.20.1",
 		"xlsx": "^0.18.5"
 	},
 	"repository": {

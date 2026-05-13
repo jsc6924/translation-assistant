@@ -2,6 +2,7 @@ import * as net from 'net';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import WebSocket = require('ws');
 import {
 	LanguageClient,
 	LanguageClientOptions,
@@ -14,13 +15,30 @@ import { isActivePullMode, setActivePullMode, updateDatabaseNamingByGameTitle, u
 import { getParserConfigPayload, ParserConfigPayload } from './parser';
 import * as crossref from './crossref';
 
-const SERVER_HOST = '127.0.0.1';
-const SERVER_PORT = 6010;
-
+const SIMPLETM_WS_URL = 'wss://simpletm.jscrosoft.com/ws';
+const SIMPLETM_RECONNECT_DELAY_MS = 3000;
+const SIMPLETM_REQUEST_TIMEOUT_MS = 10000;
 
 interface ServerNotificationParams {
 	message: string;
-	remote_available: boolean;
+}
+
+interface JsonRpcMessage {
+	jsonrpc?: string;
+	id?: string | number | null;
+	method?: string;
+	params?: unknown;
+	result?: unknown;
+	error?: {
+		code?: number;
+		message?: string;
+	};
+}
+
+interface PendingWebSocketRequest {
+	resolve: (result: unknown) => void;
+	reject: (error: Error) => void;
+	timeout: NodeJS.Timeout;
 }
 
 export interface ProjectTranslationUpdatedNotification {
@@ -94,15 +112,317 @@ export interface GetSimilarTextParams {
 
 let languageClient: LanguageClient | undefined;
 let bridgeProcess: ChildProcessWithoutNullStreams | undefined;
+let simpleTMWebSocketClient: SimpleTMWebSocketClient | undefined;
 
 export function getLanguageClient(): LanguageClient | undefined {
 	return languageClient;
 }
 export const RequestEcho = new RequestType<{ message: string }, { result: string }, void>('dltxt/echo');
-export const RequestSubscribeProject = new RequestType<{ project_id: string }, { project_id: string }, void>('simpletm/subscribeProject');
 export const RequestGetDocumentContent = new RequestType<{ uri: string }, ResGetDocumentContent, void>('dltxt/get_document_content');
 export const RequestGetParsedDocument = new RequestType<{ uri: string }, ResGetParsedDocument, void>('dltxt/get_parsed_document');
 export const RequestGetSimilarText = new RequestType<GetSimilarTextParams, ResGetSimilarText, void>('dltxt/get_similar_text');
+
+class SimpleTMWebSocketClient {
+	private socket: WebSocket | undefined;
+	private reconnectTimer: NodeJS.Timeout | undefined;
+	private nextRequestId = 0;
+	private readonly subscribedProjects = new Set<string>();
+	private readonly pendingRequests = new Map<string, PendingWebSocketRequest>();
+	private stopRequested = false;
+	private static UUID = SimpleTMWebSocketClient.generateUUID();
+
+	static generateUUID(): string {
+		// simplified UUID generator for request IDs
+		let id = '';
+		for (let i = 0; i < 48; i++) {
+			id += Math.floor(Math.random() * 16).toString(16);
+		}
+		return id;
+	}
+
+	async start(): Promise<void> {
+		this.stopRequested = false;
+		this.ensureConnected();
+	}
+
+	async stop(): Promise<void> {
+		this.stopRequested = true;
+		if (this.reconnectTimer) {
+			clearTimeout(this.reconnectTimer);
+			this.reconnectTimer = undefined;
+		}
+
+		this.rejectAllPendingRequests(new Error('SimpleTM websocket stopped'));
+
+		const socket = this.socket;
+		this.socket = undefined;
+		if (!socket || socket.readyState === WebSocket.CLOSED) {
+			return;
+		}
+
+		await new Promise<void>((resolve) => {
+			let settled = false;
+			const finish = () => {
+				if (settled) {
+					return;
+				}
+				settled = true;
+				resolve();
+			};
+
+			const timer = setTimeout(finish, 1000);
+			socket.once('close', () => {
+				clearTimeout(timer);
+				finish();
+			});
+
+			try {
+				socket.close();
+			} catch {
+				clearTimeout(timer);
+				finish();
+			}
+		});
+	}
+
+	async subscribeProject(projectId: string): Promise<void> {
+		if (!projectId) {
+			return;
+		}
+
+		const isNewProject = !this.subscribedProjects.has(projectId);
+		this.subscribedProjects.add(projectId);
+		this.ensureConnected();
+
+		if (!isNewProject || !this.isOpen()) {
+			return;
+		}
+
+		await this.sendSubscribeProject(projectId);
+	}
+
+	private isOpen(): boolean {
+		return this.socket?.readyState === WebSocket.OPEN;
+	}
+
+	private ensureConnected(): void {
+		if (this.stopRequested) {
+			return;
+		}
+
+		if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+			return;
+		}
+
+		const socket = new WebSocket(SIMPLETM_WS_URL);
+		this.socket = socket;
+
+		socket.on('open', () => {
+			channel.appendLine(`SimpleTM websocket connected: ${SIMPLETM_WS_URL}`);
+			void this.handleOpen(socket);
+		});
+
+		socket.on('message', async (data) => {
+			await this.handleMessage(data);
+		});
+
+		socket.on('error', (error) => {
+			channel.appendLine(`SimpleTM websocket error: ${error.message}`);
+		});
+
+		socket.on('close', (code, reasonBuffer) => {
+			if (this.socket === socket) {
+				this.socket = undefined;
+			}
+
+			const reason = this.rawDataToString(reasonBuffer);
+			channel.appendLine(`SimpleTM websocket closed: code=${code} reason=${reason}`);
+			this.rejectAllPendingRequests(new Error('SimpleTM websocket disconnected'));
+			setActivePullMode(true);
+
+			if (!this.stopRequested) {
+				this.scheduleReconnect();
+			}
+		});
+	}
+
+	private scheduleReconnect(): void {
+		if (this.reconnectTimer || this.stopRequested) {
+			return;
+		}
+
+		this.reconnectTimer = setTimeout(() => {
+			this.reconnectTimer = undefined;
+			this.ensureConnected();
+		}, SIMPLETM_RECONNECT_DELAY_MS);
+	}
+
+	private async handleOpen(socket: WebSocket): Promise<void> {
+		if (this.socket !== socket) {
+			return;
+		}
+
+		for (const projectId of this.subscribedProjects) {
+			try {
+				await this.sendSubscribeProject(projectId);
+			} catch (error) {
+				channel.appendLine(`Failed to resubscribe project ${projectId}: ${String(error)}`);
+			}
+		}
+
+		if (isActivePullMode()) {
+			setActivePullMode(false);
+			void vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
+		}
+	}
+
+	private async sendSubscribeProject(projectId: string): Promise<void> {
+		const response = await this.sendRequest<{ project_id: string }>('simpletm/subscribeProject', { project_id: projectId });
+		channel.appendLine(`SimpleTM websocket subscribed to project ${response.project_id}`);
+	}
+
+	private sendRequest<TResponse>(method: string, params: Record<string, unknown>): Promise<TResponse> {
+		const socket = this.socket;
+		if (!socket || socket.readyState !== WebSocket.OPEN) {
+			return Promise.reject(new Error('SimpleTM websocket is not connected'));
+		}
+
+		const requestId = `simpletm-${SimpleTMWebSocketClient.UUID}-${++this.nextRequestId}`;
+		const payload = JSON.stringify({
+			jsonrpc: '2.0',
+			id: requestId,
+			method,
+			params,
+		});
+
+		return new Promise<TResponse>((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				this.pendingRequests.delete(requestId);
+				reject(new Error(`SimpleTM websocket request timed out: ${method}`));
+			}, SIMPLETM_REQUEST_TIMEOUT_MS);
+
+			this.pendingRequests.set(requestId, {
+				resolve: (result: unknown) => {
+					clearTimeout(timeout);
+					this.pendingRequests.delete(requestId);
+					resolve(result as TResponse);
+				},
+				reject: (error: Error) => {
+					clearTimeout(timeout);
+					this.pendingRequests.delete(requestId);
+					reject(error);
+				},
+				timeout,
+			});
+
+			socket.send(payload, (error?: Error) => {
+				if (!error) {
+					return;
+				}
+
+				const pending = this.pendingRequests.get(requestId);
+				if (pending) {
+					pending.reject(error);
+				}
+			});
+		});
+	}
+
+	private async handleMessage(data: WebSocket.RawData): Promise<void> {
+		const rawMessage = this.rawDataToString(data);
+		let message: JsonRpcMessage;
+
+		try {
+			message = JSON.parse(rawMessage) as JsonRpcMessage;
+		} catch (error) {
+			channel.appendLine(`Ignoring non-JSON SimpleTM websocket payload: ${String(error)}`);
+			return;
+		}
+
+		if (message.id !== undefined && message.id !== null && !message.method) {
+			channel.appendLine(`received response: id=${message.id} result=${JSON.stringify(message.result)} error=${JSON.stringify(message.error)}`);
+			this.handleResponse(message);
+			return;
+		}
+
+		if (!message.method) {
+			return;
+		}
+
+		channel.appendLine(`received notification: method=${message.method} params=${JSON.stringify(message.params)}`);
+		await this.dispatchNotification(message.method, message.params);
+	}
+
+	private handleResponse(message: JsonRpcMessage): void {
+		const requestId = String(message.id);
+		const pending = this.pendingRequests.get(requestId);
+		if (!pending) {
+			return;
+		}
+
+		if (message.error) {
+			pending.reject(new Error(message.error.message ?? `SimpleTM websocket request failed: ${requestId}`));
+			return;
+		}
+
+		pending.resolve(message.result);
+	}
+
+	private async dispatchNotification(method: string, params: unknown): Promise<void> {
+		switch (method) {
+			case 'simpletm/translationsUpdated':
+				await updateDatabaseTranslationByGameTitle((params as ProjectTranslationUpdatedNotification).project_id, params as ProjectTranslationUpdatedNotification, false);
+				return;
+			case 'simpletm/translationsDeleted':
+				await updateDatabaseTranslationByGameTitle((params as ProjectTranslationUpdatedNotification).project_id, params as ProjectTranslationUpdatedNotification, true);
+				return;
+			case 'simpletm/namingUpdated':
+				await updateDatabaseNamingByGameTitle((params as ProjectNamingUpdatedNotification).project_id, params as ProjectNamingUpdatedNotification, false);
+				return;
+			case 'simpletm/namingDeleted':
+				await updateDatabaseNamingByGameTitle((params as ProjectNamingUpdatedNotification).project_id, params as ProjectNamingUpdatedNotification, true);
+				return;
+			case 'simpletm/projectUpdated':
+				await vscode.commands.executeCommand('Extension.dltxt.sync_database_by_game_title', (params as ProjectBatchUpdatedNotification).project_id);
+				return;
+			default:
+				channel.appendLine(`Unhandled SimpleTM websocket notification: ${method}`);
+		}
+	}
+
+	private rejectAllPendingRequests(error: Error): void {
+		for (const [requestId, pending] of this.pendingRequests) {
+			clearTimeout(pending.timeout);
+			this.pendingRequests.delete(requestId);
+			pending.reject(error);
+		}
+	}
+
+	private rawDataToString(data: WebSocket.RawData): string {
+		if (typeof data === 'string') {
+			return data;
+		}
+
+		if (Buffer.isBuffer(data)) {
+			return data.toString('utf8');
+		}
+
+		if (Array.isArray(data)) {
+			return Buffer.concat(data).toString('utf8');
+		}
+
+		return Buffer.from(data).toString('utf8');
+	}
+}
+
+export async function subscribeProjectNotifications(projectId: string): Promise<void> {
+	if (!simpleTMWebSocketClient) {
+		simpleTMWebSocketClient = new SimpleTMWebSocketClient();
+		await simpleTMWebSocketClient.start();
+	}
+
+	await simpleTMWebSocketClient.subscribeProject(projectId);
+}
 
 async function pushParserRegexConfigToBridge() {
 	if (!languageClient) {
@@ -169,31 +489,6 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		return getParserConfigPayload() ?? null;
 	});
 
-	client.onNotification("simpletm/translationsUpdated", async (params: ProjectTranslationUpdatedNotification) => {
-		console.log(`simpletm/translationsUpdated received ${JSON.stringify(params)}`);
-		await updateDatabaseTranslationByGameTitle(params.project_id, params, false);
-	});
-
-	client.onNotification("simpletm/translationsDeleted", async (params: ProjectTranslationUpdatedNotification) => {
-		console.log(`simpletm/translationsDeleted received ${JSON.stringify(params)}`);
-		await updateDatabaseTranslationByGameTitle(params.project_id, params, true);
-	});
-
-	client.onNotification("simpletm/namingUpdated", async (params: ProjectNamingUpdatedNotification) => {
-		console.log(`simpletm/namingUpdated received ${JSON.stringify(params)}`);
-		await updateDatabaseNamingByGameTitle(params.project_id, params, false);
-	});
-
-	client.onNotification("simpletm/namingDeleted", async (params: ProjectNamingUpdatedNotification) => {
-		console.log(`simpletm/namingDeleted received ${JSON.stringify(params)}`);
-		await updateDatabaseNamingByGameTitle(params.project_id, params, true);
-	});
-
-	client.onNotification("simpletm/projectUpdated", async (params: ProjectNamingUpdatedNotification) => {
-		console.log(`simpletm/projectUpdated received ${JSON.stringify(params)}`);
-		await vscode.commands.executeCommand('Extension.dltxt.sync_database_by_game_title', params.project_id);
-	});
-
 	client.onDidChangeState((event) => {
 		switch (event.newState) {
 			case 1: // Starting
@@ -232,10 +527,17 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 	try {
 		await client.start();
 		languageClient = client;
+		if (!simpleTMWebSocketClient) {
+			simpleTMWebSocketClient = new SimpleTMWebSocketClient();
+		}
+		await simpleTMWebSocketClient.start();
 		await pushParserRegexConfigToBridge();
 	} catch (error) {
 		channel.appendLine(`Failed to start LSP client: ${String(error)}`);
 		vscode.window.showErrorMessage(`Failed to start language server: ${String(error)}`);
+		if (simpleTMWebSocketClient) {
+			await simpleTMWebSocketClient.stop();
+		}
 		await stopBridgeProcess();
 		setActivePullMode(true);
 	}
@@ -245,7 +547,7 @@ const channelBridgeStderr = vscode.window.createOutputChannel("DLTXT Bridge stde
 
 async function spawnBridgeProcess(serverBinPath: string): Promise<StreamInfo> {
 	return new Promise((resolve, reject) => {
-		const serverProcess = spawn(serverBinPath, ['--remote-host', 'simpletm.jscrosoft.com', '--remote-port', '443'], {
+		const serverProcess = spawn(serverBinPath, [], {
 			stdio: ['pipe', 'pipe', 'pipe'],
 		});
 		bridgeProcess = serverProcess;
@@ -340,6 +642,11 @@ async function stopBridgeProcess(): Promise<void> {
 }
 
 export async function stopLanguageClient() {
+	if (simpleTMWebSocketClient) {
+		await simpleTMWebSocketClient.stop();
+		simpleTMWebSocketClient = undefined;
+	}
+
 	if (!languageClient) {
 		await stopBridgeProcess();
 		return;
@@ -360,12 +667,6 @@ export async function stopLanguageClient() {
 
 function handleServerHeartbeat(params: ServerNotificationParams | undefined) {
 	channel.appendLine(`[LSP notification] ${JSON.stringify(params)}`);
-	if (params) {
-		if (isActivePullMode() && params.remote_available) {
-			vscode.commands.executeCommand('Extension.dltxt.sync_all_database');
-			setActivePullMode(false);
-		}
-	}
 }
 
 export async function activate(context: vscode.ExtensionContext) {
