@@ -1,0 +1,114 @@
+name: VSCE Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to VS Code Marketplace after packaging
+        required: true
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+env:
+  BRIDGE_REPOSITORY: jsc6924/dltxt-bridge
+  NODE_VERSION: '20'
+
+jobs:
+  package:
+    name: ${{ matrix.vsce_target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            vsce_target: win32-x64
+          - runner: ubuntu-22.04
+            vsce_target: linux-x64
+          - runner: macos-13
+            vsce_target: darwin-x64
+          - runner: macos-14
+            vsce_target: darwin-arm64
+
+    steps:
+      - name: Checkout extension repository
+        uses: actions/checkout@v4
+        with:
+          path: translation-assistant
+
+      - name: Checkout bridge repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BRIDGE_REPOSITORY }}
+          path: dltxt-bridge
+          token: ${{ secrets.CROSS_REPO_TOKEN != '' && secrets.CROSS_REPO_TOKEN || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: translation-assistant/package-lock.json
+
+      - name: Bootstrap vcpkg on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg "$env:RUNNER_TEMP/vcpkg"
+          & "$env:RUNNER_TEMP/vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Bootstrap vcpkg on Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          git clone https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+
+      - name: Install extension dependencies
+        working-directory: translation-assistant
+        shell: bash
+        run: npm ci
+
+      - name: Configure bridge on Windows
+        if: runner.os == 'Windows'
+        working-directory: dltxt-bridge
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:RUNNER_TEMP/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Configure bridge on Unix
+        if: runner.os != 'Windows'
+        working-directory: dltxt-bridge
+        shell: bash
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build bridge
+        working-directory: dltxt-bridge
+        shell: bash
+        run: cmake --build build --target dltxt_bridge
+
+      - name: Package VSIX
+        working-directory: translation-assistant
+        shell: bash
+        run: npm run vsce:package:target -- ${{ matrix.vsce_target }}
+
+      - name: Publish to VS Code Marketplace
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+        working-directory: translation-assistant
+        shell: bash
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npm run vsce:publish:target -- ${{ matrix.vsce_target }}
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.vsce_target }}-vsix
+          path: translation-assistant/*.vsix

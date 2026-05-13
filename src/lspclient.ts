@@ -1,6 +1,7 @@
 import * as net from 'net';
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import WebSocket = require('ws');
 import {
@@ -18,6 +19,7 @@ import * as crossref from './crossref';
 const SIMPLETM_WS_URL = 'wss://simpletm.jscrosoft.com/ws';
 const SIMPLETM_RECONNECT_DELAY_MS = 3000;
 const SIMPLETM_REQUEST_TIMEOUT_MS = 10000;
+const BRIDGE_BINARY_STEM = 'dltxt_lsp_server';
 
 interface ServerNotificationParams {
 	message: string;
@@ -113,6 +115,49 @@ export interface GetSimilarTextParams {
 let languageClient: LanguageClient | undefined;
 let bridgeProcess: ChildProcessWithoutNullStreams | undefined;
 let simpleTMWebSocketClient: SimpleTMWebSocketClient | undefined;
+
+function getBridgeBinaryFileName(): string {
+	return process.platform === 'win32' ? `${BRIDGE_BINARY_STEM}.exe` : BRIDGE_BINARY_STEM;
+}
+
+function getCurrentVsceTarget(): string | undefined {
+	const osMap: Record<string, string> = {
+		win32: 'win32',
+		linux: 'linux',
+		darwin: 'darwin',
+	};
+
+	const archMap: Record<string, string> = {
+		x64: 'x64',
+		arm64: 'arm64',
+	};
+
+	const targetOs = osMap[process.platform];
+	const targetArch = archMap[process.arch];
+	if (!targetOs || !targetArch) {
+		return undefined;
+	}
+
+	return `${targetOs}-${targetArch}`;
+}
+
+function resolveBridgeBinaryPath(context: vscode.ExtensionContext): string {
+	const fileName = getBridgeBinaryFileName();
+	const packagedPath = path.join(context.extensionPath, 'bin', fileName);
+	if (fs.existsSync(packagedPath)) {
+		return packagedPath;
+	}
+
+	const target = getCurrentVsceTarget();
+	if (target) {
+		const targetPath = path.join(context.extensionPath, 'bin', 'targets', target, fileName);
+		if (fs.existsSync(targetPath)) {
+			return targetPath;
+		}
+	}
+
+	throw new Error(`Bridge binary not found for ${process.platform}/${process.arch}`);
+}
 
 export function getLanguageClient(): LanguageClient | undefined {
 	return languageClient;
@@ -450,7 +495,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext) {
 		return;
 	}
 
-	const SERVER_BIN_PATH = path.join(context.extensionPath, "bin", "dltxt_lsp_server.exe");
+	const SERVER_BIN_PATH = resolveBridgeBinaryPath(context);
 
 	const serverOptions = async (): Promise<StreamInfo> => {
 		await stopBridgeProcess();

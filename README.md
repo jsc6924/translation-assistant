@@ -38,6 +38,7 @@
 - [共享vscode设置](#共享vscode设置)
 - [翻译数据库](#翻译数据库)
 - [进阶批量操作](#进阶批量操作)
+- [开发与发布](#开发与发布)
 - [其他](#其他)
 
 ## 基本使用流程
@@ -878,40 +879,76 @@ vars.get(string): any;
   2. 搜索 `font family`，把Workspace的Editor：Font Family设置成`SimHei`（黑体）
 
 ---
-## 开发
+## 开发与发布
+
+### 本地开发
 ```
 npm run compile && npm run esbuild
-vsce login <username of dev.azure.com>
-vsce package
-vsce publish [--pre-release]
 ```
 
-upgrade vscode api version
+bridge 需要先在对应平台单独构建。构建完成后，CMake 会自动把二进制复制到 `translation-assistant/bin/targets/<target>/`。
+
+当前约定的目标名称如下：
+- `win32-x64`
+- `linux-x64`
+- `darwin-x64`
+- `darwin-arm64`
+
+### 本地打包 VSIX
+不要再直接使用 `vsce package`，否则会把错误的平台二进制一起打进包里。
+
+请使用：
+```
+npm run vsce:package:target -- win32-x64
+npm run vsce:package:target -- linux-x64
+npm run vsce:package:target -- darwin-x64
+npm run vsce:package:target -- darwin-arm64
+```
+
+这些命令会先把对应 target 的 bridge 二进制暂存到 `bin/`，然后执行 `vsce package --target <target>`。
+
+### 本地发布到 VS Code Marketplace
+先准备好 Marketplace PAT，然后使用：
+```
+npm run vsce:publish:target -- win32-x64
+npm run vsce:publish:target -- linux-x64
+npm run vsce:publish:target -- darwin-x64
+npm run vsce:publish:target -- darwin-arm64
+```
+
+建议在对应平台上发布对应 target，因为 bridge 可执行文件和部分原生依赖需要和目标平台一致。
+
+### GitHub Actions 发布
+仓库中提供了 [vsce-publish.yml](.github/workflows/vsce-publish.yml) 工作流。
+
+它会在以下 runner 上分别构建 bridge、打包插件，并按 target 生成 VSIX：
+- `windows-latest` -> `win32-x64`
+- `ubuntu-22.04` -> `linux-x64`
+- `macos-13` -> `darwin-x64`
+- `macos-14` -> `darwin-arm64`
+
+触发方式：
+- 推送 tag `v*` 时自动打包并发布
+- 手动运行 workflow 时，可选择只打包，或打包后发布
+
+需要的 secrets：
+- `VSCE_PAT`：发布到 VS Code Marketplace 时使用
+- `CROSS_REPO_TOKEN`：仅当 `dltxt-bridge` 仓库不是当前 workflow token 可直接读取时才需要
+
+### 升级 VS Code API 版本
 ```
 package.json
 "engines": {
-		"vscode": "^1.90.0"
+    "vscode": "^1.90.0"
 },
 
 npm install --save @types/vscode@1.80
-
 ```
 
-update pat
-
-login into https://dev.azure.com/{username}
-create a PAT
-```
-npx @vscode/vsce login jsc723
-```
-
-
-
-count lines of code 
+### 统计代码行数
 ```
 find ./src -type f -print0 | xargs -0 wc -l
 ```
-
 
 ---
 ## Release Notes

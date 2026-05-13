@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.4.0",
+	"version": "4.4.1",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -1597,7 +1597,9 @@
 		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --external:nodejieba --format=cjs --platform=node",
 		"esbuild": "npm run esbuild-base -- --sourcemap",
 		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-		"test-compile": "tsc -p ./"
+		"test-compile": "tsc -p ./",
+		"vsce:package:target": "node ./scripts/vsce-target.cjs package",
+		"vsce:publish:target": "node ./scripts/vsce-target.cjs publish"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
