@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import isFullwidthCodePoint from 'is-fullwidth-code-point';
 import * as utils from './utils';
-import { updateNewlineDecorations } from './error-check';
+import { updateNewlineDecorations } from './decoration';
 import { MatchedGroups } from './parser';
 import { formatNewlineInLine } from './formatter';
 import { getNodeJieba } from './nodejieba';

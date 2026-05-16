@@ -3,7 +3,8 @@ import { SearchIndex, findBlocksForVirtualDocument } from './translation-db';
 import { registerCommand, showOutputText, DictSettings, ContextHolder, CSSNamedColors, DictType, escapeHtml, DictKeyInfo, getDictNamingTranslation } from './utils';
 import * as fs from 'fs';
 import * as path from "path";
-import { SimpleTMDefaultURL, updateKeywordDecorations } from './simpletm';
+import { SimpleTMDefaultURL } from './simpletm';
+import { updateKeywordDecorations } from './decoration';
 
 
 

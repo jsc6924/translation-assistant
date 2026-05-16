@@ -12,11 +12,13 @@ import * as dlbuild from './dlbuild';
 import { trdb_view } from './treeview';
 import { cc_view } from './command-center';
 import { spellCheck, clearSpellCheck } from './spellcheck';
-import { updateErrorDecorations, updateNewlineDecorations } from './error-check';
+import { updateErrorDecorations } from './error-check';
+import { updateNewlineDecorations } from './decoration';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
 import * as trdb from './translation-db';
 import * as simpletm from './simpletm';
+import * as decoration from './decoration';
 import * as singleline from './singleline';
 import * as auto_format from './auto-format';
 import * as fs from 'fs';
@@ -148,7 +150,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			timeout = setTimeout(() => {
 				updateNewlineDecorations();
 				updateErrorDecorations();
-				simpletm.updateKeywordDecorations();
+				decoration.updateKeywordDecorations();
 			}, 200);
 		}
 

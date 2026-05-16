@@ -3,7 +3,7 @@ import * as utils from './utils';
 import { DocumentParser } from './parser';
 import { DictSettings, registerCommand, repeatStr } from './utils';
 import { DecorationMemoryStorage } from './simpletm';
-import { updateNewlineDecorations } from './error-check';
+import { updateNewlineDecorations } from './decoration';
 import { ShowRestrictEditingWarning } from './mode';
 
 export function activate(context: vscode.ExtensionContext) {

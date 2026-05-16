@@ -280,44 +280,6 @@ function likelyDltxt(doc: vscode.TextDocument): boolean {
     return diffGroupSize <= 2;
 }
 
-export function updateNewlineDecorations() {
-    //console.log('updateNewlineDecorations');
-    const config = vscode.workspace.getConfiguration("dltxt");
-    if (!config.get<boolean>('nestedLine.displayTokenAsSymbol')) {
-        const nestedLineToken = config.get("nestedLine.token") as string;
-        const newLineDecoTuple = DictSettings.getNewlineDecorationType(nestedLineToken);
-        const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor) {
-            newLineDecoTuple.oldDeco && activeEditor.setDecorations(newLineDecoTuple.oldDeco, []);
-        }
-        return;
-    }
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-        return;
-    }
-    const newLineDecos: vscode.DecorationOptions[] = [];
-    const nestedLineToken = config.get("nestedLine.token") as string;
-    const ac = new AhoCorasick([nestedLineToken]);
-    const newlineResults = ac.search(activeEditor.document.getText()) as any[];
-    for (const r of newlineResults) {
-        const endIndex = r[0];
-        const keyword = r[1][0];
-        const index = endIndex + 1 - keyword.length;
-        const startPos = activeEditor.document.positionAt(index);
-        const endPos = activeEditor.document.positionAt(index + keyword.length);
-        const decoration = {
-            range: new vscode.Range(startPos, endPos),
-            renderOptions: {
-            }
-        };
-        newLineDecos.push(decoration);
-    }
-    const newLineDecoTuple = DictSettings.getNewlineDecorationType(nestedLineToken);
-    newLineDecoTuple.oldDeco && activeEditor.setDecorations(newLineDecoTuple.oldDeco, []);
-    activeEditor.setDecorations(newLineDecoTuple.deco, newLineDecos);
-}
-
 
 // two input arrays must be sorted by line number
 export function filterUntranslatedLines(missingLineDiags: readonly vscode.Diagnostic[], untranslatedLines: number[]): vscode.Diagnostic[] {
