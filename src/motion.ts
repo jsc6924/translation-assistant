@@ -4,6 +4,7 @@ import { DocumentParser } from './parser';
 import { DictSettings, registerCommand, repeatStr } from './utils';
 import { DecorationMemoryStorage } from './simpletm';
 import { updateNewlineDecorations } from './error-check';
+import { ShowRestrictEditingWarning } from './mode';
 
 export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
@@ -43,6 +44,14 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommand(context, 'Extension.dltxt.deleteAllAfter', () => {
 		deleteAllAfter();
 	});
+
+  registerCommand(context, 'Extension.dltxt.backspace', async () => {
+    if (dltxtBackspace()) {
+      ShowRestrictEditingWarning(`标签部分不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。`);
+      return;
+    }
+    await vscode.commands.executeCommand('deleteLeft');
+  });
 
 	registerCommand(context, 'Extension.dltxt.replaceAllKeywordsAtCurrentPosition', (arg) => {
 		replaceAllKeywordsAtCurrentPosition();
@@ -531,6 +540,22 @@ function deleteAllAfter() {
       position.with(position.line, iend));
     builder.delete(toDelete);
   })
+}
+
+function dltxtBackspace(): boolean {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor)
+    return false;
+  const position = editor.selection.active;
+  const [curIsTranslation, curLine, curGroups] = DocumentParser.getCurrentTranslationLine(editor);
+  if (!curIsTranslation || !curLine || !curGroups) {
+    return false;
+  }
+  const prefixLen = curGroups.prefix.length;
+  if (position.character <= prefixLen) {
+    return true; // block this edit
+  }
+  return false;
 }
 
 function cursorToSublineHead() {

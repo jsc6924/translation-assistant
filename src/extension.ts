@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as motion from './motion';
-import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder, compareVersions, countInString } from './utils';
+import { setCursorAndScroll, VSCodeContext, registerCommand, ContextHolder, compareVersions } from './utils';
 import {
 	formatter, copyOriginalToTranslation,
 	repeatFirstChar
@@ -74,8 +74,6 @@ process.on('unhandledRejection', (reason) => {
 	logStartup('unhandledRejection', reason);
 });
 
-
-
 /*
 (;\\[[a-z0-9]+\\])|((☆|●)[a-z0-9]+(☆|●))|(<\\d+>(?!//))|(//.*\n)
 */
@@ -106,6 +104,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		if (!fs.existsSync(context.globalStorageUri.fsPath)) {
 			fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });
 		}
+
+		stage = 'initialize mode';
+		logStartup(stage);
+		mode.activate(context);
 
 		let timeout: NodeJS.Timer | undefined = undefined;
 
@@ -172,64 +174,32 @@ export async function activate(context: vscode.ExtensionContext) {
 		}, null, context.subscriptions);
 
 		vscode.workspace.onDidChangeTextDocument(event => {
-		let activeEditor = vscode.window.activeTextEditor;
-		const document = event.document;
-		const config = vscode.workspace.getConfiguration("dltxt.core");
-		const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo || 
-				event.reason === vscode.TextDocumentChangeReason.Redo);
-		// Skip non-file documents (terminal, output, etc.) and non-.txt files
-		if (event.document.uri.scheme !== 'file' 
-			|| !event.document.uri.fsPath.endsWith('.txt')
-		    || event.document.uri.fsPath.includes('CMakeLists.txt')) {
-			return;
-		}
-
-		if (config.get<boolean>('strictEditing') && !noStrict && !tempDisableStrictEditing) {
-			for (const change of event.contentChanges) {
-				const startLine = change.range.start.line;
-				const endLine = change.range.end.line;
-				const originalLineCount = endLine - startLine + 1;
-				const newLineCount = countInString(change.text, '\n') + 1;
-				if (originalLineCount !== newLineCount) {
-					vscode.commands.executeCommand('undo');
-					vscode.window.showWarningMessage(`不可删除或插入行。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line} ${change.range.end.line}`, '临时关闭').then(selection => {
-						if (selection === '临时关闭') {
-							tempDisableStrictEditing = true;
-						}
-					});
-					return;
-				}
-				if (newLineCount <= 2) {
-					for (let line = startLine; line <= endLine; line++) {
-						const lineText = event.document.lineAt(line).text;
-						if (parser.DocumentParser.isUneditable(lineText)) {
-							vscode.commands.executeCommand('undo');
-							vscode.window.showWarningMessage(`原文不可编辑。您可以在设置中查找dltxt.core.strictEditing关闭此功能。${change.range.start.line}`, '临时关闭').then(selection => {
-								if (selection === '临时关闭') {
-									tempDisableStrictEditing = true;
-								}
-							});
-							return;
-						}
-					}
-				}
+			let activeEditor = vscode.window.activeTextEditor;
+			// Skip non-file documents (terminal, output, etc.) and non-.txt files
+			if (event.document.uri.scheme !== 'file' 
+				|| !event.document.uri.fsPath.endsWith('.txt')
+				|| event.document.uri.fsPath.includes('CMakeLists.txt')) {
+				return;
 			}
-		}
-		if (activeEditor && event.document === activeEditor.document) {
-			triggerUpdateDecorations();
-		}
+
+			if (mode.processOnDidChangeTextDocument(event)) {
+				return;
+			}
+			if (activeEditor && event.document === activeEditor.document) {
+				triggerUpdateDecorations();
+			}
 		}, null, context.subscriptions);
 
 		registerCommand(context, 'Extension.dltxt.copy_original', () => {
-		const editor = vscode.window.activeTextEditor;
-		const document = editor?.document;
-		if (!editor || !document) {
-			vscode.window.showErrorMessage('请先选中需要更改的双行文本');
-			return;
-		}
-		editor.edit(editBuilder => {
-			copyOriginalToTranslation(context, document, editBuilder);
-		});
+			const editor = vscode.window.activeTextEditor;
+			const document = editor?.document;
+			if (!editor || !document) {
+				vscode.window.showErrorMessage('请先选中需要更改的双行文本');
+				return;
+			}
+			editor.edit(editBuilder => {
+				copyOriginalToTranslation(context, document, editBuilder);
+			});
 		});
 
 		stage = 'activate motion';
@@ -330,9 +300,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 }
-
-var tempDisableStrictEditing = false;
-
 // this method is called when your extension is deactivated
 export async function deactivate() {
 	await lsp.stopLanguageClient();

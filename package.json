@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.4.2",
+	"version": "4.5.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -663,6 +663,11 @@
 				"command": "Extension.dltxt.deleteAllAfter",
 				"key": "alt+delete",
 				"when": "editorTextFocus && resourceLangId == dltxt"
+			},
+			{
+				"command": "Extension.dltxt.backspace",
+				"key": "backspace",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.strictEditingEffective"
 			},
 			{
 				"command": "Extension.dltxt.repeatFirst",
