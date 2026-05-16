@@ -3,7 +3,7 @@
 imgs/
 data/
 node_modules/**
-!node_modules/nodejieba/**
+*.vsix
 .gitignore
 vsc-extension-quickstart.md
 **/tsconfig.json

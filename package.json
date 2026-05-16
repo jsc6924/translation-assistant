@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.5.0",
+	"version": "4.5.1",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -1599,7 +1599,7 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
-		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --external:nodejieba --format=cjs --platform=node",
+		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
 		"esbuild": "npm run esbuild-base -- --sourcemap",
 		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
 		"test-compile": "tsc -p ./"
@@ -1637,7 +1637,7 @@
 		"js-yaml": "^4.1.0",
 		"jsonc-parser": "^3.3.1",
 		"kuromoji": "^0.1.2",
-		"nodejieba": "^3.5.8",
+		"segmentit": "^2.0.3",
 		"open": "^7.4.2",
 		"request": "^2.88.2",
 		"typed-rest-client": "^1.8.11",

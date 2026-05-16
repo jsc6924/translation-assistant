@@ -4,7 +4,7 @@ import * as utils from './utils';
 import { updateNewlineDecorations } from './decoration';
 import { MatchedGroups } from './parser';
 import { formatNewlineInLine } from './formatter';
-import { getNodeJieba } from './nodejieba';
+import { getChineseTokenizer } from './tokenizer';
 
 const tagStatusNormal = 0;
 const tagStatusTag = 1;
@@ -126,7 +126,7 @@ export function insert_newline_for_line(jgrps: MatchedGroups, cgrps: MatchedGrou
 }
 
 function cut_force_by_word(text: string): Int8Array {
-    const wordLengths = getNodeJieba().cut(text, true).map((w: string) => w.length);
+    const wordLengths = getChineseTokenizer().cut(text, true).map((w: string) => w.length);
     const res = Int8Array.from({length: text.length}, () => 0);
 
     const sumLength = wordLengths.reduce((a: number, b: number) => a + b, 0);

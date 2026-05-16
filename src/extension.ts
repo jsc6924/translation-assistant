@@ -30,7 +30,7 @@ import * as crossref from './crossref';
 import * as error_check from './error-check';
 import * as lsp from './lspclient';
 import * as word_count from './word-count';
-import { ensureNodeJiebaLoaded } from './nodejieba';
+import { ensureChineseTokenizerLoaded } from './tokenizer';
 
 const startupChannel = vscode.window.createOutputChannel('DLTXT Startup');
 let startupLogFilePath: string | undefined;
@@ -284,9 +284,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		logStartup(stage);
 		migration(context);
 
-		stage = 'load nodejieba';
+		stage = 'load chinese tokenizer';
 		logStartup(stage);
-		ensureNodeJiebaLoaded();
+		ensureChineseTokenizerLoaded();
 
 		logStartup('activate completed');
 	} catch (error) {
