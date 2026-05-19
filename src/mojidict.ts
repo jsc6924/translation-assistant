@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { URL } from 'url';
-import { getWebviewContent, registerCommand } from './utils';
+import { getWebviewContentWithScripts, registerCommand } from './utils';
 import { channel } from './dlbuild';
 
 const axios = require('axios');
@@ -300,9 +300,10 @@ async function mojidictSearch(context: vscode.ExtensionContext, word: string): P
 		{ enableScripts: true }
 	);
 
+	const sharedReactUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'react-shared-vendor.js'));
 	const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'dictserver.js'));
 	const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'dictserver.css'));
-	panel.webview.html = getWebviewContent(scriptUri, cssUri, jsonData);
+	panel.webview.html = getWebviewContentWithScripts([sharedReactUri, scriptUri], cssUri, jsonData);
 	panel.reveal();
 }
 

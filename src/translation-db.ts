@@ -1,6 +1,6 @@
 import * as kuromoji from 'kuromoji';
 import * as vscode from 'vscode';
-import { compressFoldersToZip, getWebviewContent, mapToObject, Pair, removeSpace, writeAtomic } from "./utils";
+import { compressFoldersToZip, getWebviewContentWithScripts, mapToObject, Pair, removeSpace, writeAtomic } from "./utils";
 import * as fs from 'fs';
 import * as path from 'path';
 import FlexSearch, { Index, SearchResults, SearchOptions } from 'flexsearch'
@@ -417,11 +417,12 @@ function showSearchResultWebView(context: vscode.ExtensionContext, title:string,
         }
     );
 
-    const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.js'));
+        const sharedReactUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'react-shared-vendor.js'));
+        const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.js'));
     const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.css'));
 
     // Set the HTML content
-    panel.webview.html = getWebviewContent(scriptUri, cssUri, jsonData);
+        panel.webview.html = getWebviewContentWithScripts([sharedReactUri, scriptUri], cssUri, jsonData);
     panel.reveal();
   }
 

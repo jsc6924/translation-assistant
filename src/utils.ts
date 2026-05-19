@@ -329,6 +329,24 @@ export function getWebviewContent(scritpUri: vscode.Uri, cssUri: vscode.Uri, jso
       </html>`;
 }
 
+export function getWebviewContentWithScripts(scriptUris: vscode.Uri[], cssUri: vscode.Uri, jsonString: string, dataElementId: string = 'raw-data'): string {
+  const scriptTags = scriptUris.map(scriptUri => `<script src="${scriptUri}"></script>`).join('\n');
+  return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link rel="stylesheet" type="text/css" href="${cssUri}">
+      </head>
+      <body>
+          <div id="view-root"></div>
+          <pre id='${dataElementId}' hidden>${jsonString}</pre>
+          ${scriptTags}
+      </body>
+      </html>`;
+}
+
 
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));

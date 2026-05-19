@@ -442,11 +442,13 @@ function getConfigureFormatWebviewHtml(panel: vscode.WebviewPanel, state: Format
   const htmlPath = path.join(ContextHolder.get().extensionPath, 'src', 'webview', 'format-config.html');
   const template = fs.readFileSync(htmlPath, 'utf8');
   const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'format-config.css'));
+  const sharedScriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'react-shared-vendor.js'));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'format-config.js'));
   const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
 
   return template
     .replace('{{styleUri}}', cssUri.toString())
+    .replace('{{sharedScriptUri}}', sharedScriptUri.toString())
     .replace('{{scriptUri}}', scriptUri.toString())
     .replace('{{state}}', serializedState);
 }

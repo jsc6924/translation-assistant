@@ -566,6 +566,7 @@ function getBatchRegexReplaceHtml(
   context: vscode.ExtensionContext,
   initialState: InitialStatePayload
 ): string {
+  const sharedScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'react-shared-vendor.js'));
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'batch-regex-replace.js'));
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'batch-regex-replace.css'));
   const initialJson = JSON.stringify(initialState).replace(/</g, '\\u003c');
@@ -580,6 +581,7 @@ function getBatchRegexReplaceHtml(
 <body>
   <div id="view-root"></div>
   <script id="initial-state" type="application/json">${initialJson}</script>
+  <script src="${sharedScriptUri}"></script>
   <script src="${scriptUri}"></script>
 </body>
 </html>`;

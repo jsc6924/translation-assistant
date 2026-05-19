@@ -6,43 +6,9 @@
   <link rel="stylesheet" type="text/css" href="{{styleUri}}">
 </head>
 <body>
-  <div class="container">
-    <div class="section">
-      <h2>格式化选项</h2>
-      <div id="option-list" class="option-list"></div>
-    </div>
-    <div class="section">
-      <h2>空格规则</h2>
-      <div class="two-column">
-        <div class="field">
-          <label for="space-after-qe">在问号、感叹号后的空格</label>
-          <select id="space-after-qe" class="config-select"></select>
-        </div>
-        <div class="field">
-          <label for="space-after-newline">在对话换行符后的空格</label>
-          <select id="space-after-newline" class="config-select"></select>
-        </div>
-      </div>
-    </div>
-    <div class="section">
-      <h2>换行设置</h2>
-      <div class="two-column">
-        <div class="field">
-          <label for="newline-token">换行符</label>
-          <input id="newline-token" class="config-input" type="text">
-        </div>
-        <div class="field">
-          <label for="newline-max-len">单行最大长度</label>
-          <input id="newline-max-len" class="config-input" type="number" min="1" step="1">
-        </div>
-      </div>
-    </div>
-    <div class="actions">
-      <button id="cancel" class="secondary" type="button">取消</button>
-      <button id="submit" class="primary" type="button">提交</button>
-    </div>
-  </div>
+  <div id="view-root"></div>
   <script id="format-config-state" type="application/json">{{state}}</script>
+  <script src="{{sharedScriptUri}}"></script>
   <script src="{{scriptUri}}"></script>
 </body>
 </html>

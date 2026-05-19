@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import { React, createRoot, useEffect, useRef, useState } from './react-shared-runtime';
 
 const vscode = acquireVsCodeApi();
 const initialStateElement = document.getElementById('initial-state');
