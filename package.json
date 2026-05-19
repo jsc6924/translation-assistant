@@ -4,7 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
-	"version": "4.5.1",
+	"version": "4.6.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -182,6 +182,11 @@
 			{
 				"command": "Extension.dltxt.batch_replace_with_select",
 				"title": "批量替换选中的译文",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.batchRegexReplaceTranslations",
+				"title": "正则批量替换译文",
 				"category": "DLTXT"
 			},
 			{

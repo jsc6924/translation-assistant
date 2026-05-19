@@ -26,6 +26,7 @@ import * as path from 'path';
 import * as mojidict from './mojidict';
 import * as parser from './parser';
 import * as batch from './batch';
+import * as batch_regex_replace from './batch-regex-replace';
 import * as crossref from './crossref';
 import * as error_check from './error-check';
 import * as lsp from './lspclient';
@@ -264,6 +265,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		auto_format.activate(context);
 		mojidict.activate(context);
 		batch.activate(context);
+		batch_regex_replace.activate(context);
 		crossref.activate(context);
 		error_check.activate(context);
 	
