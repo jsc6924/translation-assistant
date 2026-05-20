@@ -98,9 +98,9 @@ textarea {
 }
 
 .layout {
-  display: grid;
-  grid-template-columns: minmax(360px, 44%) minmax(420px, 56%);
-  gap: 16px;
+  display: flex;
+  flex-direction: row; /* 横向并排 */
+  gap: 0;             /* 将 gap 置 0，改由 resizer 控制间距与热区 */
   width: 100%;
   height: 100vh;
   padding: 16px;
@@ -108,6 +108,7 @@ textarea {
 
 .sidebar,
 .preview-panel {
+  min-width: 0;
   min-height: 0;
   background: color-mix(in srgb, var(--panel) 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
@@ -339,6 +340,37 @@ textarea {
 .preview-panel {
   display: flex;
   flex-direction: column;
+  flex: 1;
+}
+
+.layout-resizer {
+  width: 16px;         /* 扩充鼠标物理热区 */
+  background: transparent;
+  cursor: col-resize;  /* 变换为横向拉伸指针 */
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: background 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 在大热区中心画一条优雅的 VS Code 缝隙分割线 */
+.layout-resizer::after {
+  content: '';
+  width: 1px;
+  height: calc(100% - 8px);
+  background: color-mix(in srgb, var(--border) 45%, transparent);
+  transition: background 150ms ease, width 150ms ease;
+}
+
+/* 鼠标悬浮或正在激活拉伸时的高亮演出 */
+.layout-resizer:hover::after,
+.layout-resizer.dragging::after {
+  background: var(--accent);
+  width: 2px;
+  box-shadow: 0 0 6px var(--accent);
 }
 
 .preview-body {
@@ -464,11 +496,18 @@ textarea {
 
 @media (max-width: 980px) {
   .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(420px, 48%) minmax(320px, 52%);
+    flex-direction: column;
   }
-
+  .layout-resizer {
+    display: none; /* 小屏幕下隐藏横向拉伸条 */
+  }
   .sidebar {
-    grid-template-rows: minmax(240px, 46%) minmax(0, 54%);
+    height: 48% !important;
+    width: 100% !important;
+    margin-bottom: 12px;
+  }
+  .preview-panel {
+    height: 52% !important;
+    width: 100% !important;
   }
 }

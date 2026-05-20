@@ -398,6 +398,11 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const sidebarRef = useRef(null); // 用于计算侧边栏在视口中的绝对坐标
 
+  // 默认左侧工具控制台分配 420 像素宽度
+  const [sidebarWidth, setSidebarWidth] = useState(420);
+  const [isHorizontalDragging, setIsHorizontalDragging] = useState(false);
+  const layoutRef = useRef(null); // 用于捕获整个布局视窗的宽度基准
+
   const fileInputRef = useRef(null);
   const pendingRequestsRef = useRef(new Map());
   const latestPreviewRequestRef = useRef(0);
@@ -435,6 +440,37 @@ function App() {
   function handleResizerPointerUp(event) {
     if (!isDragging) return;
     setIsDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  // 开始横向拖拽
+  function handleHorizontalPointerDown(event) {
+    event.preventDefault();
+    setIsHorizontalDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId); // 锁定全局指针安全热区
+  }
+
+  // 实时宽度跟踪与碰撞检测
+  function handleHorizontalPointerMove(event) {
+    if (!isHorizontalDragging || !layoutRef.current) return;
+
+    const rect = layoutRef.current.getBoundingClientRect();
+    // 计算鼠标当前 X 坐标相对于主容器左边界的距离
+    const computedWidth = event.clientX - rect.left;
+
+    // 工业安全栅栏：左侧最少留 360px，右侧差异预览最少留 420px
+    const minWidth = 360;
+    const maxWidth = rect.width - 420;
+
+    if (computedWidth >= minWidth && computedWidth <= maxWidth) {
+      setSidebarWidth(computedWidth);
+    }
+  }
+
+  // 释放横向拖拽锁
+  function handleHorizontalPointerUp(event) {
+    if (!isHorizontalDragging) return;
+    setIsHorizontalDragging(false);
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
@@ -707,8 +743,12 @@ function App() {
   const selectedLabel = selectedFile ? basename(selectedFile) : '未选择文件';
 
   return (
-    <div className="layout">
-      <aside className="sidebar" ref={sidebarRef}>
+    <div className="layout" ref={layoutRef}>
+      <aside 
+        className="sidebar" 
+        ref={sidebarRef}
+        style={{ width: `${sidebarWidth}px`, flexShrink: 0 }}
+      >
         <section 
             className="panel-section" 
             style={{ height: `${rulesPanelHeight}px`, flexShrink: 0 }}
@@ -790,6 +830,14 @@ function App() {
           </div>
         </section>
       </aside>
+
+      <div 
+        className={`layout-resizer ${isHorizontalDragging ? 'dragging' : ''}`}
+        onPointerDown={handleHorizontalPointerDown}
+        onPointerMove={handleHorizontalPointerMove}
+        onPointerUp={handleHorizontalPointerUp}
+      />
+      
       <section className="preview-panel">
         <div className="preview-header">
           <div className="preview-title">
