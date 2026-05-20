@@ -5,7 +5,7 @@ import { DocumentParser } from './parser';
 import { getCurrentWorkspaceFolder, registerCommand } from './utils';
 
 const VIEW_TYPE = 'dltxt-batch-regex-replace';
-const PANEL_TITLE = '正则批量替换译文';
+const PANEL_TITLE = '译文替换流水线';
 const TEXT_FILE_EXTENSIONS = new Set([
   '.txt',
   '.md',

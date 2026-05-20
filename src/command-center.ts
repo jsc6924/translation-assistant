@@ -70,7 +70,7 @@ export namespace cc_view {
                 await vscode.commands.executeCommand('editor.action.formatDocument');
             }));
 
-            textCommands.children.push(new CommandItem("批量替换译文", async () => {
+            textCommands.children.push(new CommandItem("译文替换流水线", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.batchRegexReplaceTranslations');
             }));
 
