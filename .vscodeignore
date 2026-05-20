@@ -2,6 +2,7 @@
 .vscode-test/**
 imgs/
 data/
+resource/dict/**
 node_modules/**
 *.vsix
 .gitignore

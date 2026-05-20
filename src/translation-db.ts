@@ -1028,6 +1028,57 @@ export class Tokenizer {
     static downloadURL = 'https://github.com/jsc6924/translation-assistant/raw/master/data/dict.zip'
     static tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | undefined;
     static lock = new Semaphore(1);
+
+    static getDictionaryPaths(context: vscode.ExtensionContext) {
+        const storagePath = context.globalStorageUri.fsPath;
+        const dictPath = path.join(storagePath, "dict");
+        const zipPath = path.join(storagePath, "dict.zip");
+        const readyFilePath = path.join(dictPath, "base.dat.gz");
+        return {
+            storagePath,
+            dictPath,
+            zipPath,
+            readyFilePath,
+        };
+    }
+
+    static async ensureDictionary(context: vscode.ExtensionContext): Promise<string> {
+        const { storagePath, dictPath, zipPath, readyFilePath } = Tokenizer.getDictionaryPaths(context);
+        fs.mkdirSync(storagePath, { recursive: true });
+        if (fs.existsSync(readyFilePath)) {
+            return dictPath;
+        }
+
+        channel.show();
+        if (!fs.existsSync(zipPath)) {
+            channel.appendLine(`正在从 ${Tokenizer.downloadURL} 下载词典...`);
+            await downloadFile(Tokenizer.downloadURL, zipPath);
+            channel.appendLine(`下载完成，正在解压...`);
+        } else {
+            channel.appendLine(`检测到已下载的 dict.zip，正在解压...`);
+        }
+
+        try {
+            fs.mkdirSync(dictPath, { recursive: true });
+            await unzipFile(zipPath, dictPath);
+        } catch (error) {
+            if (fs.existsSync(zipPath)) {
+                fs.unlinkSync(zipPath);
+            }
+            throw error;
+        }
+
+        if (!fs.existsSync(readyFilePath)) {
+            throw new Error(`词典初始化失败：未在 ${dictPath} 找到 base.dat.gz`);
+        }
+
+        channel.appendLine(`解压完成，初始化分词器...`);
+        if (fs.existsSync(zipPath)) {
+            fs.unlinkSync(zipPath);
+        }
+        return dictPath;
+    }
+
     static async getAsync(context: vscode.ExtensionContext): Promise<Tokenizer> {
         await Tokenizer.lock.acquire();
         try {
@@ -1039,33 +1090,7 @@ export class Tokenizer {
 
     static async init(context: vscode.ExtensionContext): Promise<Tokenizer> {
         if (!Tokenizer.tokenizer) {
-            const dictPath = path.join(context.extensionPath, "resource", "dict");
-            if (!fs.existsSync(path.join(context.extensionPath, "resource", "dict", "base.dat.gz"))) {
-                const zipPath = path.join(context.extensionPath, "resource", "dict.zip");
-                if (fs.existsSync(zipPath)) {
-                    channel.show();
-                    channel.appendLine(`检测到目录下存在dict.zip，等待解压...`);
-                    const p = new Promise((resolve, reject) => {
-                        const watcher = fs.watch(zipPath, { persistent: false }, (event, filename) => {
-                            if (event === 'rename') {
-                                watcher.close(); // Close the watcher
-                                channel.appendLine(`解压完成，初始化分词器...`);
-                                resolve(undefined);
-                            }
-                        });
-                    });
-                    await p;
-                } else {
-                    channel.show();
-                    channel.appendLine(`正在从 ${Tokenizer.downloadURL} 下载词典...`);
-                    const zipFile = await downloadFile(Tokenizer.downloadURL, zipPath);
-                    channel.appendLine(`下载完成，正在解压...`);
-                    fs.mkdirSync(dictPath, {recursive: true});
-                    const files = await unzipFile(zipFile, dictPath);
-                    channel.appendLine(`解压完成，初始化分词器...`);
-                    fs.unlinkSync(zipFile);
-                }
-            } 
+            const dictPath = await Tokenizer.ensureDictionary(context);
             return new Promise((resolve, reject) => {
                 kuromoji
                     .builder({ dicPath: dictPath })
