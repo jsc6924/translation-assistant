@@ -421,7 +421,7 @@ DLTXT默认支持以下格式（用横线隔开）
 ### 译文替换流水线
 这是新版的批量替换译文的功能。可通过侧边栏->命令与设置->文本编辑->译文替换流水线启动。
 启动后界面如下
-![batch-replace](https://github.com/jsc6924/translation-assistant/blob/master/imgs/batch-replace.gif?raw=true)
+![batch-replace](https://github.com/jsc6924/translation-assistant/blob/master/imgs/batch-replace.png?raw=true)
 
 这个界面由一下三个部分组成
 #### 替换规则
