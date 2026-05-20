@@ -71,12 +71,7 @@ export namespace cc_view {
             }));
 
             textCommands.children.push(new CommandItem("批量替换译文", async () => {
-                await vscode.window.showInputBox({ prompt: '请输入要替换的文本（不支持正则表达式）' }).then(async (rawText) => {
-                    if (!rawText) {
-                        return;
-                    }
-                    await batchReplace(rawText);
-                });
+                await vscode.commands.executeCommand('Extension.dltxt.batchRegexReplaceTranslations');
             }));
 
             const checkingNode = new CCDirectory(this, "文本检查", vscode.TreeItemCollapsibleState.Collapsed);
