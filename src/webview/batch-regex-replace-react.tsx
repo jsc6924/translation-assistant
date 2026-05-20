@@ -5,9 +5,11 @@ type TargetKind = 'folder' | 'file';
 type RuleField = 'pattern' | 'replacement' | 'regexEnabled';
 type MoveDirection = 'up' | 'down';
 type DiffRowKind = 'equal' | 'added' | 'removed' | 'changed';
+type ReplaceRuleType = 'standard';
 
 interface ReplaceRule {
 	id: string;
+	type: ReplaceRuleType;
 	pattern: string;
 	replacement: string;
 	regexEnabled: boolean;
@@ -145,6 +147,7 @@ function uid(prefix: string): string {
 function createRule(): ReplaceRule {
 	return {
 		id: uid('rule'),
+		type: 'standard',
 		pattern: '',
 		replacement: '',
 		regexEnabled: false,
@@ -158,6 +161,7 @@ function basename(filePath?: string): string {
 function serializeRules(rules: ReplaceRule[]): ReplaceRule[] {
 	return rules.map((rule) => ({
 		id: rule.id,
+		type: rule.type,
 		pattern: rule.pattern,
 		replacement: rule.replacement,
 		regexEnabled: rule.regexEnabled,
@@ -769,6 +773,7 @@ function App() {
 					const rule = (typeof item === 'object' && item) ? item as Partial<ReplaceRule> : {};
 					return {
 						id: uid('rule'),
+						type: rule.type || 'standard',
 						pattern: String(rule.pattern || ''),
 						replacement: String(rule.replacement || ''),
 						regexEnabled: Boolean(rule.regexEnabled),

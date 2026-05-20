@@ -31,6 +31,7 @@ const TEXT_FILE_EXTENSIONS = new Set([
 
 interface ReplaceRuleInput {
   id?: string;
+  type: string;
   pattern: string;
   replacement: string;
   regexEnabled: boolean;
