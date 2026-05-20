@@ -393,12 +393,50 @@ function App() {
   const [isComposing, setIsComposing] = useState(false);
   const [message, setMessage] = useState(undefined);
 
+  // 初始规则面板高度默认分配 280 像素
+  const [rulesPanelHeight, setRulesPanelHeight] = useState(280);
+  const [isDragging, setIsDragging] = useState(false);
+  const sidebarRef = useRef(null); // 用于计算侧边栏在视口中的绝对坐标
+
   const fileInputRef = useRef(null);
   const pendingRequestsRef = useRef(new Map());
   const latestPreviewRequestRef = useRef(0);
   const hasInitializedRulesEffectRef = useRef(false);
   const isComposingRef = useRef(false);
   const pendingPreviewResultRef = useRef(undefined);
+
+  // 开始拖拽处理函数
+  function handleResizerPointerDown(event) {
+    event.preventDefault();
+    setIsDragging(true);
+    // 高级防御：捕获当前指针，使鼠标滑出 Webview 面板外依然能稳定响应高度计算
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  // 拖拽过程实时高度映射
+  function handleResizerPointerMove(event) {
+    if (!isDragging || !sidebarRef.current) return;
+    
+    // 获取当前侧边栏在屏幕中的物理布局矩阵
+    const rect = sidebarRef.current.getBoundingClientRect();
+    // 计算当前鼠标位置相对于侧边栏顶部的 delta 差值
+    const computedHeight = event.clientY - rect.top;
+
+    // 边界安全栅栏（下限不低于120px，上限保留底端文件浏览器至少160px的合理视窗）
+    const minHeight = 120;
+    const maxHeight = rect.height - 160;
+
+    if (computedHeight >= minHeight && computedHeight <= maxHeight) {
+      setRulesPanelHeight(computedHeight);
+    }
+  }
+
+  // 结束拖拽，解构物理锁
+  function handleResizerPointerUp(event) {
+    if (!isDragging) return;
+    setIsDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
 
   useEffect(() => {
     isComposingRef.current = isComposing;
@@ -670,8 +708,11 @@ function App() {
 
   return (
     <div className="layout">
-      <aside className="sidebar">
-        <section className="panel-section">
+      <aside className="sidebar" ref={sidebarRef}>
+        <section 
+            className="panel-section" 
+            style={{ height: `${rulesPanelHeight}px`, flexShrink: 0 }}
+          >
           <div className="section-header">
             <div className="section-title">
               <strong>替换规则</strong>
@@ -709,7 +750,15 @@ function App() {
             ))}
           </div>
         </section>
-        <section className="panel-section">
+
+        <div 
+          className={`sidebar-resizer ${isDragging ? 'dragging' : ''}`}
+          onPointerDown={handleResizerPointerDown}
+          onPointerMove={handleResizerPointerMove}
+          onPointerUp={handleResizerPointerUp}
+        />
+
+        <section className="panel-section" style={{ flex: 1 }}>
           <div className="section-header">
             <div className="section-title">
               <strong>文件浏览器</strong>

@@ -117,9 +117,11 @@ textarea {
   backdrop-filter: blur(8px);
 }
 
+/* 修改侧边栏布局：改为 flex 纵向弹性分配，完全由子项高度撑开或自由收缩 */
 .sidebar {
-  display: grid;
-  grid-template-rows: minmax(220px, 38%) minmax(0, 62%);
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 .panel-section {
@@ -129,8 +131,34 @@ textarea {
   border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
 }
 
+/* 规则面板部分：取消原有的 min-height 束缚，改为依靠内部规则列表溢出滚动 */
+.sidebar > .panel-section:first-child {
+  border-bottom: none; /* 分割线的职责将交由拖拽 resizer 承担 */
+}
+
 .panel-section:last-child {
   border-bottom: none;
+}
+
+/* 核心注入：工业级可拖拽物理栏 */
+.sidebar-resizer {
+  height: 4px;
+  background: transparent;
+  cursor: row-resize;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: background 150ms ease;
+  margin: -2px 0; /* 扩大鼠标热区，同时不额外抢占实际布局像素 */
+  border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.dragging {
+  background: var(--accent);
+  border-color: transparent;
+  box-shadow: 0 0 4px var(--accent);
 }
 
 .section-header,
