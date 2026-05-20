@@ -81,21 +81,56 @@ function computeDiffRows(beforeText, afterText) {
 
 function computeLcsDiff(beforeLines, afterLines) {
   const rows = [];
-  const matrix = Array.from({ length: beforeLines.length + 1 }, () => new Array(afterLines.length + 1).fill(0));
-  for (let i = beforeLines.length - 1; i >= 0; i--) {
-    for (let j = afterLines.length - 1; j >= 0; j--) {
+  const m = beforeLines.length;
+  const n = afterLines.length;
+
+  // 1. 空间优化：动态选择较短的数组作为滚动列，维持空间在 O(min(M, N))
+  // 为了不破坏你后续从 0 到 m/n 的正向回溯逻辑，我们这里依然维持空间为 (n + 1)
+  // 仅用两行（当前行、下一行）进行滚动计算
+  let nextRow = new Array(n + 1).fill(0);
+  let currRow = new Array(n + 1).fill(0);
+
+  // 2. 引入轻量级的“决策状态矩阵”（用 0, 1, 2, 3 存储轻量状态，占用内存极小）
+  // 0: equal, 1: changed, 2: removed, 3: added
+  const hints = Array.from({ length: m }, () => new Uint8Array(n));
+
+  // 逆向滚动计算
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
       if (beforeLines[i] === afterLines[j]) {
-        matrix[i][j] = matrix[i + 1][j + 1] + 1;
+        currRow[j] = nextRow[j + 1] + 1;
+        hints[i][j] = 0; // equal
       } else {
-        matrix[i][j] = Math.max(matrix[i + 1][j], matrix[i][j + 1]);
+        const scoreMovedI = nextRow[j];     // matrix[i + 1][j]
+        const scoreMovedJ = currRow[j + 1]; // matrix[i][j + 1]
+
+        if (scoreMovedI === scoreMovedJ) {
+          currRow[j] = scoreMovedI;
+          hints[i][j] = 1; // changed
+        } else if (scoreMovedI > scoreMovedJ) {
+          currRow[j] = scoreMovedI;
+          hints[i][j] = 2; // removed
+        } else {
+          currRow[j] = scoreMovedJ;
+          hints[i][j] = 3; // added
+        }
       }
     }
+    // 滚动：将当前行的数据拷贝或引用切换给下一行
+    // 优雅的分配：复用已有的数组空间，避免重复垃圾回收（GC）
+    const temp = nextRow;
+    nextRow = currRow;
+    currRow = temp;
+    currRow.fill(0); // 清空以便下一次循环使用
   }
 
+  // 3. 正向回溯：完全不需要读取海量的得分矩阵，直接根据 hints 决策图进行快车道回溯
   let i = 0;
   let j = 0;
-  while (i < beforeLines.length && j < afterLines.length) {
-    if (beforeLines[i] === afterLines[j]) {
+  while (i < m && j < n) {
+    const hint = hints[i][j];
+
+    if (hint === 0) { // equal
       rows.push({
         kind: 'equal',
         beforeLineNumber: String(i + 1),
@@ -105,10 +140,7 @@ function computeLcsDiff(beforeLines, afterLines) {
       });
       i++;
       j++;
-      continue;
-    }
-
-    if (matrix[i + 1][j] === matrix[i][j + 1]) {
+    } else if (hint === 1) { // changed
       rows.push({
         kind: 'changed',
         beforeLineNumber: String(i + 1),
@@ -118,7 +150,7 @@ function computeLcsDiff(beforeLines, afterLines) {
       });
       i++;
       j++;
-    } else if (matrix[i + 1][j] > matrix[i][j + 1]) {
+    } else if (hint === 2) { // removed
       rows.push({
         kind: 'removed',
         beforeLineNumber: String(i + 1),
@@ -127,7 +159,7 @@ function computeLcsDiff(beforeLines, afterLines) {
         afterText: ''
       });
       i++;
-    } else {
+    } else { // added
       rows.push({
         kind: 'added',
         beforeLineNumber: '',
@@ -139,7 +171,8 @@ function computeLcsDiff(beforeLines, afterLines) {
     }
   }
 
-  while (i < beforeLines.length) {
+  // 4. 收尾剩余行
+  while (i < m) {
     rows.push({
       kind: 'removed',
       beforeLineNumber: String(i + 1),
@@ -150,7 +183,7 @@ function computeLcsDiff(beforeLines, afterLines) {
     i++;
   }
 
-  while (j < afterLines.length) {
+  while (j < n) {
     rows.push({
       kind: 'added',
       beforeLineNumber: '',
@@ -163,7 +196,6 @@ function computeLcsDiff(beforeLines, afterLines) {
 
   return rows;
 }
-
 function RuleCard({
   rule,
   index,
