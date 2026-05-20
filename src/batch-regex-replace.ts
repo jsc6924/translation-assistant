@@ -92,7 +92,12 @@ type WebviewMessage =
       type: 'refreshTree';
       requestId: string;
       rootPath: string;
-    };
+    }
+  | {
+      type: 'exportRulesJson';
+      requestId: string;
+      rules: ReplaceRuleInput[];
+  };
 
 let currentPanel: vscode.WebviewPanel | undefined;
 
@@ -166,6 +171,20 @@ async function handleWebviewMessage(panel: vscode.WebviewPanel, fallbackRootPath
         requestId: message.requestId,
         payload: result
       });
+      return;
+    }
+
+    if (message.type === 'exportRulesJson') {
+      const jsonContent = JSON.stringify(message.rules, null, 2);
+      const uri = await vscode.window.showSaveDialog({
+        title: '导出替换规则为 JSON 文件',
+        defaultUri: vscode.Uri.file(path.join(fallbackRootPath, '批量替换规则.json')),
+        filters: { 'JSON 文件': ['json'] }
+      });
+      if (uri) {
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(jsonContent, 'utf-8'));
+        vscode.window.showInformationMessage('替换规则已成功导出。');
+      }
       return;
     }
 

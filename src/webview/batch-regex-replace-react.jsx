@@ -393,6 +393,7 @@ function App() {
   const [isComposing, setIsComposing] = useState(false);
   const [message, setMessage] = useState(undefined);
 
+  const fileInputRef = useRef(null);
   const pendingRequestsRef = useRef(new Map());
   const latestPreviewRequestRef = useRef(0);
   const hasInitializedRulesEffectRef = useRef(false);
@@ -513,6 +514,62 @@ function App() {
     )));
   }
 
+  // 导出 JSON 功能：通过 VS Code Extension 宿主保存文件以保持数据主权和跨平台鲁棒性
+  async function handleExportRules() {
+    try {
+      const serialized = serializeRules(rules);
+      await request('exportRulesJson', { rules: serialized });
+      setMessage({ kind: 'info', text: '规则配置已成功导出' });
+    } catch (error) {
+      setMessage({ kind: 'error', text: `导出失败: ${String(error)}` });
+    }
+  }
+
+  // 触发本地文件导入
+  function triggerImportClick() {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }
+
+  // 处理前端 JSON 导入读取
+  function handleImportRules(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result;
+        if (typeof content !== 'string') {
+          throw new Error('无法读取文件内容');
+        }
+        const parsed = JSON.parse(content);
+        if (!Array.isArray(parsed)) {
+          throw new Error('JSON 格式不正确，预期为规则数组');
+        }
+
+        const nextRules = parsed.map((item) => ({
+          id: uid('rule'),
+          pattern: String(item.pattern || ''),
+          replacement: String(item.replacement || '')
+        }));
+
+        setRules(nextRules.length > 0 ? nextRules : [createRule()]);
+        setMessage({ kind: 'info', text: `成功导入 ${nextRules.length} 条规则` });
+      } catch (error) {
+        setMessage({ kind: 'error', text: `导入解析失败: ${error.message}` });
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
   function handleRuleMove(ruleId, direction) {
     setRules((currentRules) => {
       const index = currentRules.findIndex((rule) => rule.id === ruleId);
@@ -621,7 +678,16 @@ function App() {
               <span className="subtle">规则按列表顺序依次应用到译文内容。</span>
             </div>
             <div className="header-actions">
+              <button className="ghost" title="导入规则" onClick={triggerImportClick}>导入</button>
+              <button className="ghost" title="导出规则" onClick={handleExportRules}>导出</button>
               <button className="icon-button" title="添加规则" onClick={handleAddRule}>+</button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                style={{ display: 'none' }} 
+                accept=".json" 
+                onChange={handleImportRules} 
+              />
             </div>
           </div>
           <div className="rules-list">
