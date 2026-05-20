@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -28,33 +29,60 @@ const reactAppOptions = {
   jsxFragment: 'React.Fragment',
 };
 
-const builds = [
-  {
-    entryPoints: [path.join(webviewSourceDir, 'react-shared-vendor.entry.ts')],
-    outfile: path.join(webviewOutDir, 'react-shared-vendor.js'),
-    options: commonBrowserOptions,
-  },
-  {
-    entryPoints: [path.join(webviewSourceDir, 'batch-regex-replace-react.tsx')],
-    outfile: path.join(webviewOutDir, 'batch-regex-replace.js'),
-    options: reactAppOptions,
-  },
-  {
-    entryPoints: [path.join(webviewSourceDir, 'dictserver-react.tsx')],
-    outfile: path.join(webviewOutDir, 'dictserver.js'),
-    options: reactAppOptions,
-  },
-  {
-    entryPoints: [path.join(webviewSourceDir, 'trdb-viewer-react.tsx')],
-    outfile: path.join(webviewOutDir, 'trdb-viewer.js'),
-    options: reactAppOptions,
-  },
-  {
-    entryPoints: [path.join(webviewSourceDir, 'format-config-react.tsx')],
-    outfile: path.join(webviewOutDir, 'format-config.js'),
-    options: reactAppOptions,
-  },
-];
+function collectWebviewEntries(dir) {
+  const entries = [];
+  const fileNames = fs.readdirSync(dir, { withFileTypes: true });
+  for (const fileName of fileNames) {
+    const filePath = path.join(dir, fileName.name);
+    if (fileName.isDirectory()) {
+      entries.push(...collectWebviewEntries(filePath));
+      continue;
+    }
+
+    if (!fileName.isFile()) {
+      continue;
+    }
+
+    if (fileName.name.endsWith('.d.ts')) {
+      continue;
+    }
+
+    if (fileName.name.endsWith('.ts') || fileName.name.endsWith('.tsx')) {
+      entries.push(filePath);
+    }
+  }
+  return entries;
+}
+
+function getOutputPath(entryPath) {
+  const relativePath = path.relative(webviewSourceDir, entryPath);
+  const sourceName = path.basename(relativePath);
+  const outputDir = path.join(webviewOutDir, path.dirname(relativePath));
+
+  if (sourceName === 'react-shared-vendor.entry.ts') {
+    return path.join(outputDir, 'react-shared-vendor.js');
+  }
+
+  let baseName = sourceName;
+  if (baseName.endsWith('.tsx')) {
+    baseName = baseName.slice(0, -4);
+  } else if (baseName.endsWith('.ts')) {
+    baseName = baseName.slice(0, -3);
+  }
+
+  baseName = baseName.replace(/-react$/, '');
+  return path.join(outputDir, `${baseName}.js`);
+}
+
+const entryFiles = collectWebviewEntries(webviewSourceDir);
+const builds = entryFiles.map((entryFile) => {
+  const outfile = getOutputPath(entryFile);
+  return {
+    entryPoints: [entryFile],
+    outfile,
+    options: entryFile.endsWith('.tsx') ? reactAppOptions : commonBrowserOptions,
+  };
+});
 
 await Promise.all(
   builds.map(({ entryPoints, outfile, options }) => build({
