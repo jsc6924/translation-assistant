@@ -129,7 +129,10 @@ function createPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-      localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'src', 'webview')]
+      localResourceRoots: [
+        vscode.Uri.joinPath(context.extensionUri, 'src', 'webview'),
+        vscode.Uri.joinPath(context.extensionUri, 'media', 'webview')
+      ]
     }
   );
 
@@ -181,10 +184,17 @@ async function handleWebviewMessage(panel: vscode.WebviewPanel, fallbackRootPath
         defaultUri: vscode.Uri.file(path.join(fallbackRootPath, '批量替换规则.json')),
         filters: { 'JSON 文件': ['json'] }
       });
+      let saved = false;
       if (uri) {
         await vscode.workspace.fs.writeFile(uri, Buffer.from(jsonContent, 'utf-8'));
         vscode.window.showInformationMessage('替换规则已成功导出。');
+        saved = true;
       }
+      await panel.webview.postMessage({
+        type: 'exportRulesJsonResult',
+        requestId: message.requestId,
+        payload: { saved }
+      });
       return;
     }
 
@@ -585,8 +595,8 @@ function getBatchRegexReplaceHtml(
   context: vscode.ExtensionContext,
   initialState: InitialStatePayload
 ): string {
-  const sharedScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'react-shared-vendor.js'));
-  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'batch-regex-replace.js'));
+  const sharedScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'react-shared-vendor.js'));
+  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'batch-regex-replace.js'));
   const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'batch-regex-replace.css'));
   const initialJson = JSON.stringify(initialState).replace(/</g, '\\u003c');
 

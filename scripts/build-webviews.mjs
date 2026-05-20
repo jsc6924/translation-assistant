@@ -9,7 +9,8 @@ const sourcemap = args.has('--sourcemap');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const webviewDir = path.join(rootDir, 'src', 'webview');
+const webviewSourceDir = path.join(rootDir, 'src', 'webview');
+const webviewOutDir = path.join(rootDir, 'media', 'webview');
 
 const commonBrowserOptions = {
   bundle: true,
@@ -29,28 +30,28 @@ const reactAppOptions = {
 
 const builds = [
   {
-    entryPoints: [path.join(webviewDir, 'react-shared-vendor.entry.js')],
-    outfile: path.join(webviewDir, 'react-shared-vendor.js'),
+    entryPoints: [path.join(webviewSourceDir, 'react-shared-vendor.entry.ts')],
+    outfile: path.join(webviewOutDir, 'react-shared-vendor.js'),
     options: commonBrowserOptions,
   },
   {
-    entryPoints: [path.join(webviewDir, 'batch-regex-replace-react.jsx')],
-    outfile: path.join(webviewDir, 'batch-regex-replace.js'),
+    entryPoints: [path.join(webviewSourceDir, 'batch-regex-replace-react.tsx')],
+    outfile: path.join(webviewOutDir, 'batch-regex-replace.js'),
     options: reactAppOptions,
   },
   {
-    entryPoints: [path.join(webviewDir, 'dictserver-react.jsx')],
-    outfile: path.join(webviewDir, 'dictserver.js'),
+    entryPoints: [path.join(webviewSourceDir, 'dictserver-react.tsx')],
+    outfile: path.join(webviewOutDir, 'dictserver.js'),
     options: reactAppOptions,
   },
   {
-    entryPoints: [path.join(webviewDir, 'trdb-viewer-react.jsx')],
-    outfile: path.join(webviewDir, 'trdb-viewer.js'),
+    entryPoints: [path.join(webviewSourceDir, 'trdb-viewer-react.tsx')],
+    outfile: path.join(webviewOutDir, 'trdb-viewer.js'),
     options: reactAppOptions,
   },
   {
-    entryPoints: [path.join(webviewDir, 'format-config-react.jsx')],
-    outfile: path.join(webviewDir, 'format-config.js'),
+    entryPoints: [path.join(webviewSourceDir, 'format-config-react.tsx')],
+    outfile: path.join(webviewOutDir, 'format-config.js'),
     options: reactAppOptions,
   },
 ];

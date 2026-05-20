@@ -7,6 +7,8 @@ node_modules/**
 .gitignore
 vsc-extension-quickstart.md
 **/tsconfig.json
+**/tsconfig.webview.json
 **/.eslintrc.json
 **/*.map
 **/*.ts
+**/*.tsx

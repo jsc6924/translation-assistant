@@ -7,4 +7,5 @@ mytoken
 src/notes.txt
 dist/
 data/
-src/webview/*.js
+media/webview/*.js
+media/webview/*.js.map

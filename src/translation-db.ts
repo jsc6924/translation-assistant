@@ -417,8 +417,8 @@ function showSearchResultWebView(context: vscode.ExtensionContext, title:string,
         }
     );
 
-        const sharedReactUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'react-shared-vendor.js'));
-        const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.js'));
+        const sharedReactUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'react-shared-vendor.js'));
+        const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'trdb-viewer.js'));
     const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'trdb-viewer.css'));
 
     // Set the HTML content
