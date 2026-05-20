@@ -33,14 +33,16 @@ interface ReplaceRuleInput {
   id?: string;
   pattern: string;
   replacement: string;
+  regexEnabled: boolean;
 }
 
-interface CompiledRule {
+type CompiledRule = {
   id: string;
   pattern: string;
   replacement: string;
   regex: RegExp;
   countRegex: RegExp;
+  regexEnabled: boolean;
 }
 
 interface ReplaceTextResult {
@@ -348,6 +350,11 @@ function isTextFile(fileName: string): boolean {
   return extension.length === 0;
 }
 
+function escapeRegExp(string: string): string {
+  // $& 表示匹配到的整个字符
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function compileRules(rules: ReplaceRuleInput[]): CompiledRule[] {
   const compiled: CompiledRule[] = [];
   for (let index = 0; index < rules.length; index++) {
@@ -358,13 +365,18 @@ function compileRules(rules: ReplaceRuleInput[]): CompiledRule[] {
     }
     const id = rule.id || `rule-${index + 1}`;
     const replacement = decodeReplacementEscapes(rule.replacement ?? '');
+    const regexEnabled = Boolean(rule.regexEnabled);
     try {
+      // 如果没有启用正则，就对 pattern 进行转义
+      const finalPattern = regexEnabled ? pattern : escapeRegExp(pattern);
+
       compiled.push({
         id,
-        pattern,
+        pattern, // 保持用户看到的原始文本不变
         replacement,
-        regex: new RegExp(pattern, 'g'),
-        countRegex: new RegExp(pattern, 'g')
+        regex: new RegExp(finalPattern, 'g'),
+        countRegex: new RegExp(finalPattern, 'g'),
+        regexEnabled
       });
     } catch (error) {
       throw new Error(`第 ${index + 1} 条规则的正则无效: ${String(error)}`);

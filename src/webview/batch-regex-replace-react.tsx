@@ -2,7 +2,7 @@ import type { ChangeEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { React, createRoot, useEffect, useRef, useState } from './react-shared-runtime';
 
 type TargetKind = 'folder' | 'file';
-type RuleField = 'pattern' | 'replacement';
+type RuleField = 'pattern' | 'replacement' | 'regexEnabled';
 type MoveDirection = 'up' | 'down';
 type DiffRowKind = 'equal' | 'added' | 'removed' | 'changed';
 
@@ -10,6 +10,7 @@ interface ReplaceRule {
 	id: string;
 	pattern: string;
 	replacement: string;
+	regexEnabled: boolean;
 }
 
 interface FileTreeNode {
@@ -92,11 +93,11 @@ interface RuleCardProps {
 	rule: ReplaceRule;
 	index: number;
 	total: number;
-	onChange: (ruleId: string, field: RuleField, value: string) => void;
+	onChange: (ruleId: string, field: RuleField, value: string | boolean) => void;
 	onMove: (ruleId: string, direction: MoveDirection) => void;
 	onRemove: (ruleId: string) => void;
 	onCompositionStart: () => void;
-	onCompositionEnd: (ruleId: string, field: RuleField, value: string) => void;
+	onCompositionEnd: (ruleId: string, field: RuleField, value: string | boolean) => void;
 }
 
 interface TreeNodeProps {
@@ -146,6 +147,7 @@ function createRule(): ReplaceRule {
 		id: uid('rule'),
 		pattern: '',
 		replacement: '',
+		regexEnabled: false,
 	};
 }
 
@@ -158,6 +160,7 @@ function serializeRules(rules: ReplaceRule[]): ReplaceRule[] {
 		id: rule.id,
 		pattern: rule.pattern,
 		replacement: rule.replacement,
+		regexEnabled: rule.regexEnabled,
 	}));
 }
 
@@ -330,11 +333,25 @@ function RuleCard({
 	onCompositionStart,
 	onCompositionEnd,
 }: RuleCardProps) {
+
+	const searchSearch = rule.regexEnabled ? '正则表达式' : '查找文本';
+	const searchReplace = rule.regexEnabled ? '正则替换' : '替换文本';
+	const placeHolder1 = rule.regexEnabled ? '(\\w+)_old' : '请输入要替换的文本';
+	const placeHolder2 = rule.regexEnabled ? '支持 $1、$2，以及 \\n / \\t 等转义' : '请输入替换内容';
+	
 	return (
 		<section className="rule-card">
 			<div className="rule-card-header">
 				<div className="rule-index">规则 {index + 1}</div>
 				<div className="rule-actions">
+					<button
+						className={`ghost icon-button ${rule.regexEnabled ? 'active' : ''}`}
+						onClick={() => {
+							onChange(rule.id, 'regexEnabled', !rule.regexEnabled);
+						}}
+					>
+						.*
+					</button>
 					<button
 						className="ghost icon-button"
 						disabled={index === 0}
@@ -355,10 +372,10 @@ function RuleCard({
 				</div>
 			</div>
 			<label className="field-label">
-				<span>正则表达式</span>
+				<span>{searchSearch}</span>
 				<input
 					type="text"
-					placeholder="例如：(\\w+)_old"
+					placeholder={placeHolder1}
 					value={rule.pattern}
 					onChange={(event) => onChange(rule.id, 'pattern', event.target.value)}
 					onCompositionStart={onCompositionStart}
@@ -366,10 +383,10 @@ function RuleCard({
 				/>
 			</label>
 			<label className="field-label">
-				<span>替换内容</span>
+				<span>{searchReplace}</span>
 				<input
 					type="text"
-					placeholder="支持 $1、$2，以及 \\n / \\t 等转义"
+					placeholder={placeHolder2}
 					value={rule.replacement}
 					onChange={(event) => onChange(rule.id, 'replacement', event.target.value)}
 					onCompositionStart={onCompositionStart}
@@ -707,7 +724,7 @@ function App() {
 		};
 	}, [rules, isComposing]);
 
-	function handleRuleChange(ruleId: string, field: RuleField, value: string) {
+	function handleRuleChange(ruleId: string, field: RuleField, value: string | boolean) {
 		setRules((currentRules) => currentRules.map((rule) => (
 			rule.id === ruleId ? { ...rule, [field]: value } : rule
 		)));
@@ -754,6 +771,7 @@ function App() {
 						id: uid('rule'),
 						pattern: String(rule.pattern || ''),
 						replacement: String(rule.replacement || ''),
+						regexEnabled: Boolean(rule.regexEnabled),
 					};
 				});
 

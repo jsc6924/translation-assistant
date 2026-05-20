@@ -251,6 +251,11 @@ textarea {
   gap: 6px;
 }
 
+.rule-actions .active {
+  font-weight: bold;
+  border-width: 3px;
+}
+
 .field-label {
   display: flex;
   flex-direction: column;
