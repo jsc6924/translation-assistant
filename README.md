@@ -933,7 +933,9 @@ find ./src -type f -print0 | xargs -0 wc -l
 ---
 ## Release Notes
 #### 4.6   (2026/05/21)
-- 
+- 译文替换流水线
+- 插件中不再打包kuromoji的辞典
+- 使用react/typescript重构了所有的webview
 #### 4.5   (2026/05/16)
 - 限制编辑模式时将无法删除译文行的标签
 - 术语和人名的高亮，如果有重合，被较长术语完全包含的术语将不再显示
