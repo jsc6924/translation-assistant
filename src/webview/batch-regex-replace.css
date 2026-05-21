@@ -232,6 +232,10 @@ textarea {
   gap: 10px;
 }
 
+.rule-card.disabled {
+  opacity: 0.62;
+}
+
 .rule-card-header {
   display: flex;
   align-items: center;
@@ -249,11 +253,42 @@ textarea {
 .rule-actions {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .rule-actions .active {
   font-weight: bold;
   border-width: 3px;
+}
+
+.rule-toggle {
+  min-width: 58px;
+  height: 34px;
+  padding: 0 10px;
+}
+
+.rule-toggle-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rule-toggle-checkbox span {
+  white-space: nowrap;
+}
+
+.rule-toggle-checkbox input {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: auto;
+  margin: 0;
 }
 
 .field-label {
@@ -262,6 +297,18 @@ textarea {
   gap: 6px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.field-label-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-label-inline > input {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .tree-shell {
@@ -510,6 +557,14 @@ textarea {
     height: 48% !important;
     width: 100% !important;
     margin-bottom: 12px;
+    overflow: auto !important;
+  }
+  .sidebar > .panel-section:first-child {
+    min-height: 0;
+  }
+  .sidebar > .panel-section:last-child {
+    flex: 1 1 auto;
+    min-height: 0;
   }
   .preview-panel {
     height: 52% !important;

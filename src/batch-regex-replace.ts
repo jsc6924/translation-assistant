@@ -29,21 +29,28 @@ const TEXT_FILE_EXTENSIONS = new Set([
   '.ks'
 ]);
 
+type ReplaceRuleType = 'standard' | 'naming-conditional';
+
 interface ReplaceRuleInput {
   id?: string;
-  type: string;
+  type?: ReplaceRuleType;
+  speaker?: string;
   pattern: string;
   replacement: string;
   regexEnabled: boolean;
+  enabled?: boolean;
 }
 
 type CompiledRule = {
   id: string;
+  type: ReplaceRuleType;
+  speaker?: string;
   pattern: string;
   replacement: string;
   regex: RegExp;
   countRegex: RegExp;
   regexEnabled: boolean;
+  enabled: boolean;
 }
 
 interface ReplaceTextResult {
@@ -356,14 +363,44 @@ function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function normalizeRuleType(value: ReplaceRuleInput['type']): ReplaceRuleType {
+  return value === 'naming-conditional' ? 'naming-conditional' : 'standard';
+}
+
+function normalizeSpeakerName(value: string | undefined): string | undefined {
+  const normalized = value?.trim() ?? '';
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function doesRuleMatchSpeaker(rule: CompiledRule, talkingName?: string): boolean {
+  if (!rule.enabled) {
+    return false;
+  }
+
+  if (rule.type !== 'naming-conditional') {
+    return true;
+  }
+
+  const currentSpeaker = normalizeSpeakerName(talkingName);
+  return !!rule.speaker && currentSpeaker === rule.speaker;
+}
+
 function compileRules(rules: ReplaceRuleInput[]): CompiledRule[] {
   const compiled: CompiledRule[] = [];
   for (let index = 0; index < rules.length; index++) {
     const rule = rules[index];
     const pattern = rule.pattern?.trim() ?? '';
-    if (!pattern) {
+    const enabled = rule.enabled !== false;
+    if (!pattern || !enabled) {
       continue;
     }
+
+    const type = normalizeRuleType(rule.type);
+    const speaker = normalizeSpeakerName(rule.speaker);
+    if (type === 'naming-conditional' && !speaker) {
+      continue;
+    }
+
     const id = rule.id || `rule-${index + 1}`;
     const replacement = decodeReplacementEscapes(rule.replacement ?? '');
     const regexEnabled = Boolean(rule.regexEnabled);
@@ -373,11 +410,14 @@ function compileRules(rules: ReplaceRuleInput[]): CompiledRule[] {
 
       compiled.push({
         id,
+        type,
+        speaker,
         pattern, // 保持用户看到的原始文本不变
         replacement,
         regex: new RegExp(finalPattern, 'g'),
         countRegex: new RegExp(finalPattern, 'g'),
-        regexEnabled
+        regexEnabled,
+        enabled
       });
     } catch (error) {
       throw new Error(`第 ${index + 1} 条规则的正则无效: ${String(error)}`);
@@ -401,11 +441,15 @@ function decodeReplacementEscapes(value: string): string {
   });
 }
 
-function applyRulesToText(text: string, rules: CompiledRule[]): ReplaceTextResult {
+function applyRulesToText(text: string, rules: CompiledRule[], talkingName?: string): ReplaceTextResult {
   let current = text;
   let replacementCount = 0;
 
   for (const rule of rules) {
+    if (!doesRuleMatchSpeaker(rule, talkingName)) {
+      continue;
+    }
+
     const matchCount = countMatches(current, rule.countRegex);
     if (matchCount === 0) {
       continue;
@@ -435,11 +479,11 @@ function transformDocument(doc: vscode.TextDocument, rules: CompiledRule[]): Doc
   let changedLineCount = 0;
   let replacementCount = 0;
 
-  DocumentParser.processTranslatedLines(doc, (groups, lineIndex) => {
+  DocumentParser.processPairedLines(doc, (_jGroups, groups, _jLineIndex, lineIndex, talkingName) => {
     const lineText = lines[lineIndex];
     const editableStart = groups.prefix.length;
     const originalEditable = lineText.slice(editableStart);
-    const transformed = applyRulesToText(originalEditable, rules);
+    const transformed = applyRulesToText(originalEditable, rules, talkingName);
     if (transformed.text === originalEditable) {
       return;
     }
@@ -461,11 +505,11 @@ function queueDocumentEdits(doc: vscode.TextDocument, rules: CompiledRule[], edi
   let changedLineCount = 0;
   let replacementCount = 0;
 
-  DocumentParser.processTranslatedLines(doc, (groups, lineIndex) => {
+  DocumentParser.processPairedLines(doc, (_jGroups, groups, _jLineIndex, lineIndex, talkingName) => {
     const line = doc.lineAt(lineIndex);
     const editableStart = groups.prefix.length;
     const originalEditable = line.text.slice(editableStart);
-    const transformed = applyRulesToText(originalEditable, rules);
+    const transformed = applyRulesToText(originalEditable, rules, talkingName);
     if (transformed.text === originalEditable) {
       return;
     }

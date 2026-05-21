@@ -1,5 +1,5 @@
 import { React, createRoot, useState } from './react-shared-runtime';
-
+import { vscode } from './vscode';
 interface FormatChoice {
 	configKey: string;
 	label: string;
@@ -17,7 +17,6 @@ interface FormatConfigState {
 	newlineMaxLen?: number;
 }
 
-const vscode = acquireVsCodeApi();
 const spaceOptions = ['无效', '添加空格', '删除空格'];
 
 function parseJsonElement<T>(elementId: string, fallback: T): T {

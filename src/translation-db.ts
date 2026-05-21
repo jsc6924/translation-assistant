@@ -467,7 +467,11 @@ async function addDocument(context: vscode.ExtensionContext, documentFilename: s
     let GameTitle: string = config.get("trdb.project") as string;
 
     if (!GameTitle) {
-        throw new Error('请先设置项目名称');
+        await configTrdb();
+        GameTitle = config.get("trdb.project") as string;
+        if (!GameTitle) {
+            throw new Error('请先设置项目名称');
+        }
     }
 
     const [showError, diagnostics] = DocumentParser.errorCheck(documentContent);

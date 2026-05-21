@@ -1,19 +1,24 @@
 import type { ChangeEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { React, createRoot, useEffect, useRef, useState } from './react-shared-runtime';
+import { vscode } from './vscode';
 
 type TargetKind = 'folder' | 'file';
-type RuleField = 'pattern' | 'replacement' | 'regexEnabled';
+type RuleField = 'type' | 'speaker' | 'pattern' | 'replacement' | 'regexEnabled' | 'enabled';
 type MoveDirection = 'up' | 'down';
 type DiffRowKind = 'equal' | 'added' | 'removed' | 'changed';
-type ReplaceRuleType = 'standard';
+type ReplaceRuleType = 'standard' | 'naming-conditional';
 
 interface ReplaceRule {
 	id: string;
 	type: ReplaceRuleType;
+	speaker: string;
 	pattern: string;
 	replacement: string;
 	regexEnabled: boolean;
+	enabled: boolean;
 }
+
+type ExportableReplaceRule = Omit<ReplaceRule, 'enabled'>;
 
 interface FileTreeNode {
 	kind: TargetKind;
@@ -116,8 +121,6 @@ interface PreviewContentProps {
 	showAllDiffRows: boolean;
 }
 
-const vscode = acquireVsCodeApi();
-
 function parseJsonElement<T>(elementId: string, fallback: T): T {
 	const element = document.getElementById(elementId);
 	if (!element?.textContent) {
@@ -148,20 +151,39 @@ function createRule(): ReplaceRule {
 	return {
 		id: uid('rule'),
 		type: 'standard',
+		speaker: '',
 		pattern: '',
 		replacement: '',
 		regexEnabled: false,
+		enabled: true,
 	};
+}
+
+function normalizeRuleType(value: unknown): ReplaceRuleType {
+	return value === 'naming-conditional' ? 'naming-conditional' : 'standard';
 }
 
 function basename(filePath?: string): string {
 	return (filePath || '').split(/[/\\]/).pop() || filePath || '';
 }
 
-function serializeRules(rules: ReplaceRule[]): ReplaceRule[] {
+function serializeRuntimeRules(rules: ReplaceRule[]): ReplaceRule[] {
 	return rules.map((rule) => ({
 		id: rule.id,
 		type: rule.type,
+		speaker: rule.speaker,
+		pattern: rule.pattern,
+		replacement: rule.replacement,
+		regexEnabled: rule.regexEnabled,
+		enabled: rule.enabled,
+	}));
+}
+
+function serializeExportRules(rules: ReplaceRule[]): ExportableReplaceRule[] {
+	return rules.map((rule) => ({
+		id: rule.id,
+		type: rule.type,
+		speaker: rule.speaker,
 		pattern: rule.pattern,
 		replacement: rule.replacement,
 		regexEnabled: rule.regexEnabled,
@@ -337,19 +359,27 @@ function RuleCard({
 	onCompositionStart,
 	onCompositionEnd,
 }: RuleCardProps) {
-
+	const isNamingConditional = rule.type === 'naming-conditional';
 	const searchSearch = rule.regexEnabled ? '正则表达式' : '查找文本';
 	const searchReplace = rule.regexEnabled ? '正则替换' : '替换文本';
 	const placeHolder1 = rule.regexEnabled ? '(\\w+)_old' : '请输入要替换的文本';
 	const placeHolder2 = rule.regexEnabled ? '支持 $1、$2，以及 \\n / \\t 等转义' : '请输入替换内容';
 	
 	return (
-		<section className="rule-card">
+		<section className={`rule-card ${rule.enabled ? '' : 'disabled'}`}>
 			<div className="rule-card-header">
 				<div className="rule-index">规则 {index + 1}</div>
 				<div className="rule-actions">
 					<button
+						className={`ghost rule-toggle ${rule.enabled ? 'active' : ''}`}
+						title={rule.enabled ? '当前启用，点击后禁用' : '当前禁用，点击后启用'}
+						onClick={() => onChange(rule.id, 'enabled', !rule.enabled)}
+					>
+						{rule.enabled ? '启用' : '停用'}
+					</button>
+					<button
 						className={`ghost icon-button ${rule.regexEnabled ? 'active' : ''}`}
+						title={rule.regexEnabled ? '当前为正则模式，点击切换为普通文本模式' : '当前为普通文本模式，点击切换为正则模式'}
 						onClick={() => {
 							onChange(rule.id, 'regexEnabled', !rule.regexEnabled);
 						}}
@@ -375,6 +405,26 @@ function RuleCard({
 					</button>
 				</div>
 			</div>
+			<label className={`rule-toggle-checkbox`} title="切换卡片类型">
+				<span>说话人</span>
+				<input
+					type="checkbox"
+					checked={isNamingConditional}
+					onChange={(e) => onChange(rule.id, 'type', e.target.checked ? 'naming-conditional' : 'standard')}
+				/>
+			</label>
+			{isNamingConditional ? (
+				<label className="field-label">
+					<input
+						type="text"
+						placeholder="仅当前说话人与该值完全相同时生效"
+						value={rule.speaker}
+						onChange={(event) => onChange(rule.id, 'speaker', event.target.value)}
+						onCompositionStart={onCompositionStart}
+						onCompositionEnd={(event) => onCompositionEnd(rule.id, 'speaker', event.currentTarget.value)}
+					/>
+				</label>
+			) : null}
 			<label className="field-label">
 				<span>{searchSearch}</span>
 				<input
@@ -537,7 +587,7 @@ function App() {
 	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set());
 	const [isComposing, setIsComposing] = useState(false);
 	const [message, setMessage] = useState<MessageState | undefined>(undefined);
-	const [rulesPanelHeight, setRulesPanelHeight] = useState(280);
+	const [rulesPanelHeight, setRulesPanelHeight] = useState(320);
 	const [isDragging, setIsDragging] = useState(false);
 	const [sidebarWidth, setSidebarWidth] = useState(420);
 	const [isHorizontalDragging, setIsHorizontalDragging] = useState(false);
@@ -564,8 +614,8 @@ function App() {
 
 		const rect = sidebarRef.current.getBoundingClientRect();
 		const computedHeight = event.clientY - rect.top;
-		const minHeight = 120;
-		const maxHeight = rect.height - 160;
+		const minHeight = 60;
+		const maxHeight = rect.height - 60;
 
 		if (computedHeight >= minHeight && computedHeight <= maxHeight) {
 			setRulesPanelHeight(computedHeight);
@@ -679,7 +729,7 @@ function App() {
 		try {
 			const payload = await request('previewFile', {
 				filePath,
-				rules: serializeRules(nextRules),
+				rules: serializeRuntimeRules(nextRules),
 			});
 			if (requestToken !== latestPreviewRequestRef.current) {
 				return;
@@ -736,7 +786,7 @@ function App() {
 
 	async function handleExportRules(): Promise<void> {
 		try {
-			const serialized = serializeRules(rules);
+			const serialized = serializeExportRules(rules);
 			const result = await request('exportRulesJson', { rules: serialized });
 			setMessage({ kind: 'info', text: result.saved ? '规则配置已成功导出' : '已取消导出' });
 		} catch (error) {
@@ -773,10 +823,12 @@ function App() {
 					const rule = (typeof item === 'object' && item) ? item as Partial<ReplaceRule> : {};
 					return {
 						id: uid('rule'),
-						type: rule.type || 'standard',
+						type: normalizeRuleType(rule.type),
+						speaker: String(rule.speaker || ''),
 						pattern: String(rule.pattern || ''),
 						replacement: String(rule.replacement || ''),
 						regexEnabled: Boolean(rule.regexEnabled),
+						enabled: true,
 					};
 				});
 
@@ -868,7 +920,7 @@ function App() {
 			const result = await request('applyTarget', {
 				targetPath,
 				targetKind,
-				rules: serializeRules(rules),
+				rules: serializeRuntimeRules(rules),
 			});
 			const fragments = [
 				`扫描 ${result.fileCount} 个文件`,

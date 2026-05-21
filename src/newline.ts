@@ -180,9 +180,9 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
             } else {
                 // punc -> alpha/normal
                 if(periodPuncs.test(text[i])) {
-                    strength[i] -= 1.0; // 句号等
+                    strength[i] -= 1.5; // 句号等
                 } else {
-                    strength[i] -= 0.75; // 其他标点，比如逗号
+                    strength[i] -= 1.25; // 其他标点，比如逗号
                 }
             }
         } else if (alphanum.test(text[i])) {
@@ -198,7 +198,7 @@ function split_to_lines(text: string, widths: number[], tagStatusArr: number[], 
                 strength[i] += 1.0; // alpha -> punc
             } else {
                 // alpha -> alpha/normal
-                strength[i] -= 0.5 * wordCutForce[i]; // 词的末尾
+                strength[i] -= 0.3 * wordCutForce[i]; // 词的末尾
             }
         }
     }
