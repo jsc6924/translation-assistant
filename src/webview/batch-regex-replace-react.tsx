@@ -213,9 +213,6 @@ function splitLines(text: string): string[] {
 function computeDiffRows(beforeText: string, afterText: string): DiffRow[] {
 	const beforeLines = splitLines(beforeText);
 	const afterLines = splitLines(afterText);
-	if (beforeLines.length * afterLines.length <= 160000) {
-		return computeLcsDiff(beforeLines, afterLines);
-	}
 
 	const rows: DiffRow[] = [];
 	const max = Math.max(beforeLines.length, afterLines.length);
@@ -241,114 +238,6 @@ function computeDiffRows(beforeText: string, afterText: string): DiffRow[] {
 	return rows;
 }
 
-function computeLcsDiff(beforeLines: string[], afterLines: string[]): DiffRow[] {
-	const rows: DiffRow[] = [];
-	const m = beforeLines.length;
-	const n = afterLines.length;
-
-	let nextRow = new Array<number>(n + 1).fill(0);
-	let currRow = new Array<number>(n + 1).fill(0);
-	const hints = Array.from({ length: m }, () => new Uint8Array(n));
-
-	for (let i = m - 1; i >= 0; i--) {
-		for (let j = n - 1; j >= 0; j--) {
-			if (beforeLines[i] === afterLines[j]) {
-				currRow[j] = nextRow[j + 1] + 1;
-				hints[i][j] = 0;
-			} else {
-				const scoreMovedI = nextRow[j];
-				const scoreMovedJ = currRow[j + 1];
-
-				if (scoreMovedI === scoreMovedJ) {
-					currRow[j] = scoreMovedI;
-					hints[i][j] = 1;
-				} else if (scoreMovedI > scoreMovedJ) {
-					currRow[j] = scoreMovedI;
-					hints[i][j] = 2;
-				} else {
-					currRow[j] = scoreMovedJ;
-					hints[i][j] = 3;
-				}
-			}
-		}
-
-		const temp = nextRow;
-		nextRow = currRow;
-		currRow = temp;
-		currRow.fill(0);
-	}
-
-	let i = 0;
-	let j = 0;
-	while (i < m && j < n) {
-		const hint = hints[i][j];
-
-		if (hint === 0) {
-			rows.push({
-				kind: 'equal',
-				beforeLineNumber: String(i + 1),
-				afterLineNumber: String(j + 1),
-				beforeText: beforeLines[i],
-				afterText: afterLines[j],
-			});
-			i++;
-			j++;
-		} else if (hint === 1) {
-			rows.push({
-				kind: 'changed',
-				beforeLineNumber: String(i + 1),
-				afterLineNumber: String(j + 1),
-				beforeText: beforeLines[i],
-				afterText: afterLines[j],
-			});
-			i++;
-			j++;
-		} else if (hint === 2) {
-			rows.push({
-				kind: 'removed',
-				beforeLineNumber: String(i + 1),
-				afterLineNumber: '',
-				beforeText: beforeLines[i],
-				afterText: '',
-			});
-			i++;
-		} else {
-			rows.push({
-				kind: 'added',
-				beforeLineNumber: '',
-				afterLineNumber: String(j + 1),
-				beforeText: '',
-				afterText: afterLines[j],
-			});
-			j++;
-		}
-	}
-
-	while (i < m) {
-		rows.push({
-			kind: 'removed',
-			beforeLineNumber: String(i + 1),
-			afterLineNumber: '',
-			beforeText: beforeLines[i],
-			afterText: '',
-		});
-		i++;
-	}
-
-	while (j < n) {
-		rows.push({
-			kind: 'added',
-			beforeLineNumber: '',
-			afterLineNumber: String(j + 1),
-			beforeText: '',
-			afterText: afterLines[j],
-		});
-		j++;
-	}
-
-	return rows;
-}
-
 function RuleCard({
 	rule,
 	index,
@@ -363,7 +252,7 @@ function RuleCard({
 	const searchSearch = rule.regexEnabled ? '正则表达式' : '查找文本';
 	const searchReplace = rule.regexEnabled ? '正则替换' : '替换文本';
 	const placeHolder1 = rule.regexEnabled ? '(\\w+)_old' : '请输入要替换的文本';
-	const placeHolder2 = rule.regexEnabled ? '支持 $1、$2，以及 \\n / \\t 等转义' : '请输入替换内容';
+	const placeHolder2 = rule.regexEnabled ? '支持 $1、$2等' : '请输入替换内容';
 	
 	return (
 		<section className={`rule-card ${rule.enabled ? '' : 'disabled'}`}>
@@ -378,7 +267,7 @@ function RuleCard({
 						{rule.enabled ? '启用' : '停用'}
 					</button>
 					<button
-						className={`ghost icon-button ${rule.regexEnabled ? 'active' : ''}`}
+						className={`ghost icon-button small ${rule.regexEnabled ? 'active' : ''}`}
 						title={rule.regexEnabled ? '当前为正则模式，点击切换为普通文本模式' : '当前为普通文本模式，点击切换为正则模式'}
 						onClick={() => {
 							onChange(rule.id, 'regexEnabled', !rule.regexEnabled);
@@ -387,21 +276,21 @@ function RuleCard({
 						.*
 					</button>
 					<button
-						className="ghost icon-button"
+						className="ghost icon-button small"
 						disabled={index === 0}
 						onClick={() => onMove(rule.id, 'up')}
 					>
 						↑
 					</button>
 					<button
-						className="ghost icon-button"
+						className="ghost icon-button small"
 						disabled={index === total - 1}
 						onClick={() => onMove(rule.id, 'down')}
 					>
 						↓
 					</button>
-					<button className="ghost danger icon-button" onClick={() => onRemove(rule.id)}>
-						×
+					<button className="ghost danger icon-button small" onClick={() => onRemove(rule.id)}>
+						X
 					</button>
 				</div>
 			</div>
@@ -477,7 +366,7 @@ function TreeNode({ node, selectedFile, expandedFolders, onToggleFolder, onSelec
 								onToggleFolder(node.path);
 							}}
 						>
-							{isExpanded ? 'V' : '>'}
+							{isExpanded ? '▼' : '▶'}
 						</button>
 					) : null}
 					<div>{icon}</div>

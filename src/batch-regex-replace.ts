@@ -6,28 +6,7 @@ import { getCurrentWorkspaceFolder, registerCommand } from './utils';
 
 const VIEW_TYPE = 'dltxt-batch-regex-replace';
 const PANEL_TITLE = '译文替换流水线';
-const TEXT_FILE_EXTENSIONS = new Set([
-  '.txt',
-  '.md',
-  '.csv',
-  '.json',
-  '.yaml',
-  '.yml',
-  '.ini',
-  '.cfg',
-  '.conf',
-  '.xml',
-  '.html',
-  '.htm',
-  '.css',
-  '.js',
-  '.ts',
-  '.po',
-  '.properties',
-  '.srt',
-  '.ass',
-  '.ks'
-]);
+const TEXT_FILE_EXTENSIONS = new Set(['.txt']);
 
 type ReplaceRuleType = 'standard' | 'naming-conditional';
 
@@ -352,10 +331,7 @@ function findFirstFile(node: FileTreeNode): string | undefined {
 
 function isTextFile(fileName: string): boolean {
   const extension = path.extname(fileName).toLowerCase();
-  if (TEXT_FILE_EXTENSIONS.has(extension)) {
-    return true;
-  }
-  return extension.length === 0;
+  return TEXT_FILE_EXTENSIONS.has(extension);
 }
 
 function escapeRegExp(string: string): string {
