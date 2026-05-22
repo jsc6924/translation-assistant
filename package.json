@@ -4,6 +4,7 @@
 	"publisher": "jsc723",
 	"icon": "assets/logo.png",
 	"description": "",
+	"license": "Custom-NonCommercial-Software",
 	"version": "4.6.1",
 	"engines": {
 		"vscode": "^1.90.0"
