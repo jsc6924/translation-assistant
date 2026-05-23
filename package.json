@@ -862,6 +862,96 @@
 			},
 			{
 				"command": "type",
+				"key": "f1",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "1"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f2",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "2"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f3",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "3"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f4",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "4"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f5",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "5"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f6",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "6"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f7",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "7"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f8",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "8"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f9",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "9"
+				}
+			},
+			{
+				"command": "type",
+				"key": "f10",
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
+				"args": {
+					"soucre": "keyboard",
+					"text": "0"
+				}
+			},
+			{
+				"command": "type",
 				"key": "-",
 				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.mode == 'Translate'",
 				"args": {
