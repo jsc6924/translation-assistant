@@ -31,14 +31,19 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*,Auto,Auto">
-        <Border Padding="12" BorderThickness="0,0,0,1" Background="{StaticResource HeaderBackgroundBrush}">
+        <Border Padding="0,0,8,0" BorderThickness="0,0,0,1" Background="{StaticResource HeaderBackgroundBrush}" IsVisible="{Binding IsWorkspaceLoaded}">
             <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="打开文件夹" Click="OnOpenFolderClick" />
-                    <Button Content="双行格式" Click="OnConfigureFormatClick" />
-                    <Button Content="术语库配置" Click="OnConfigureSimpleTmClick" />
-                    <Button Content="保存" Command="{Binding SaveSelectedCommand}" />
-                </StackPanel>
+                <Menu>
+                    <MenuItem Header="文件">
+                        <MenuItem Header="打开文件夹" Click="OnOpenFolderClick" />
+                        <MenuItem Header="新建文件" Click="OnCreateNewFileClick" />
+                        <MenuItem Header="保存" Command="{Binding SaveSelectedCommand}" />
+                    </MenuItem>
+                    <MenuItem Header="设置">
+                        <MenuItem Header="双行格式" Click="OnConfigureFormatClick" />
+                        <MenuItem Header="术语库配置" Click="OnConfigureSimpleTmClick" />
+                    </MenuItem>
+                </Menu>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                     <TextBlock Text="{Binding WorkspaceLabel}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding ParserSummary}" VerticalAlignment="Center" />

@@ -330,6 +330,27 @@ public partial class MainWindowViewModel : ViewModelBase
             var newNode = new FileNodeViewModel(newFilePath, false);
             if (!AddFileNode(folderPath, newNode))
             {
+                if (string.Equals(folderPath, _workspacePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    var firstFileIndex = RootNodes.TakeWhile(node => node.IsDirectory).Count();
+                    var insertIndex = firstFileIndex;
+                    var newFileName = Path.GetFileName(newNode.FullPath);
+                    for (var i = firstFileIndex; i < RootNodes.Count; i++)
+                    {
+                        var existingName = Path.GetFileName(RootNodes[i].FullPath);
+                        if (string.Compare(existingName, newFileName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            insertIndex = i;
+                            break;
+                        }
+
+                        insertIndex = i + 1;
+                    }
+
+                    RootNodes.Insert(insertIndex, newNode);
+                    return newNode;
+                }
+
                 RefreshWorkspaceNodes();
                 return null;
             }

@@ -218,6 +218,35 @@ public partial class MainWindow : Window
         CommitRename(node);
     }
 
+    private void OnCreateNewFileClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var folderPath = viewModel.WorkspacePath;
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            viewModel.SetStatus("请先打开一个工作区，再创建新文件。");
+            return;
+        }
+
+        var newNode = viewModel.CreateNewFile(folderPath, out var error);
+        if (error is not null)
+        {
+            viewModel.SetStatus($"创建文件失败：{error}");
+            return;
+        }
+
+        if (newNode is not null)
+        {
+            FileTree.SelectedItem = newNode;
+            viewModel.OpenFile(newNode.FullPath);
+            viewModel.SetStatus($"已创建并打开新文件：{newNode.FullPath}");
+        }
+    }
+
     private void CommitRename(FileNodeViewModel node)
     {
         if (DataContext is not MainWindowViewModel viewModel)

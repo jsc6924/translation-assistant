@@ -38,15 +38,28 @@ public sealed class SimpleTmRemoteClient
     public async Task<(IReadOnlyList<TerminologyEntry> Terms, IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> NamingRules)> FetchAsync(string sharedUrl)
     {
         var connection = ParseSharedUrl(sharedUrl);
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromSeconds(15);
-
-        var authValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{connection.Username}:{connection.ApiToken}"));
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+        using var httpClient = CreateHttpClient(connection);
 
         var terms = await FetchTermsAsync(httpClient, connection).ConfigureAwait(false);
         var naming = await FetchNamingRulesAsync(httpClient, connection).ConfigureAwait(false);
         return (terms, naming);
+    }
+
+    public async Task<string> FetchTermsJsonAsync(string sharedUrl)
+    {
+        var connection = ParseSharedUrl(sharedUrl);
+        using var httpClient = CreateHttpClient(connection);
+
+        return await httpClient.GetStringAsync(BuildUrl(connection.BaseUrl, $"/api/querybygame/{Uri.EscapeDataString(connection.GameTitle)}")).ConfigureAwait(false);
+    }
+
+    private static HttpClient CreateHttpClient(SharedConnection connection)
+    {
+        var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(15);
+        var authValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{connection.Username}:{connection.ApiToken}"));
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+        return httpClient;
     }
 
     private static async Task<IReadOnlyList<TerminologyEntry>> FetchTermsAsync(HttpClient httpClient, SharedConnection connection)

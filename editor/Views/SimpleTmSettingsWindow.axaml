@@ -1,11 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:editor.Views"
+        xmlns:model="using:editor.Models"
         x:Class="editor.Views.SimpleTmSettingsWindow"
         x:DataType="local:SimpleTmSettingsWindow"
         Width="580"
-        Height="220"
-        CanResize="False"
+        Height="520"
+        MinHeight="520"
+        CanResize="True"
         WindowStartupLocation="CenterOwner"
         Title="术语库配置">
 
@@ -13,9 +15,24 @@
         <TextBlock Text="设置 simpleTmSharedUrl" FontSize="16" FontWeight="SemiBold" />
         <TextBlock Text="请输入 remote-url 形式的 SimpleTM 共享地址，例如：simpletm://protocol/host/username/apiToken/gameTitle" TextWrapping="Wrap" />
         <TextBox Text="{Binding SharedUrl, Mode=TwoWay}" AcceptsReturn="False" />
+        <TextBlock Text="{Binding StatusMessage}" Foreground="Gray" TextWrapping="Wrap" />
+
+        <TextBlock Text="远程术语预览" FontSize="14" FontWeight="SemiBold" />
+        <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="4" Padding="8" Background="WhiteSmoke">
+            <TextBox Text="{Binding PreviewBody, Mode=OneWay}"
+                     AcceptsReturn="True"
+                     IsReadOnly="True"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     Height="220"
+                     FontFamily="Consolas"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
+        </Border>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
             <Button Content="取消" Width="80" Click="OnCancelClick" />
+            <Button Content="刷新预览" Width="100" Click="OnRefreshPreviewClick" />
             <Button Content="保存" Width="80" Click="OnSaveClick" />
         </StackPanel>
     </StackPanel>
