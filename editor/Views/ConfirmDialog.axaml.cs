@@ -14,9 +14,9 @@ public partial class ConfirmDialog : Window
     }
 
     public ConfirmDialog(string message)
-        : this()
     {
         Message = message;
+        InitializeComponent();
         DataContext = this;
     }
 
