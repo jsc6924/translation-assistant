@@ -353,14 +353,25 @@ public partial class DocumentEditorView : UserControl
 
         try
         {
-            var point = e.GetPosition(Editor.TextArea.TextView);
+            var point = e.GetPosition(Editor);
             var position = Editor.GetPositionFromPoint(point);
             if (!position.HasValue)
             {
                 return null;
             }
 
-            return Editor.Document.GetOffset(position.Value.Location);
+            var offset = Editor.Document.GetOffset(position.Value.Location);
+            // GetPositionFromPoint(point) 有时候会返回光标所在位置的下一个字符 offset，尤其是鼠标靠近高亮右边界时。这样就会导致你本来在高亮范围内，但 FindByOffset(offset) 返回 null。
+            if (_terminologySnapshot.FindByOffset(offset) is null && offset > 0)
+            {
+                var previous = offset - 1;
+                if (_terminologySnapshot.FindByOffset(previous) is not null)
+                {
+                    return previous;
+                }
+            }
+
+            return offset;
         }
         catch
         {
