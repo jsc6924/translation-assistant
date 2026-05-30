@@ -50,11 +50,31 @@
             <Border Padding="12" BorderThickness="0,0,1,0">
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Text="{Binding SidebarTitle}" FontSize="16" FontWeight="SemiBold" />
+
+                    <StackPanel Grid.Row="1" Margin="0,12,0,0" Spacing="10" IsVisible="{Binding IsWorkspaceLoaded, Converter={StaticResource InverseBooleanConverter}}">
+                        <TextBlock Text="最近打开的文件夹" FontSize="14" FontWeight="SemiBold" />
+                        <ItemsControl ItemsSource="{Binding RecentFolders}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding}"
+                                            HorizontalAlignment="Stretch"
+                                            Padding="10"
+                                            Click="OnOpenRecentFolderClick"
+                                            ToolTip.Tip="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="打开新的文件夹"
+                                HorizontalAlignment="Stretch"
+                                Click="OnOpenFolderClick" />
+                    </StackPanel>
+
                     <TreeView x:Name="FileTree"
                               Grid.Row="1"
                               Margin="0,12,0,0"
                               ItemsSource="{Binding RootNodes}"
-                              SelectionChanged="OnFileTreeSelectionChanged">
+                              SelectionChanged="OnFileTreeSelectionChanged"
+                              IsVisible="{Binding IsWorkspaceLoaded}">
                         <TreeView.ItemTemplate>
                             <TreeDataTemplate x:DataType="vm:FileNodeViewModel" ItemsSource="{Binding Children}">
                                 <Grid Background="Transparent"
@@ -125,15 +145,16 @@
         </Grid>
 
         <Border Grid.Row="2" Padding="12" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"
+                           Grid.Column="0" />
                 <CheckBox Content="启用编辑限制模式"
                           IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
-                          VerticalAlignment="Center" />
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="3" Padding="12" BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding StatusMessage}" />
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Right"
+                          Grid.Column="1" />
+            </Grid>
         </Border>
     </Grid>
 

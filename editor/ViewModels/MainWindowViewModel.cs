@@ -14,14 +14,21 @@ namespace editor.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly EditorSettingsStore _settingsStore;
+    private readonly RecentFoldersStore _recentFoldersStore;
     private EditorDocumentViewModel? _selectedDocument;
     private string? _workspacePath;
 
     [ObservableProperty]
-    private string _statusMessage = "请选择一个文件夹开始。";
+    private string _statusMessage = "请选择最近打开的文件夹，或打开一个新的文件夹。";
 
     [ObservableProperty]
     private bool _enableEditRestriction = true;
+
+    public ObservableCollection<string> RecentFolders { get; }
+
+    public bool IsWorkspaceLoaded => !string.IsNullOrWhiteSpace(_workspacePath);
+
+    public bool HasRecentFolders => RecentFolders.Count > 0;
 
     partial void OnEnableEditRestrictionChanged(bool value)
     {
@@ -34,17 +41,21 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public MainWindowViewModel()
-        : this(new EditorSettingsStore())
+        : this(new EditorSettingsStore(), new RecentFoldersStore())
     {
     }
 
-    public MainWindowViewModel(EditorSettingsStore settingsStore)
+    public MainWindowViewModel(EditorSettingsStore settingsStore, RecentFoldersStore recentFoldersStore)
     {
         _settingsStore = settingsStore;
+        _recentFoldersStore = recentFoldersStore;
         ParserConfig = new ParserConfig();
         RootNodes = new ObservableCollection<FileNodeViewModel>();
         OpenDocuments = new ObservableCollection<EditorDocumentViewModel>();
         OpenDocuments.CollectionChanged += OnOpenDocumentsChanged;
+
+        RecentFolders = new ObservableCollection<string>(_recentFoldersStore.LoadRecentFolders());
+        RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
     }
 
     public ObservableCollection<FileNodeViewModel> RootNodes { get; }
@@ -113,6 +124,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _workspacePath = folderPath;
         ParserConfig = _settingsStore.LoadParserConfig(folderPath);
+        AddRecentFolder(folderPath);
         RefreshWorkspaceNodes();
 
         SetSelectedDocument(null, false);
@@ -120,6 +132,34 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ParserConfig));
         OnPropertyChanged(nameof(ParserSummary));
         StatusMessage = $"已打开文件夹：{folderPath}";
+    }
+
+    private void AddRecentFolder(string folderPath)
+    {
+        try
+        {
+            var normalizedPath = Path.GetFullPath(folderPath);
+            for (var i = RecentFolders.Count - 1; i >= 0; i--)
+            {
+                if (string.Equals(RecentFolders[i], normalizedPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    RecentFolders.RemoveAt(i);
+                }
+            }
+
+            RecentFolders.Insert(0, normalizedPath);
+            while (RecentFolders.Count > 10)
+            {
+                RecentFolders.RemoveAt(10);
+            }
+
+            _recentFoldersStore.SaveRecentFolders(RecentFolders);
+            OnPropertyChanged(nameof(HasRecentFolders));
+        }
+        catch
+        {
+            // Ignore recent-folder persistence failures.
+        }
     }
 
     public void RefreshWorkspaceNodes()
@@ -136,7 +176,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public void CreateNewFile(string folderPath, out string? error)
+    public FileNodeViewModel? CreateNewFile(string folderPath, out string? error)
     {
         error = null;
         try
@@ -144,7 +184,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (!Directory.Exists(folderPath))
             {
                 error = "目标文件夹不存在。";
-                return;
+                return null;
             }
 
             var fileName = "newfile.txt";
@@ -161,18 +201,23 @@ public partial class MainWindowViewModel : ViewModelBase
             {
             }
 
-            if (!AddFileNode(folderPath, newFilePath))
+            var newNode = new FileNodeViewModel(newFilePath, false);
+            if (!AddFileNode(folderPath, newNode))
             {
                 RefreshWorkspaceNodes();
+                return null;
             }
+
+            return newNode;
         }
         catch (Exception exception)
         {
             error = exception.Message;
+            return null;
         }
     }
 
-    private bool AddFileNode(string folderPath, string filePath)
+    private bool AddFileNode(string folderPath, FileNodeViewModel newNode)
     {
         var folderNode = FindNodeByPath(folderPath);
         if (folderNode is null)
@@ -180,8 +225,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return false;
         }
 
-        var newNode = new FileNodeViewModel(filePath, false);
-        var insertIndex = folderNode.Children.TakeWhile(child => string.Compare(Path.GetFileName(child.FullPath), Path.GetFileName(filePath), StringComparison.OrdinalIgnoreCase) < 0).Count();
+        var insertIndex = folderNode.Children.TakeWhile(child => string.Compare(Path.GetFileName(child.FullPath), Path.GetFileName(newNode.FullPath), StringComparison.OrdinalIgnoreCase) < 0).Count();
         folderNode.Children.Insert(insertIndex, newNode);
         return true;
     }
@@ -574,6 +618,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(WorkspaceLabel));
         OnPropertyChanged(nameof(SidebarTitle));
         OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(IsWorkspaceLoaded));
     }
 
     private static string GetLeafFolderName(string path)

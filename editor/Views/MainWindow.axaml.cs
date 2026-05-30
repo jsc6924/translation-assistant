@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -13,12 +14,9 @@ namespace editor.Views;
 
 public partial class MainWindow : Window
 {
-    private bool _initialFolderRequested;
-
     public MainWindow()
     {
         InitializeComponent();
-        Opened += OnOpened;
         Closing += OnClosing;
     }
 
@@ -75,6 +73,27 @@ public partial class MainWindow : Window
         await PickFolderAndLoadAsync(false);
     }
 
+    private void OnOpenRecentFolderClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not Button button || button.DataContext is not string folderPath)
+        {
+            return;
+        }
+
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (!Directory.Exists(folderPath))
+        {
+            viewModel.SetStatus($"最近文件夹不存在：{folderPath}");
+            return;
+        }
+
+        viewModel.LoadWorkspace(folderPath);
+    }
+
     private void OnCreateFileClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not MenuItem menuItem || menuItem.DataContext is not FileNodeViewModel node || !node.IsDirectory)
@@ -87,17 +106,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        viewModel.CreateNewFile(node.FullPath, out var error);
+        var newNode = viewModel.CreateNewFile(node.FullPath, out var error);
         if (error is not null)
         {
             viewModel.SetStatus($"创建文件失败：{error}");
             return;
         }
 
+        if (newNode is not null)
+        {
+            FileTree.SelectedItem = newNode;
+            viewModel.OpenFile(newNode.FullPath);
+        }
+
         viewModel.SetStatus($"已创建新文件：{node.FullPath}");
     }
 
-    private void OnDeleteNodeClick(object? sender, RoutedEventArgs eventArgs)
+    private async void OnDeleteNodeClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (sender is not MenuItem menuItem || menuItem.DataContext is not FileNodeViewModel node)
         {
@@ -105,6 +130,14 @@ public partial class MainWindow : Window
         }
 
         if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var target = node.IsDirectory ? "文件夹" : "文件";
+        var dialog = new ConfirmDialog($"确认删除 {target}：{node.DisplayName}？\n此操作无法撤销。");
+        var confirmed = await dialog.ShowDialog<bool?>(this) ?? false;
+        if (!confirmed)
         {
             return;
         }
@@ -208,21 +241,6 @@ public partial class MainWindow : Window
                 treeViewItem.IsExpanded = !treeViewItem.IsExpanded;
                 e.Handled = true;
             }
-        }
-    }
-
-    private async void OnOpened(object? sender, EventArgs eventArgs)
-    {
-        if (_initialFolderRequested)
-        {
-            return;
-        }
-
-        _initialFolderRequested = true;
-        var opened = await PickFolderAndLoadAsync(true);
-        if (!opened)
-        {
-            Close();
         }
     }
 
