@@ -34,7 +34,22 @@ public partial class MainWindow : Window
             viewModel.ApplyParserConfig(parserConfig);
         }
     }
+    private async void OnConfigureSimpleTmClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
 
+        var dialog = new SimpleTmSettingsWindow(viewModel.SimpleTmSharedUrl);
+        var confirmed = await dialog.ShowDialog<bool?>(this) ?? false;
+        if (!confirmed)
+        {
+            return;
+        }
+
+        viewModel.SetSimpleTmSharedUrl(dialog.SharedUrl);
+    }
     private void OnClosing(object? sender, WindowClosingEventArgs eventArgs)
     {
         if (DataContext is MainWindowViewModel viewModel)

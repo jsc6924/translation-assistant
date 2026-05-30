@@ -8,3 +8,12 @@
 - 让用户可以设置双行文本格式
 - 在设置完格式后，使用DocumentParser解析文本，对原文和译文行的颜色进行区分，并只允许用户编辑译文部分。
 - 双行文本格式、DocumentrParser的实现，请参考parser.ts
+
+## 术语和人称高亮
+现在我要实现术语高亮功能，也就是从服务器获取术语和人称信息，在文本编辑器中将那些术语高亮，当鼠标hover的时候，显示对应翻译和备注。
+dltxt插件支持三种术语库：remote，remote-url，local，但是editor只需要支持remote-url即可。
+dltxt支持连接多个术语库，但editor只需要支持连接一个。
+dltxt有treeview显示和编辑术语和人称，editor暂时不需要这个界面，目前只需要从服务器获取术语并显示即可。
+dltxt支持用websocket实时获取服务器推送的术语更新，editor暂时不需要支持，每30秒轮询一次即可。
+
+当前 editor 使用工作区根目录下 `dltxt-editor-setting.json` 的 `simpleTmSharedUrl` 字段连接远程术语库（`simpletm://protocol/host/username/apiToken/gameTitle`）。

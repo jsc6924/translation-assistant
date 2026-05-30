@@ -25,6 +25,9 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     private bool _translationModeEnabled;
 
     [ObservableProperty]
+    private string _simpleTmSharedUrl = string.Empty;
+
+    [ObservableProperty]
     private FontFamily _fontFamily = new("Microsoft YaHei");
 
     [ObservableProperty]

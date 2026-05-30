@@ -1,9 +1,11 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 using AvaloniaEdit.Document;
 using editor.Controls;
 using editor.Models;
@@ -16,15 +18,33 @@ public partial class DocumentEditorView : UserControl
 {
     private readonly DualLineDocumentParser _parser = new();
     private readonly DualLineColorizer _colorizer = new();
+    private readonly TerminologyHighlightService _terminologyHighlightService = new();
+    private readonly SimpleTmRemoteClient _simpleTmRemoteClient = new();
+    private readonly DispatcherTimer _terminologyTimer;
     private EditorDocumentViewModel? _viewModel;
+    private IReadOnlyList<TerminologyEntry> _terms = [];
+    private IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> _namingRules =
+        new Dictionary<string, IReadOnlyDictionary<string, NamingRuleValue>>();
+    private TerminologySnapshot _terminologySnapshot = TerminologySnapshot.Empty;
+    private DateTime _lastTerminologyFetchUtc = DateTime.MinValue;
+    private bool _terminologyFetchInProgress;
+    private string? _lastHoverText;
 
     public DocumentEditorView()
     {
         InitializeComponent();
+        _terminologyTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(30),
+        };
+        _terminologyTimer.Tick += OnTerminologyTimerTick;
+
         Editor.Document = new TextDocument();
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
+        Editor.PointerMoved += OnEditorPointerMoved;
+        Editor.PointerExited += OnEditorPointerExited;
         Editor.TextArea.KeyDown += OnEditorTextAreaKeyDown;
         Editor.TextArea.TextEntering += OnEditorTextEntering;
         EnsureEditorHooks();
@@ -54,7 +74,8 @@ public partial class DocumentEditorView : UserControl
         {
             Editor.Document = new TextDocument();
             EnsureEditorHooks();
-            _colorizer.Update(new ParsedDocument(false));
+            ResetTerminologyState();
+            _colorizer.Update(new ParsedDocument(false), TerminologySnapshot.Empty);
             Editor.TextArea.ReadOnlySectionProvider = AllowAllReadOnlySectionProvider.Instance;
             Editor.TextArea.TextView.Redraw();
             return;
@@ -65,16 +86,22 @@ public partial class DocumentEditorView : UserControl
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.Document.Changed += OnDocumentChanged;
         RefreshParserState();
+        _ = RefreshTerminologyFromServerAsync(force: true);
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs eventArgs)
     {
         EnsureEditorHooks();
+        _terminologyTimer.Start();
         RefreshParserState();
+        _ = RefreshTerminologyFromServerAsync(force: true);
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs eventArgs)
     {
+        _terminologyTimer.Stop();
+        _lastHoverText = null;
+        ToolTip.SetTip(Editor, null);
         if (Editor.TextArea.TextView.LineTransformers.Contains(_colorizer))
         {
             Editor.TextArea.TextView.LineTransformers.Remove(_colorizer);
@@ -89,9 +116,11 @@ public partial class DocumentEditorView : UserControl
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
         if (eventArgs.PropertyName == nameof(EditorDocumentViewModel.ParserConfig)
-            || eventArgs.PropertyName == nameof(EditorDocumentViewModel.EditRestrictionEnabled))
+            || eventArgs.PropertyName == nameof(EditorDocumentViewModel.EditRestrictionEnabled)
+            || eventArgs.PropertyName == nameof(EditorDocumentViewModel.SimpleTmSharedUrl))
         {
             RefreshParserState();
+            _ = RefreshTerminologyFromServerAsync(force: true);
         }
     }
 
@@ -143,8 +172,9 @@ public partial class DocumentEditorView : UserControl
         }
 
         EnsureEditorHooks();
+        _terminologySnapshot = _terminologyHighlightService.Build(Editor.Document.Text, _terms, _namingRules);
         var parsedDocument = _parser.Parse(Editor.Document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
-        _colorizer.Update(parsedDocument);
+        _colorizer.Update(parsedDocument, _terminologySnapshot);
         ApplyReadOnlySections(parsedDocument);
         Editor.TextArea.TextView.Redraw();
     }
@@ -207,6 +237,135 @@ public partial class DocumentEditorView : UserControl
         Editor.TextArea.Caret.Offset = previousTranslatedLine.EditableStartOffset;
         var halfHeight = Math.Max(0, Editor.TextArea.Bounds.Height / 2);
         Editor.TextArea.Caret.BringCaretToView(halfHeight);
+    }
+
+    private async void OnTerminologyTimerTick(object? sender, EventArgs e)
+    {
+        await RefreshTerminologyFromServerAsync(force: false);
+    }
+
+    private async System.Threading.Tasks.Task RefreshTerminologyFromServerAsync(bool force)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var sharedUrl = _viewModel.SimpleTmSharedUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(sharedUrl))
+        {
+            if (_terms.Count > 0 || _namingRules.Count > 0)
+            {
+                ResetTerminologyState();
+                RefreshParserState();
+            }
+
+            return;
+        }
+
+        if (_terminologyFetchInProgress)
+        {
+            return;
+        }
+
+        if (!force && DateTime.UtcNow - _lastTerminologyFetchUtc < TimeSpan.FromSeconds(30))
+        {
+            return;
+        }
+
+        _terminologyFetchInProgress = true;
+        try
+        {
+            var (terms, namingRules) = await _simpleTmRemoteClient.FetchAsync(sharedUrl);
+            _lastTerminologyFetchUtc = DateTime.UtcNow;
+            _terms = terms;
+            _namingRules = namingRules;
+            RefreshParserState();
+        }
+        catch
+        {
+            // Ignore terminology sync failures to keep editor responsive.
+        }
+        finally
+        {
+            _terminologyFetchInProgress = false;
+        }
+    }
+
+    private void ResetTerminologyState()
+    {
+        _terms = [];
+        _namingRules = new Dictionary<string, IReadOnlyDictionary<string, NamingRuleValue>>();
+        _terminologySnapshot = TerminologySnapshot.Empty;
+        _lastTerminologyFetchUtc = DateTime.MinValue;
+        _lastHoverText = null;
+        ToolTip.SetTip(Editor, null);
+    }
+
+    private void OnEditorPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_terminologySnapshot.Highlights.Count == 0 || Editor.Document is null)
+        {
+            if (_lastHoverText is not null)
+            {
+                _lastHoverText = null;
+                ToolTip.SetTip(Editor, null);
+            }
+
+            return;
+        }
+
+        var offset = TryGetOffsetAtPointer(e);
+        if (offset is null)
+        {
+            if (_lastHoverText is not null)
+            {
+                _lastHoverText = null;
+                ToolTip.SetTip(Editor, null);
+            }
+
+            return;
+        }
+
+        var highlight = _terminologySnapshot.FindByOffset(offset.Value);
+        var hoverText = highlight?.HoverText;
+        if (string.Equals(_lastHoverText, hoverText, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastHoverText = hoverText;
+        ToolTip.SetTip(Editor, hoverText);
+    }
+
+    private void OnEditorPointerExited(object? sender, PointerEventArgs e)
+    {
+        _lastHoverText = null;
+        ToolTip.SetTip(Editor, null);
+    }
+
+    private int? TryGetOffsetAtPointer(PointerEventArgs e)
+    {
+        if (Editor.Document is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var point = e.GetPosition(Editor.TextArea.TextView);
+            var position = Editor.GetPositionFromPoint(point);
+            if (!position.HasValue)
+            {
+                return null;
+            }
+
+            return Editor.Document.GetOffset(position.Value.Location);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void EnsureEditorHooks()

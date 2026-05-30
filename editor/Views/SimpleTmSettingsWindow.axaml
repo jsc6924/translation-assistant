@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:editor.Views"
+        x:Class="editor.Views.SimpleTmSettingsWindow"
+        x:DataType="local:SimpleTmSettingsWindow"
+        Width="580"
+        Height="220"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="术语库配置">
+
+    <StackPanel Margin="16" Spacing="12">
+        <TextBlock Text="设置 simpleTmSharedUrl" FontSize="16" FontWeight="SemiBold" />
+        <TextBlock Text="请输入 remote-url 形式的 SimpleTM 共享地址，例如：simpletm://protocol/host/username/apiToken/gameTitle" TextWrapping="Wrap" />
+        <TextBox Text="{Binding SharedUrl, Mode=TwoWay}" AcceptsReturn="False" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="取消" Width="80" Click="OnCancelClick" />
+            <Button Content="保存" Width="80" Click="OnSaveClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>

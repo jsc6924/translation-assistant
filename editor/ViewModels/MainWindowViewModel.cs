@@ -18,6 +18,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly RecentFoldersStore _recentFoldersStore;
     private EditorDocumentViewModel? _selectedDocument;
     private string? _workspacePath;
+    private string _simpleTmSharedUrl = string.Empty;
 
     [ObservableProperty]
     private string _statusMessage = "请选择最近打开的文件夹，或打开一个新的文件夹。";
@@ -161,6 +162,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string SidebarTitle => string.IsNullOrWhiteSpace(_workspacePath) ? "文件浏览器" : $"文件浏览器 - {WorkspaceName}";
 
+    public string SimpleTmSharedUrl => _simpleTmSharedUrl;
+
     public string WindowTitle => string.IsNullOrWhiteSpace(_workspacePath) ? "dltxt editor" : $"dltxt editor - {WorkspaceName}";
 
     public string ParserSummary
@@ -222,6 +225,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _workspacePath = folderPath;
         var settings = _settingsStore.LoadSettings(folderPath);
         ParserConfig = settings.ParserConfig.Clone();
+        _simpleTmSharedUrl = settings.SimpleTmSharedUrl ?? string.Empty;
         AddRecentFolder(folderPath);
         RefreshWorkspaceNodes();
 
@@ -230,6 +234,30 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ParserConfig));
         OnPropertyChanged(nameof(ParserSummary));
         StatusMessage = $"已打开文件夹：{folderPath}";
+    }
+
+    public void SetSimpleTmSharedUrl(string sharedUrl)
+    {
+        _simpleTmSharedUrl = sharedUrl?.Trim() ?? string.Empty;
+
+        foreach (var document in OpenDocuments)
+        {
+            document.SimpleTmSharedUrl = _simpleTmSharedUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(_workspacePath))
+        {
+            StatusMessage = "请先打开工作区后再配置术语库地址。";
+            return;
+        }
+
+        var settings = _settingsStore.LoadSettings(_workspacePath);
+        settings.SimpleTmSharedUrl = _simpleTmSharedUrl;
+        _settingsStore.SaveSettings(_workspacePath, settings);
+
+        StatusMessage = string.IsNullOrWhiteSpace(_simpleTmSharedUrl)
+            ? "已清除术语库地址。"
+            : "已保存术语库地址。";
     }
 
     private void AddRecentFolder(string folderPath)
@@ -592,6 +620,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 EditRestrictionEnabled = EnableEditRestriction,
                 TranslationModeEnabled = EnableTranslationMode,
+                SimpleTmSharedUrl = _simpleTmSharedUrl,
             };
             document.ApplyEditorFontSettings(EditorFontFamily, EditorFontSize);
             OpenDocuments.Add(document);

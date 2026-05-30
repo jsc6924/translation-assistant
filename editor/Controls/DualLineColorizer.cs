@@ -12,12 +12,16 @@ public sealed class DualLineColorizer : DocumentColorizingTransformer
     private static readonly IBrush OriginalTextBrush = new SolidColorBrush(Color.Parse("#006c28"));
     private static readonly IBrush TranslatedPrefixBrush = new SolidColorBrush(Color.Parse("#80000000"));
     private static readonly IBrush TranslatedTextBrush = new SolidColorBrush(Color.Parse("#000000"));
+    private static readonly IBrush TermHighlightBrush = new SolidColorBrush(Color.Parse("#80ffe58f"));
+    private static readonly IBrush NamingHighlightBrush = new SolidColorBrush(Color.Parse("#80c2e7ff"));
 
     private ParsedDocument _parsedDocument = new(false);
+    private TerminologySnapshot _terminologySnapshot = TerminologySnapshot.Empty;
 
-    public void Update(ParsedDocument parsedDocument)
+    public void Update(ParsedDocument parsedDocument, TerminologySnapshot terminologySnapshot)
     {
         _parsedDocument = parsedDocument;
+        _terminologySnapshot = terminologySnapshot;
     }
 
     protected override void ColorizeLine(DocumentLine line)
@@ -65,5 +69,40 @@ public sealed class DualLineColorizer : DocumentColorizingTransformer
             });
         }
 
+        ApplyTerminologyHighlights(line);
+
+    }
+
+    private void ApplyTerminologyHighlights(DocumentLine line)
+    {
+        if (_terminologySnapshot.Highlights.Count == 0)
+        {
+            return;
+        }
+
+        var lineStart = line.Offset;
+        var lineEnd = line.EndOffset;
+        foreach (var highlight in _terminologySnapshot.Highlights)
+        {
+            var highlightStart = highlight.StartOffset;
+            if (highlightStart >= lineEnd)
+            {
+                break;
+            }
+
+            var highlightEnd = highlight.StartOffset + highlight.Length;
+            if (highlightEnd <= lineStart)
+            {
+                continue;
+            }
+
+            var start = Math.Max(lineStart, highlightStart);
+            var end = Math.Min(lineEnd, highlightEnd);
+            var brush = highlight.IsNaming ? NamingHighlightBrush : TermHighlightBrush;
+            ChangeLinePart(start, end, element =>
+            {
+                element.TextRunProperties.SetBackgroundBrush(brush);
+            });
+        }
     }
 }
