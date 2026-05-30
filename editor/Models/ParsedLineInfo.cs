@@ -9,4 +9,6 @@ public sealed class ParsedLineInfo
     public int EditableStartOffset { get; init; }
 
     public int EditableLength { get; init; }
+
+    public int PrefixLength { get; init; }
 }

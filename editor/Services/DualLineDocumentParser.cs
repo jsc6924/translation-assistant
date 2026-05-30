@@ -114,6 +114,7 @@ public sealed class DualLineDocumentParser
                 ? lineStartOffset + groups.Prefix.Length + groups.White.Length
                 : lineStartOffset,
             EditableLength = kind == ParsedLineKind.Translated ? groups.Text.Length : 0,
+            PrefixLength = groups.Prefix.Length + groups.White.Length,
         };
     }
 

@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
@@ -7,10 +8,10 @@ namespace editor.Controls;
 
 public sealed class DualLineColorizer : DocumentColorizingTransformer
 {
-    private static readonly IBrush OriginalBrush = new SolidColorBrush(Color.Parse("#C65D2E"));
-    private static readonly IBrush OriginalBackgroundBrush = new SolidColorBrush(Color.Parse("#1AF2C9B0"));
-    private static readonly IBrush TranslatedBrush = new SolidColorBrush(Color.Parse("#1B6E45"));
-    private static readonly IBrush TranslatedBackgroundBrush = new SolidColorBrush(Color.Parse("#1A8FD19E"));
+    private static readonly IBrush OriginalPrefixBrush = new SolidColorBrush(Color.Parse("#80006c28"));
+    private static readonly IBrush OriginalTextBrush = new SolidColorBrush(Color.Parse("#006c28"));
+    private static readonly IBrush TranslatedPrefixBrush = new SolidColorBrush(Color.Parse("#80000000"));
+    private static readonly IBrush TranslatedTextBrush = new SolidColorBrush(Color.Parse("#000000"));
 
     private ParsedDocument _parsedDocument = new(false);
 
@@ -32,12 +33,37 @@ public sealed class DualLineColorizer : DocumentColorizingTransformer
             return;
         }
 
-        var brush = lineInfo.Kind == ParsedLineKind.Original ? OriginalBrush : TranslatedBrush;
-        var backgroundBrush = lineInfo.Kind == ParsedLineKind.Original ? OriginalBackgroundBrush : TranslatedBackgroundBrush;
-        ChangeLinePart(line.Offset, line.EndOffset, element =>
+        var prefixLength = lineInfo.PrefixLength;
+        if (prefixLength <= 0)
         {
-            element.TextRunProperties.SetForegroundBrush(brush);
-            element.TextRunProperties.SetBackgroundBrush(backgroundBrush);
-        });
+            return;
+        }
+
+        var start = line.Offset;
+        var end = line.EndOffset;
+        var mid = start + prefixLength;
+        if (lineInfo.Kind == ParsedLineKind.Original)  
+        {
+            ChangeLinePart(start, mid, element =>
+            {
+                element.TextRunProperties.SetForegroundBrush(OriginalPrefixBrush);
+            });
+            ChangeLinePart(mid, end, element =>
+            {
+                element.TextRunProperties.SetForegroundBrush(OriginalTextBrush);
+            });
+        } 
+        else if (lineInfo.Kind == ParsedLineKind.Translated) 
+        {
+            ChangeLinePart(start, mid, element =>
+            {
+                element.TextRunProperties.SetForegroundBrush(TranslatedPrefixBrush);
+            });
+            ChangeLinePart(mid, end, element =>
+            {
+                element.TextRunProperties.SetForegroundBrush(TranslatedTextBrush);
+            });
+        }
+
     }
 }

@@ -14,6 +14,16 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ]
+        },
+        {
+            "name": "Editor (C#)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "Build Editor",
+            "program": "${workspaceFolder}/editor/bin/Debug/net9.0/editor.exe",
+            "cwd": "${workspaceFolder}/editor",
+            "stopAtEntry": false,
+            "console": "internalConsole"
         }
     ]
 }
