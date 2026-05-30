@@ -113,6 +113,14 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public void Redo()
+    {
+        if (Document.UndoStack.CanRedo)
+        {
+            Document.UndoStack.Redo();
+        }
+    }
+
     public void Dispose()
     {
         Document.Changed -= OnDocumentChanged;

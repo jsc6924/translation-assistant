@@ -24,6 +24,7 @@
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveSelectedCommand}" />
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoSelectedCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoSelectedCommand}" />
     </Window.KeyBindings>
 
     <Design.DataContext>

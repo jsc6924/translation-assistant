@@ -700,6 +700,12 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedDocument?.Undo();
     }
 
+    [RelayCommand]
+    private void RedoSelected()
+    {
+        SelectedDocument?.Redo();
+    }
+
     private void CloseDocumentInternal(EditorDocumentViewModel document)
     {
         if (!document.SaveIfDirty(out var error))
