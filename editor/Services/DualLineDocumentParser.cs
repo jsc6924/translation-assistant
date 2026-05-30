@@ -31,31 +31,32 @@ public sealed class DualLineDocumentParser
 
         MatchedGroups? pendingOriginal = null;
         var pendingOriginalLineNumber = -1;
+        string? beforeName = null;
 
         foreach (var line in lines)
         {
+            var lineText = line.TrimmedText;
+            var isNameLine = false;
             if (nameRegex is not null)
             {
-                var nameMatch = TryMatchName(nameRegex, line.TrimmedText);
+                var nameMatch = TryMatchName(nameRegex, lineText);
                 if (nameMatch is not null)
                 {
-                    lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Other, new MatchedGroups { Prefix = string.Empty, White = string.Empty, Text = line.TrimmedText, Suffix = string.Empty }, line.StartOffset, nameMatch);
-                    pendingOriginal = null;
-                    pendingOriginalLineNumber = -1;
-                    continue;
+                    beforeName = nameMatch;
+                    isNameLine = true;
                 }
             }
 
-            var originalGroups = TryMatch(originalRegex!, line.TrimmedText);
+            var originalGroups = TryMatch(originalRegex!, lineText);
             if (originalGroups is not null)
             {
-                lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Original, originalGroups, line.StartOffset);
+                lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Original, originalGroups, line.StartOffset, beforeName);
                 pendingOriginal = originalGroups.Clone();
                 pendingOriginalLineNumber = line.LineNumber;
                 continue;
             }
 
-            var translatedGroups = TryMatch(translatedRegex!, line.TrimmedText);
+            var translatedGroups = TryMatch(translatedRegex!, lineText);
             if (translatedGroups is not null)
             {
                 if (pendingOriginal is not null && pendingOriginalLineNumber >= 0)
@@ -67,18 +68,28 @@ public sealed class DualLineDocumentParser
                         pendingOriginalLineNumber,
                         ParsedLineKind.Original,
                         adjustedOriginal,
-                        lines[pendingOriginalLineNumber].StartOffset);
-                    lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Translated, adjustedTranslated, line.StartOffset);
+                        lines[pendingOriginalLineNumber].StartOffset,
+                        beforeName);
+                    lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Translated, adjustedTranslated, line.StartOffset, beforeName);
                     editableSegments.Add(BuildEditableSegment(line.StartOffset, adjustedTranslated));
+                    if (adjustedOriginal.Suffix.Contains('」'))
+                    {
+                        beforeName = null;
+                    }
                     pendingOriginal = null;
                     pendingOriginalLineNumber = -1;
                 }
                 else
                 {
-                    lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Translated, translatedGroups, line.StartOffset);
+                    lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Translated, translatedGroups, line.StartOffset, beforeName);
                     editableSegments.Add(BuildEditableSegment(line.StartOffset, translatedGroups));
                 }
 
+                continue;
+            }
+
+            if (isNameLine)
+            {
                 continue;
             }
 

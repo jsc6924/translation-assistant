@@ -12,7 +12,8 @@ public sealed class TerminologyHighlightService
     public TerminologySnapshot Build(
         string text,
         IReadOnlyList<TerminologyEntry> terms,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules,
+        IReadOnlyDictionary<int, string>? lineNumberToTalker = null)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -21,7 +22,7 @@ public sealed class TerminologyHighlightService
 
         var highlights = new List<TerminologyHighlight>();
         BuildTermHighlights(text, terms, highlights);
-        BuildNamingHighlights(text, namingRules, highlights);
+        BuildNamingHighlights(text, namingRules, highlights, lineNumberToTalker);
 
         var merged = MergeOverlaps(highlights);
         return merged.Count == 0 ? TerminologySnapshot.Empty : new TerminologySnapshot(merged);
@@ -71,7 +72,7 @@ public sealed class TerminologyHighlightService
         }
     }
 
-    private static void BuildNamingHighlights(string text, IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules, ICollection<TerminologyHighlight> sink)
+    private static void BuildNamingHighlights(string text, IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules, ICollection<TerminologyHighlight> sink, IReadOnlyDictionary<int, string>? lineNumberToTalker)
     {
         if (namingRules.Count == 0)
         {
@@ -99,7 +100,8 @@ public sealed class TerminologyHighlightService
         var matcher = new AhoCorasickMatcher(allCalleds);
         foreach (var match in matcher.Search(text))
         {
-            var resolution = ResolveNaming(match.Keyword, namingRules, inverted);
+            var resolveCaller = GetCallerForPosition(text, match.StartIndex, lineNumberToTalker);
+            var resolution = ResolveNaming(match.Keyword, namingRules, inverted, resolveCaller);
             if (string.IsNullOrWhiteSpace(resolution.Trans))
             {
                 continue;
@@ -155,8 +157,19 @@ public sealed class TerminologyHighlightService
     private static NamingResolution ResolveNaming(
         string called,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> inverted)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> inverted,
+        string? callerName)
     {
+        if (!string.IsNullOrWhiteSpace(callerName)
+            && namingRules.TryGetValue(callerName, out var directRules)
+            && directRules.TryGetValue(called, out var directRule))
+        {
+            return new NamingResolution(
+                GetTranslation(directRule),
+                null,
+                directRule.Comment);
+        }
+
         if (namingRules.TryGetValue(MatchAnyTalker, out var wildcardRules)
             && wildcardRules.TryGetValue(called, out var wildcardRule))
         {
@@ -196,6 +209,31 @@ public sealed class TerminologyHighlightService
         }
 
         return new NamingResolution(firstTranslation, fallbackCandidates.Count > 0 ? string.Join(", ", fallbackCandidates) : null, firstComment);
+    }
+
+    private static string? GetCallerForPosition(string text, int offset, IReadOnlyDictionary<int, string>? lineNumberToTalker)
+    {
+        if (lineNumberToTalker is null || lineNumberToTalker.Count == 0)
+        {
+            return null;
+        }
+
+        var lineNumber = GetLineNumberAtOffset(text, offset);
+        return lineNumberToTalker.TryGetValue(lineNumber, out var talker) ? talker : null;
+    }
+
+    private static int GetLineNumberAtOffset(string text, int offset)
+    {
+        var line = 0;
+        for (var i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                line++;
+            }
+        }
+
+        return line;
     }
 
     private static string GetTranslation(NamingRuleValue ruleValue)

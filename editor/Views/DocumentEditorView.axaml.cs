@@ -475,8 +475,11 @@ public partial class DocumentEditorView : UserControl
         }
 
         EnsureEditorHooks();
-        _terminologySnapshot = _terminologyHighlightService.Build(Editor.Document.Text, _terms, _namingRules);
         var parsedDocument = _parser.Parse(Editor.Document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var lineNumberToTalker = parsedDocument.Lines
+            .Where(line => !string.IsNullOrWhiteSpace(line.Name))
+            .ToDictionary(line => line.LineNumber, line => line.Name);
+        _terminologySnapshot = _terminologyHighlightService.Build(Editor.Document.Text, _terms, _namingRules, lineNumberToTalker);
         _colorizer.Update(parsedDocument, _terminologySnapshot);
         ApplyReadOnlySections(parsedDocument);
         Editor.TextArea.TextView.Redraw();
