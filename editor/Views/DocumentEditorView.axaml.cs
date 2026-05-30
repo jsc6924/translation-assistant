@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using AvaloniaEdit.Document;
 using editor.Controls;
 using editor.Models;
@@ -23,6 +24,8 @@ public partial class DocumentEditorView : UserControl
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
+        Editor.TextArea.KeyDown += OnEditorTextAreaKeyDown;
+        Editor.TextArea.TextEntering += OnEditorTextEntering;
         EnsureEditorHooks();
     }
 
@@ -88,6 +91,32 @@ public partial class DocumentEditorView : UserControl
             || eventArgs.PropertyName == nameof(EditorDocumentViewModel.EditRestrictionEnabled))
         {
             RefreshParserState();
+        }
+    }
+
+    private void OnEditorTextAreaKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel is null || !_viewModel.EditRestrictionEnabled)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter || e.Key == Key.Return)
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void OnEditorTextEntering(object? sender, TextInputEventArgs e)
+    {
+        if (_viewModel is null || !_viewModel.EditRestrictionEnabled || string.IsNullOrEmpty(e.Text))
+        {
+            return;
+        }
+
+        if (e.Text.Contains('\n') || e.Text.Contains('\r'))
+        {
+            e.Handled = true;
         }
     }
 

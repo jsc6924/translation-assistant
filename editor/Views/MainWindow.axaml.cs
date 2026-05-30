@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using editor.Models;
@@ -63,6 +64,119 @@ public partial class MainWindow : Window
     private async void OnOpenFolderClick(object? sender, RoutedEventArgs eventArgs)
     {
         await PickFolderAndLoadAsync(false);
+    }
+
+    private void OnCreateFileClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not MenuItem menuItem || menuItem.DataContext is not FileNodeViewModel node || !node.IsDirectory)
+        {
+            return;
+        }
+
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.CreateNewFile(node.FullPath, out var error);
+        if (error is not null)
+        {
+            viewModel.SetStatus($"创建文件失败：{error}");
+            return;
+        }
+
+        viewModel.SetStatus($"已创建新文件：{node.FullPath}");
+    }
+
+    private void OnDeleteNodeClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not MenuItem menuItem || menuItem.DataContext is not FileNodeViewModel node)
+        {
+            return;
+        }
+
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.DeletePath(node.FullPath, out var error);
+        if (error is not null)
+        {
+            viewModel.SetStatus($"删除失败：{error}");
+            return;
+        }
+
+        viewModel.SetStatus($"已删除：{node.FullPath}");
+    }
+
+    private void OnRenameNodeClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is not MenuItem menuItem || menuItem.DataContext is not FileNodeViewModel node || node.IsDirectory)
+        {
+            return;
+        }
+
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.ResetAllRenameStates();
+        node.BeginRename();
+        viewModel.SetStatus($"正在重命名：{node.DisplayName}");
+    }
+
+    private void OnRenameTextBoxKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox textBox || textBox.DataContext is not FileNodeViewModel node)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter || e.Key == Key.Return)
+        {
+            CommitRename(node);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            node.ResetRenaming();
+            e.Handled = true;
+        }
+    }
+
+    private void OnRenameTextBoxLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not TextBox textBox || textBox.DataContext is not FileNodeViewModel node)
+        {
+            return;
+        }
+
+        if (!node.IsRenaming)
+        {
+            return;
+        }
+
+        CommitRename(node);
+    }
+
+    private void CommitRename(FileNodeViewModel node)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.RenameFile(node.FullPath, node.RenameText, out var error);
+        if (error is not null)
+        {
+            viewModel.SetStatus($"重命名失败：{error}");
+            return;
+        }
+
+        node.ResetRenaming();
+        viewModel.SetStatus($"已重命名：{node.RenameText}");
     }
 
     private async void OnOpened(object? sender, EventArgs eventArgs)

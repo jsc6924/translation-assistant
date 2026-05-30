@@ -34,11 +34,19 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
         Document.Changed += OnDocumentChanged;
     }
 
-    public string FilePath { get; }
+    public string FilePath { get; private set; }
 
     public string DisplayName => Path.GetFileName(FilePath);
 
     public string Header => IsDirty ? $"{DisplayName} *" : DisplayName;
+
+    public void UpdateFilePath(string newPath)
+    {
+        FilePath = newPath;
+        OnPropertyChanged(nameof(FilePath));
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(Header));
+    }
 
     public string ToolTip => FilePath;
 

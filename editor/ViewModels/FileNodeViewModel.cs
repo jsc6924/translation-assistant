@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace editor.ViewModels;
 
-public sealed class FileNodeViewModel : ViewModelBase
+public sealed partial class FileNodeViewModel : ViewModelBase
 {
     private static readonly HashSet<string> IgnoredNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -16,23 +16,70 @@ public sealed class FileNodeViewModel : ViewModelBase
         "obj",
     };
 
-    public FileNodeViewModel(string fullPath, bool isDirectory, IEnumerable<FileNodeViewModel>? children = null)
+    private bool _isExpanded;
+    private bool _isRenaming;
+    private string _renameText = string.Empty;
+    private string _displayName;
+
+    public FileNodeViewModel(string fullPath, bool isDirectory, IEnumerable<FileNodeViewModel>? children = null, ISet<string>? expandedPaths = null)
     {
         FullPath = fullPath;
         IsDirectory = isDirectory;
-        DisplayName = Path.GetFileName(fullPath);
+        _displayName = Path.GetFileName(fullPath);
+        RenameText = _displayName;
         Children = new ObservableCollection<FileNodeViewModel>(children ?? []);
+        IsExpanded = expandedPaths?.Contains(fullPath) ?? false;
     }
 
-    public string FullPath { get; }
+    public string FullPath { get; private set; }
 
-    public string DisplayName { get; }
+    public string DisplayName
+    {
+        get => _displayName;
+        private set => SetProperty(ref _displayName, value);
+    }
 
     public bool IsDirectory { get; }
 
     public ObservableCollection<FileNodeViewModel> Children { get; }
 
-    public static IReadOnlyList<FileNodeViewModel> BuildChildren(string folderPath)
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetProperty(ref _isExpanded, value);
+    }
+
+    public bool IsRenaming
+    {
+        get => _isRenaming;
+        set => SetProperty(ref _isRenaming, value);
+    }
+
+    public string RenameText
+    {
+        get => _renameText;
+        set => SetProperty(ref _renameText, value);
+    }
+
+    public void BeginRename()
+    {
+        RenameText = DisplayName;
+        IsRenaming = true;
+    }
+
+    public void UpdatePath(string newPath)
+    {
+        FullPath = newPath;
+        DisplayName = Path.GetFileName(newPath);
+    }
+
+    public void ResetRenaming()
+    {
+        IsRenaming = false;
+        RenameText = DisplayName;
+    }
+
+    public static IReadOnlyList<FileNodeViewModel> BuildChildren(string folderPath, ISet<string>? expandedPaths = null)
     {
         var nodes = new List<FileNodeViewModel>();
 
@@ -45,7 +92,7 @@ public sealed class FileNodeViewModel : ViewModelBase
                     continue;
                 }
 
-                nodes.Add(new FileNodeViewModel(directoryPath, true, BuildChildren(directoryPath)));
+                nodes.Add(new FileNodeViewModel(directoryPath, true, BuildChildren(directoryPath, expandedPaths), expandedPaths));
             }
 
             foreach (var filePath in Directory.EnumerateFiles(folderPath).OrderBy(Path.GetFileName))
@@ -55,7 +102,7 @@ public sealed class FileNodeViewModel : ViewModelBase
                     continue;
                 }
 
-                nodes.Add(new FileNodeViewModel(filePath, false));
+                nodes.Add(new FileNodeViewModel(filePath, false, null, expandedPaths));
             }
         }
         catch

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
@@ -112,17 +113,318 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _workspacePath = folderPath;
         ParserConfig = _settingsStore.LoadParserConfig(folderPath);
-        RootNodes.Clear();
-        foreach (var node in FileNodeViewModel.BuildChildren(folderPath))
-        {
-            RootNodes.Add(node);
-        }
+        RefreshWorkspaceNodes();
 
         SetSelectedDocument(null, false);
         RaiseShellPropertyChanges();
         OnPropertyChanged(nameof(ParserConfig));
         OnPropertyChanged(nameof(ParserSummary));
         StatusMessage = $"已打开文件夹：{folderPath}";
+    }
+
+    public void RefreshWorkspaceNodes()
+    {
+        if (string.IsNullOrWhiteSpace(_workspacePath))
+        {
+            return;
+        }
+
+        RootNodes.Clear();
+        foreach (var node in FileNodeViewModel.BuildChildren(_workspacePath))
+        {
+            RootNodes.Add(node);
+        }
+    }
+
+    public void CreateNewFile(string folderPath, out string? error)
+    {
+        error = null;
+        try
+        {
+            if (!Directory.Exists(folderPath))
+            {
+                error = "目标文件夹不存在。";
+                return;
+            }
+
+            var fileName = "newfile.txt";
+            var counter = 1;
+            var newFilePath = Path.Combine(folderPath, fileName);
+            while (File.Exists(newFilePath))
+            {
+                fileName = $"newfile{counter}.txt";
+                newFilePath = Path.Combine(folderPath, fileName);
+                counter++;
+            }
+
+            using (File.Create(newFilePath))
+            {
+            }
+
+            if (!AddFileNode(folderPath, newFilePath))
+            {
+                RefreshWorkspaceNodes();
+            }
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+    }
+
+    private bool AddFileNode(string folderPath, string filePath)
+    {
+        var folderNode = FindNodeByPath(folderPath);
+        if (folderNode is null)
+        {
+            return false;
+        }
+
+        var newNode = new FileNodeViewModel(filePath, false);
+        var insertIndex = folderNode.Children.TakeWhile(child => string.Compare(Path.GetFileName(child.FullPath), Path.GetFileName(filePath), StringComparison.OrdinalIgnoreCase) < 0).Count();
+        folderNode.Children.Insert(insertIndex, newNode);
+        return true;
+    }
+
+    private FileNodeViewModel? FindNodeByPath(string path)
+    {
+        foreach (var node in RootNodes)
+        {
+            var found = FindNodeByPathRecursive(node, path);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static FileNodeViewModel? FindNodeByPathRecursive(FileNodeViewModel node, string path)
+    {
+        if (string.Equals(node.FullPath, path, StringComparison.OrdinalIgnoreCase))
+        {
+            return node;
+        }
+
+        foreach (var child in node.Children)
+        {
+            var found = FindNodeByPathRecursive(child, path);
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    public void ResetAllRenameStates()
+    {
+        foreach (var root in RootNodes)
+        {
+            ResetRenameStatesRecursive(root);
+        }
+    }
+
+    private static void ResetRenameStatesRecursive(FileNodeViewModel node)
+    {
+        node.ResetRenaming();
+        foreach (var child in node.Children)
+        {
+            ResetRenameStatesRecursive(child);
+        }
+    }
+
+    public void RenameFile(string originalPath, string newName, out string? error)
+    {
+        error = null;
+        try
+        {
+            if (!File.Exists(originalPath))
+            {
+                error = "原始文件不存在。";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                error = "文件名不能为空。";
+                return;
+            }
+
+            var directory = Path.GetDirectoryName(originalPath);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                error = "无法解析文件目录。";
+                return;
+            }
+
+            var newPath = Path.Combine(directory, newName);
+            if (string.Equals(newPath, originalPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (File.Exists(newPath) || Directory.Exists(newPath))
+            {
+                error = "目标文件名已存在。";
+                return;
+            }
+
+            File.Move(originalPath, newPath);
+
+            var comparer = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var document = OpenDocuments.FirstOrDefault(d => string.Equals(d.FilePath, originalPath, comparer));
+            if (document is not null)
+            {
+                document.UpdateFilePath(newPath);
+            }
+
+            if (!UpdateNodePath(originalPath, newPath))
+            {
+                RefreshWorkspaceNodes();
+            }
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+    }
+
+    private bool UpdateNodePath(string originalPath, string newPath)
+    {
+        var node = FindNodeByPath(originalPath);
+        if (node is null)
+        {
+            return false;
+        }
+
+        var parentPath = Path.GetDirectoryName(originalPath) ?? string.Empty;
+        ObservableCollection<FileNodeViewModel> siblings;
+        if (string.Equals(parentPath, _workspacePath, StringComparison.OrdinalIgnoreCase))
+        {
+            siblings = RootNodes;
+        }
+        else
+        {
+            var parentNode = FindNodeByPath(parentPath);
+            if (parentNode is null)
+            {
+                siblings = RootNodes;
+            }
+            else
+            {
+                siblings = parentNode.Children;
+            }
+        }
+
+        if (!siblings.Remove(node))
+        {
+            return false;
+        }
+
+        node.UpdatePath(newPath);
+        var insertIndex = siblings.TakeWhile(child => string.Compare(Path.GetFileName(child.FullPath), Path.GetFileName(newPath), StringComparison.OrdinalIgnoreCase) < 0).Count();
+        siblings.Insert(insertIndex, node);
+        return true;
+    }
+
+    private bool RemoveNodeByPath(string path)
+    {
+        foreach (var root in RootNodes)
+        {
+            if (string.Equals(root.FullPath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                return RootNodes.Remove(root);
+            }
+
+            if (RemoveNodeByPathRecursive(root.Children, path))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool RemoveNodeByPathRecursive(ObservableCollection<FileNodeViewModel> nodes, string path)
+    {
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            if (string.Equals(nodes[i].FullPath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                nodes.RemoveAt(i);
+                return true;
+            }
+
+            if (RemoveNodeByPathRecursive(nodes[i].Children, path))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void DeletePath(string path, out string? error)
+    {
+        error = null;
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            else if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
+            else
+            {
+                error = "目标路径不存在。";
+                return;
+            }
+
+            var comparer = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var documentsToClose = OpenDocuments
+                .Where(document => IsPathUnder(document.FilePath, path, comparer))
+                .ToList();
+
+            foreach (var document in documentsToClose)
+            {
+                if (ReferenceEquals(document, _selectedDocument))
+                {
+                    SetSelectedDocument(null, false);
+                }
+
+                OpenDocuments.Remove(document);
+                document.Dispose();
+            }
+
+            if (!RemoveNodeByPath(path))
+            {
+                RefreshWorkspaceNodes();
+            }
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+    }
+
+    private static bool IsPathUnder(string path, string parentPath, StringComparison comparison)
+    {
+        var normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedParent = Path.GetFullPath(parentPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (string.Equals(normalizedPath, normalizedParent, comparison))
+        {
+            return true;
+        }
+
+        return normalizedPath.StartsWith(normalizedParent + Path.DirectorySeparatorChar, comparison)
+            || normalizedPath.StartsWith(normalizedParent + Path.AltDirectorySeparatorChar, comparison);
     }
 
     public void OpenFile(string filePath)

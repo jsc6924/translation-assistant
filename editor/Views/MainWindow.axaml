@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:editor.ViewModels"
         xmlns:views="using:editor.Views"
+        xmlns:converters="using:editor.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -15,6 +16,10 @@
         MinHeight="640"
         Icon="/Assets/avalonia-logo.ico"
         Title="{Binding WindowTitle}">
+
+    <Window.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+    </Window.Resources>
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveSelectedCommand}" />
@@ -32,7 +37,6 @@
                     <Button Content="打开文件夹" Click="OnOpenFolderClick" />
                     <Button Content="双行格式" Click="OnConfigureFormatClick" />
                     <Button Content="保存" Command="{Binding SaveSelectedCommand}" />
-                    <Button Content="撤销" Command="{Binding UndoSelectedCommand}" />
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
@@ -51,12 +55,35 @@
                               Margin="0,12,0,0"
                               ItemsSource="{Binding RootNodes}"
                               SelectionChanged="OnFileTreeSelectionChanged">
-                        <TreeView.ItemTemplate>
-                            <TreeDataTemplate x:DataType="vm:FileNodeViewModel" ItemsSource="{Binding Children}">
-                                <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
-                            </TreeDataTemplate>
-                        </TreeView.ItemTemplate>
-                    </TreeView>
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate x:DataType="vm:FileNodeViewModel" ItemsSource="{Binding Children}">
+                            <DockPanel>
+                                <DockPanel.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="新建文件"
+                                                  IsVisible="{Binding IsDirectory}"
+                                                  Click="OnCreateFileClick" />
+                                        <MenuItem Header="删除"
+                                                  Click="OnDeleteNodeClick" />
+                                        <MenuItem Header="重命名"
+                                                  IsVisible="{Binding IsDirectory, Converter={StaticResource InverseBooleanConverter}}"
+                                                  Click="OnRenameNodeClick" />
+                                    </ContextMenu>
+                                </DockPanel.ContextMenu>
+                                <Grid>
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               TextTrimming="CharacterEllipsis"
+                                               IsVisible="{Binding IsRenaming, Converter={StaticResource InverseBooleanConverter}}" />
+                                    <TextBox Text="{Binding RenameText, Mode=TwoWay}"
+                                             IsVisible="{Binding IsRenaming}"
+                                             Width="200"
+                                             KeyDown="OnRenameTextBoxKeyDown"
+                                             LostFocus="OnRenameTextBoxLostFocus" />
+                                </Grid>
+                            </DockPanel>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
                 </Grid>
             </Border>
 
