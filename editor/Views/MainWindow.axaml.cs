@@ -1,0 +1,123 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
+using editor.Models;
+using editor.ViewModels;
+
+namespace editor.Views;
+
+public partial class MainWindow : Window
+{
+    private bool _initialFolderRequested;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        Opened += OnOpened;
+        Closing += OnClosing;
+    }
+
+    private async void OnConfigureFormatClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var dialog = new ParserSettingsWindow(viewModel.ParserConfig);
+        await dialog.ShowDialog(this);
+        if (dialog.ResultConfig is ParserConfig parserConfig)
+        {
+            viewModel.ApplyParserConfig(parserConfig);
+        }
+    }
+
+    private void OnClosing(object? sender, WindowClosingEventArgs eventArgs)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SaveAll();
+        }
+    }
+
+    private void OnFileTreeSelectionChanged(object? sender, SelectionChangedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        foreach (var item in eventArgs.AddedItems)
+        {
+            if (item is FileNodeViewModel { IsDirectory: false } node)
+            {
+                viewModel.OpenFile(node.FullPath);
+                break;
+            }
+        }
+    }
+
+    private async void OnOpenFolderClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        await PickFolderAndLoadAsync(false);
+    }
+
+    private async void OnOpened(object? sender, EventArgs eventArgs)
+    {
+        if (_initialFolderRequested)
+        {
+            return;
+        }
+
+        _initialFolderRequested = true;
+        var opened = await PickFolderAndLoadAsync(true);
+        if (!opened)
+        {
+            Close();
+        }
+    }
+
+    private async Task<bool> PickFolderAndLoadAsync(bool requireSelection)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return false;
+        }
+
+        if (!StorageProvider.CanPickFolder)
+        {
+            viewModel.SetStatus("当前平台不支持文件夹选择。请改用支持文件系统访问的桌面环境。");
+            return !requireSelection;
+        }
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "选择翻译项目文件夹",
+            AllowMultiple = false,
+        });
+
+        var folder = folders.FirstOrDefault();
+        if (folder is null)
+        {
+            if (requireSelection)
+            {
+                viewModel.SetStatus("未选择文件夹。应用将退出。");
+            }
+
+            return !requireSelection;
+        }
+
+        var path = folder.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            viewModel.SetStatus("所选文件夹无法映射到本地路径。请重新选择。" );
+            return !requireSelection;
+        }
+
+        viewModel.LoadWorkspace(path);
+        return true;
+    }
+}

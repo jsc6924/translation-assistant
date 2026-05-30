@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:editor.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="editor.Views.ParserSettingsWindow"
+        x:DataType="vm:ParserSettingsViewModel"
+        Width="620"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="双行格式设置">
+
+    <Design.DataContext>
+        <vm:ParserSettingsViewModel />
+    </Design.DataContext>
+
+    <ScrollViewer>
+        <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <TextBlock Text="参考 dltxt 的标准双行解析：原文和译文前缀都留空即可关闭高亮和只读限制。"
+                       TextWrapping="Wrap" />
+
+            <Grid Grid.Row="1" Margin="0,16,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="原文前缀正则" />
+                <TextBox Grid.Column="1" Text="{Binding OriginalPrefixRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Grid.Row="2" Margin="0,12,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="译文前缀正则" />
+                <TextBox Grid.Column="1" Text="{Binding TranslatedPrefixRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Grid.Row="3" Margin="0,12,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="原文空白正则" />
+                <TextBox Grid.Column="1" Text="{Binding OriginalWhiteRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Grid.Row="4" Margin="0,12,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="译文空白正则" />
+                <TextBox Grid.Column="1" Text="{Binding TranslatedWhiteRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Grid.Row="5" Margin="0,12,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="原文后缀正则" />
+                <TextBox Grid.Column="1" Text="{Binding OriginalSuffixRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Grid.Row="6" Margin="0,12,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="译文后缀正则" />
+                <TextBox Grid.Column="1" Text="{Binding TranslatedSuffixRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <TextBlock Grid.Row="7"
+                       Margin="0,16,0,0"
+                       Text="{Binding ValidationMessage}"
+                       Foreground="IndianRed"
+                       IsVisible="{Binding HasValidationMessage}"
+                       TextWrapping="Wrap" />
+
+            <StackPanel Grid.Row="8" Margin="0,20,0,0" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                <Button Content="取消" Click="OnCancelClick" />
+                <Button Content="保存" Click="OnSaveClick" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>
