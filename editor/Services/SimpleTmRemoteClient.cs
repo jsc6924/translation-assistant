@@ -169,6 +169,74 @@ public sealed class SimpleTmRemoteClient
         };
     }
 
+    public async Task<bool> UpdateTermAsync(string sharedUrl, string rawText, string translation)
+    {
+        var connection = ParseSharedUrl(sharedUrl);
+        using var httpClient = CreateHttpClient(connection);
+
+        var url = BuildUrl(connection.BaseUrl, "/api2/update");
+        var body = new
+        {
+            game = connection.GameTitle,
+            rawWord = rawText,
+            translate = translation,
+        };
+
+        return await SendTermUpdateRequestAsync(httpClient, url, body).ConfigureAwait(false);
+    }
+
+    public async Task<bool> DeleteTermAsync(string sharedUrl, string rawText)
+    {
+        var connection = ParseSharedUrl(sharedUrl);
+        using var httpClient = CreateHttpClient(connection);
+
+        var url = BuildUrl(connection.BaseUrl, "/api2/delete");
+        var body = new
+        {
+            game = connection.GameTitle,
+            rawWord = rawText,
+        };
+
+        return await SendTermUpdateRequestAsync(httpClient, url, body).ConfigureAwait(false);
+    }
+
+    private static async Task<bool> SendTermUpdateRequestAsync(HttpClient httpClient, string url, object body)
+    {
+        var jsonBody = JsonSerializer.Serialize(body);
+        using var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+        using var response = await httpClient.PostAsync(url, content).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var apiResult = JsonSerializer.Deserialize<ApiResultDto>(responseText);
+        if (apiResult is null)
+        {
+            throw new InvalidOperationException("远程术语 API 返回了无效响应。");
+        }
+
+        if (!apiResult.Success)
+        {
+            throw new InvalidOperationException("远程术语 API 返回失败。");
+        }
+
+        return true;
+    }
+
+    private sealed class ApiResultDto
+    {
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("project_id")]
+        public string? ProjectId { get; set; }
+
+        [JsonPropertyName("key")]
+        public string? Key { get; set; }
+
+        [JsonPropertyName("value")]
+        public string? Value { get; set; }
+    }
+
     private static string BuildUrl(string baseUrl, string path)
     {
         if (baseUrl.EndsWith("/", StringComparison.Ordinal) && path.StartsWith("/", StringComparison.Ordinal))

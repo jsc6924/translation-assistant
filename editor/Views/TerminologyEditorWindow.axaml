@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:editor.Views"
+        x:Class="editor.Views.TerminologyEditorWindow"
+        x:DataType="local:TerminologyEditorWindow"
+        Width="520"
+        Height="300"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="编辑术语">
+
+    <StackPanel Margin="16" Spacing="12">
+        <TextBlock Text="选中术语" FontWeight="SemiBold" />
+        <TextBox Text="{Binding RawText}" IsReadOnly="True" />
+
+        <TextBlock Text="术语翻译" FontWeight="SemiBold" />
+        <TextBox Text="{Binding Translation, Mode=TwoWay}"/>
+
+        <TextBlock Text="留空则会删除该术语。点击 保存 进行保存或删除。" Foreground="Gray" TextWrapping="Wrap" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="取消" Width="80" Click="OnCancelClick" />
+            <Button Content="保存" Width="80" Click="OnSaveClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>

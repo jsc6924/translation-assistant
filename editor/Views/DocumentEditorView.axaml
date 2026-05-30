@@ -9,5 +9,11 @@
                              HorizontalScrollBarVisibility="Auto"
                              VerticalScrollBarVisibility="Auto"
                              FontFamily="{Binding FontFamily}"
-                             FontSize="{Binding FontSize}" />
+                             FontSize="{Binding FontSize}">
+        <avaloniaEdit:TextEditor.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="编辑术语" Click="OnEditTerminologyClick" />
+            </ContextMenu>
+        </avaloniaEdit:TextEditor.ContextMenu>
+    </avaloniaEdit:TextEditor>
 </UserControl>

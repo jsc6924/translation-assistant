@@ -5,7 +5,9 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using AvaloniaEdit.Document;
 using editor.Controls;
 using editor.Models;
@@ -137,6 +139,11 @@ public partial class DocumentEditorView : UserControl
         }
     }
 
+    private async void OnEditTerminologyClick(object? sender, RoutedEventArgs e)
+    {
+        await OpenTerminologyDialogAsync("编辑术语");
+    }
+
     private void OnEditorTextEntering(object? sender, TextInputEventArgs e)
     {
         if (_viewModel is null || string.IsNullOrEmpty(e.Text))
@@ -265,7 +272,15 @@ public partial class DocumentEditorView : UserControl
 
         if (_terminologyFetchInProgress)
         {
-            return;
+            if (!force)
+            {
+                return;
+            }
+
+            while (_terminologyFetchInProgress)
+            {
+                await System.Threading.Tasks.Task.Delay(50).ConfigureAwait(false);
+            }
         }
 
         if (!force && DateTime.UtcNow - _lastTerminologyFetchUtc < TimeSpan.FromSeconds(30))
@@ -342,6 +357,85 @@ public partial class DocumentEditorView : UserControl
     {
         _lastHoverText = null;
         ToolTip.SetTip(Editor, null);
+    }
+
+    private async System.Threading.Tasks.Task OpenTerminologyDialogAsync(string title)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var rawText = GetSelectedText();
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            ToolTip.SetTip(Editor, "请先选中要添加/编辑/删除的术语文本。");
+            return;
+        }
+
+        var sharedUrl = _viewModel.SimpleTmSharedUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(sharedUrl))
+        {
+            ToolTip.SetTip(Editor, "请先配置 simpleTmSharedUrl，然后再操作术语。");
+            return;
+        }
+
+        var existingTranslation = _terms.FirstOrDefault(term => string.Equals(term.Raw, rawText, StringComparison.Ordinal))?.Translation ?? string.Empty;
+        var dialog = new TerminologyEditorWindow(rawText, existingTranslation)
+        {
+            Title = title,
+        };
+
+        var owner = this.VisualRoot as Window;
+        if (owner is null)
+        {
+            owner = Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+        }
+
+        if (owner is null)
+        {
+            ToolTip.SetTip(Editor, "无法找到窗口父级，无法打开术语编辑窗口。");
+            return;
+        }
+
+        var confirmed = await dialog.ShowDialog<bool?>(owner) ?? false;
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(dialog.Translation))
+            {
+                await _simpleTmRemoteClient.DeleteTermAsync(sharedUrl, rawText);
+                ToolTip.SetTip(Editor, $"已删除术语：{rawText}");
+            }
+            else
+            {
+                await _simpleTmRemoteClient.UpdateTermAsync(sharedUrl, rawText, dialog.Translation.Trim());
+                ToolTip.SetTip(Editor, $"已保存术语：{rawText}");
+            }
+
+            await RefreshTerminologyFromServerAsync(force: true);
+        }
+        catch (Exception exception)
+        {
+            ToolTip.SetTip(Editor, $"术语操作失败：{exception.Message}");
+        }
+    }
+
+    private string? GetSelectedText()
+    {
+        if (Editor.Document is null)
+        {
+            return null;
+        }
+
+        var selectedText = Editor.SelectedText?.Trim();
+        return string.IsNullOrWhiteSpace(selectedText) ? null : selectedText;
     }
 
     private int? TryGetOffsetAtPointer(PointerEventArgs e)
