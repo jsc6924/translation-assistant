@@ -26,6 +26,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _enableEditRestriction = true;
 
     [ObservableProperty]
+    private bool _enableTranslationMode;
+
+    [ObservableProperty]
     private string _editorFontFamilyName = "黑体";
 
     [ObservableProperty]
@@ -74,6 +77,14 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(ParserSummary));
+    }
+
+    partial void OnEnableTranslationModeChanged(bool value)
+    {
+        foreach (var document in OpenDocuments)
+        {
+            document.TranslationModeEnabled = value;
+        }
     }
 
     partial void OnEditorFontFamilyNameChanged(string value)
@@ -580,6 +591,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var document = new EditorDocumentViewModel(filePath, content, ParserConfig, CloseDocumentInternal)
             {
                 EditRestrictionEnabled = EnableEditRestriction,
+                TranslationModeEnabled = EnableTranslationMode,
             };
             document.ApplyEditorFontSettings(EditorFontFamily, EditorFontSize);
             OpenDocuments.Add(document);

@@ -22,6 +22,9 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     private bool _editRestrictionEnabled = true;
 
     [ObservableProperty]
+    private bool _translationModeEnabled;
+
+    [ObservableProperty]
     private FontFamily _fontFamily = new("Microsoft YaHei");
 
     [ObservableProperty]

@@ -150,14 +150,14 @@
         </Grid>
 
         <Border Grid.Row="2" Padding="8,0" Background="{StaticResource FooterBackgroundBrush}" BorderThickness="0">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
                 <Grid.Styles>
                     <Style Selector="ComboBox.OpenUp /template/ Popup#PART_Popup">
                         <Setter Property="Placement" Value="Top" />
                         <Setter Property="VerticalOffset" Value="-2" />
                     </Style>
                 </Grid.Styles>
-                
+
                 <TextBlock Text="{Binding StatusMessage}"
                            VerticalAlignment="Center"
                            Grid.Column="0" />
@@ -167,11 +167,16 @@
                 <ComboBox Classes="OpenUp" Width="65" Grid.Column="2" Margin="8,0"
                               ItemsSource="{Binding AvailableEditorFontSizes}"
                               SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
+                <CheckBox Content="翻译模式"
+                          IsChecked="{Binding EnableTranslationMode, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Right"
+                          Grid.Column="3" />
                 <CheckBox Content="启用编辑限制模式"
                           IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Right"
-                          Grid.Column="3" />
+                          Grid.Column="4" />
             </Grid>
         </Border>
     </Grid>

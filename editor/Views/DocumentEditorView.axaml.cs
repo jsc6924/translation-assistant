@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -96,25 +97,39 @@ public partial class DocumentEditorView : UserControl
 
     private void OnEditorTextAreaKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_viewModel is null || !_viewModel.EditRestrictionEnabled)
+        if (_viewModel is null)
         {
             return;
         }
 
         if (e.Key == Key.Enter || e.Key == Key.Return)
         {
-            e.Handled = true;
+            e.Handled = _viewModel.EditRestrictionEnabled;
         }
     }
 
     private void OnEditorTextEntering(object? sender, TextInputEventArgs e)
     {
-        if (_viewModel is null || !_viewModel.EditRestrictionEnabled || string.IsNullOrEmpty(e.Text))
+        if (_viewModel is null || string.IsNullOrEmpty(e.Text))
         {
             return;
         }
 
-        if (e.Text.Contains('\n') || e.Text.Contains('\r'))
+        if (_viewModel.TranslationModeEnabled && e.Text == "\\")
+        {
+            MoveCaretToPreviousTranslatedLine();
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.TranslationModeEnabled && (e.Text.Contains('\n') || e.Text.Contains('\r')))
+        {
+            MoveCaretToNextTranslatedLine();
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.EditRestrictionEnabled && (e.Text.Contains('\n') || e.Text.Contains('\r')))
         {
             e.Handled = true;
         }
@@ -132,6 +147,66 @@ public partial class DocumentEditorView : UserControl
         _colorizer.Update(parsedDocument);
         ApplyReadOnlySections(parsedDocument);
         Editor.TextArea.TextView.Redraw();
+    }
+
+    private void MoveCaretToNextTranslatedLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var parsedDocument = _parser.Parse(Editor.Document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var currentLine = Editor.Document.GetLineByOffset(Editor.TextArea.Caret.Offset);
+        var currentLineIndex = currentLine.LineNumber - 1;
+        if (currentLineIndex < 0)
+        {
+            currentLineIndex = 0;
+        }
+
+        var nextTranslatedLine = parsedDocument.Lines
+            .Where(line => line.Kind == ParsedLineKind.Translated && line.LineNumber > currentLineIndex)
+            .OrderBy(line => line.LineNumber)
+            .FirstOrDefault();
+
+        if (nextTranslatedLine is null)
+        {
+            return;
+        }
+
+        Editor.TextArea.Caret.Offset = nextTranslatedLine.EditableStartOffset;
+        var halfHeight = Math.Max(0, Editor.TextArea.Bounds.Height / 2);
+        Editor.TextArea.Caret.BringCaretToView(halfHeight);
+    }
+
+    private void MoveCaretToPreviousTranslatedLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var parsedDocument = _parser.Parse(Editor.Document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var currentLine = Editor.Document.GetLineByOffset(Editor.TextArea.Caret.Offset);
+        var currentLineIndex = currentLine.LineNumber - 1;
+        if (currentLineIndex < 0)
+        {
+            currentLineIndex = 0;
+        }
+
+        var previousTranslatedLine = parsedDocument.Lines
+            .Where(line => line.Kind == ParsedLineKind.Translated && line.LineNumber < currentLineIndex)
+            .OrderByDescending(line => line.LineNumber)
+            .FirstOrDefault();
+
+        if (previousTranslatedLine is null)
+        {
+            return;
+        }
+
+        Editor.TextArea.Caret.Offset = previousTranslatedLine.EditableStartOffset;
+        var halfHeight = Math.Max(0, Editor.TextArea.Bounds.Height / 2);
+        Editor.TextArea.Caret.BringCaretToView(halfHeight);
     }
 
     private void EnsureEditorHooks()
