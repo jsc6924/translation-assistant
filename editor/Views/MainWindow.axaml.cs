@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using editor.Models;
 using editor.ViewModels;
@@ -14,10 +15,19 @@ namespace editor.Views;
 
 public partial class MainWindow : Window
 {
+    private readonly DispatcherTimer _autoSaveTimer;
+
     public MainWindow()
     {
         InitializeComponent();
         Closing += OnClosing;
+
+        _autoSaveTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(30),
+        };
+        _autoSaveTimer.Tick += OnAutoSaveTimerTick;
+        _autoSaveTimer.Start();
     }
 
     private async void OnConfigureFormatClick(object? sender, RoutedEventArgs eventArgs)
@@ -52,9 +62,27 @@ public partial class MainWindow : Window
     }
     private void OnClosing(object? sender, WindowClosingEventArgs eventArgs)
     {
+        _autoSaveTimer.Stop();
+
         if (DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.SaveAll();
+            if (!viewModel.SaveAll(out var error))
+            {
+                viewModel.SetStatus($"关闭时保存失败：{error}");
+                eventArgs.Cancel = true;
+            }
+        }
+    }
+
+    private void OnAutoSaveTimerTick(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SaveSelectedIfDirty(out var error);
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                viewModel.SetStatus($"自动保存失败：{error}");
+            }
         }
     }
 

@@ -654,26 +654,53 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public void SaveAll()
+    public bool SaveAll(out string? error)
     {
         string? firstError = null;
         foreach (var document in OpenDocuments)
         {
-            if (!document.SaveIfDirty(out var error) && firstError is null)
+            if (!document.SaveIfDirty(out var saveError) && firstError is null)
             {
-                firstError = $"{document.DisplayName}: {error}";
+                firstError = $"{document.DisplayName}: {saveError}";
             }
         }
 
         if (!string.IsNullOrWhiteSpace(firstError))
         {
+            error = firstError;
             StatusMessage = $"保存失败：{firstError}";
+            return false;
         }
+
+        error = null;
+        return true;
+    }
+
+    public void SaveAll()
+    {
+        _ = SaveAll(out _);
     }
 
     public void SetStatus(string status)
     {
         StatusMessage = status;
+    }
+
+    public bool SaveSelectedIfDirty(out string? error)
+    {
+        if (SelectedDocument is null)
+        {
+            error = null;
+            return true;
+        }
+
+        if (!SelectedDocument.SaveIfDirty(out error))
+        {
+            StatusMessage = $"自动保存失败：{SelectedDocument.DisplayName} - {error}";
+            return false;
+        }
+
+        return true;
     }
 
     [RelayCommand]
