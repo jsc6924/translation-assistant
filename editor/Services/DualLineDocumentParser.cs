@@ -10,8 +10,13 @@ public sealed class DualLineDocumentParser
 {
     private readonly record struct LineSnapshot(int LineNumber, string Text, string TrimmedText, int StartOffset);
 
-    public ParsedDocument Parse(string text, ParserConfig config)
+    public ParsedDocument Parse(string text, ParserConfig config, bool enableEditRestriction)
     {
+        if (!enableEditRestriction)
+        {
+            return new ParsedDocument(false);
+        }
+
         var normalizedConfig = config.Clone();
         normalizedConfig.Normalize();
 

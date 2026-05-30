@@ -36,29 +36,29 @@
                 <TextBox Grid.Column="1" Text="{Binding OriginalWhiteRegex, Mode=TwoWay}" />
             </Grid>
 
-            <Grid Grid.Row="4" Margin="0,12,0,0" ColumnDefinitions="160,*">
+            <Grid Grid.Row="5" Margin="0,12,0,0" ColumnDefinitions="160,*">
                 <TextBlock VerticalAlignment="Center" Text="译文空白正则" />
                 <TextBox Grid.Column="1" Text="{Binding TranslatedWhiteRegex, Mode=TwoWay}" />
             </Grid>
 
-            <Grid Grid.Row="5" Margin="0,12,0,0" ColumnDefinitions="160,*">
+            <Grid Grid.Row="6" Margin="0,12,0,0" ColumnDefinitions="160,*">
                 <TextBlock VerticalAlignment="Center" Text="原文后缀正则" />
                 <TextBox Grid.Column="1" Text="{Binding OriginalSuffixRegex, Mode=TwoWay}" />
             </Grid>
 
-            <Grid Grid.Row="6" Margin="0,12,0,0" ColumnDefinitions="160,*">
+            <Grid Grid.Row="7" Margin="0,12,0,0" ColumnDefinitions="160,*">
                 <TextBlock VerticalAlignment="Center" Text="译文后缀正则" />
                 <TextBox Grid.Column="1" Text="{Binding TranslatedSuffixRegex, Mode=TwoWay}" />
             </Grid>
 
-            <TextBlock Grid.Row="7"
+            <TextBlock Grid.Row="8"
                        Margin="0,16,0,0"
                        Text="{Binding ValidationMessage}"
                        Foreground="IndianRed"
                        IsVisible="{Binding HasValidationMessage}"
                        TextWrapping="Wrap" />
 
-            <StackPanel Grid.Row="8" Margin="0,20,0,0" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <StackPanel Grid.Row="9" Margin="0,20,0,0" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                 <Button Content="取消" Click="OnCancelClick" />
                 <Button Content="保存" Click="OnSaveClick" />
             </StackPanel>

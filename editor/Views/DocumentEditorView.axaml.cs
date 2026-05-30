@@ -84,7 +84,8 @@ public partial class DocumentEditorView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (eventArgs.PropertyName == nameof(EditorDocumentViewModel.ParserConfig))
+        if (eventArgs.PropertyName == nameof(EditorDocumentViewModel.ParserConfig)
+            || eventArgs.PropertyName == nameof(EditorDocumentViewModel.EditRestrictionEnabled))
         {
             RefreshParserState();
         }
@@ -98,7 +99,7 @@ public partial class DocumentEditorView : UserControl
         }
 
         EnsureEditorHooks();
-        var parsedDocument = _parser.Parse(Editor.Document.Text, _viewModel.ParserConfig);
+        var parsedDocument = _parser.Parse(Editor.Document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
         _colorizer.Update(parsedDocument);
         ApplyReadOnlySections(parsedDocument);
         Editor.TextArea.TextView.Redraw();

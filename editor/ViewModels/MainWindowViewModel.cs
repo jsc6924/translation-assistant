@@ -19,6 +19,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "请选择一个文件夹开始。";
 
+    [ObservableProperty]
+    private bool _enableEditRestriction = true;
+
+    partial void OnEnableEditRestrictionChanged(bool value)
+    {
+        foreach (var document in OpenDocuments)
+        {
+            document.EditRestrictionEnabled = value;
+        }
+
+        OnPropertyChanged(nameof(ParserSummary));
+    }
+
     public MainWindowViewModel()
         : this(new EditorSettingsStore())
     {
@@ -49,7 +62,20 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string WindowTitle => string.IsNullOrWhiteSpace(_workspacePath) ? "dltxt editor" : $"dltxt editor - {WorkspaceName}";
 
-    public string ParserSummary => ParserConfig.IsConfigured ? "双行格式：已启用" : "双行格式：未配置";
+    public string ParserSummary
+    {
+        get
+        {
+            if (!ParserConfig.IsConfigured)
+            {
+                return "双行格式：未配置";
+            }
+
+            return EnableEditRestriction
+                ? "双行格式：已启用"
+                : "双行格式：已配置（非限制模式）";
+        }
+    }
 
     public bool HasOpenDocuments => OpenDocuments.Count > 0;
 
@@ -72,7 +98,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         OnPropertyChanged(nameof(ParserConfig));
         OnPropertyChanged(nameof(ParserSummary));
-        StatusMessage = ParserConfig.IsConfigured ? "双行格式已更新。" : "双行格式已关闭，当前文档恢复普通编辑。";
+        StatusMessage = ParserConfig.IsConfigured
+            ? EnableEditRestriction
+                ? "双行格式已更新。"
+                : "双行格式已更新，当前为非限制模式。"
+            : "双行格式已关闭，当前文档恢复普通编辑。";
     }
 
     public void LoadWorkspace(string folderPath)
@@ -114,7 +144,10 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var content = File.ReadAllText(filePath);
-            var document = new EditorDocumentViewModel(filePath, content, ParserConfig, CloseDocumentInternal);
+            var document = new EditorDocumentViewModel(filePath, content, ParserConfig, CloseDocumentInternal)
+            {
+                EditRestrictionEnabled = EnableEditRestriction,
+            };
             OpenDocuments.Add(document);
             SetSelectedDocument(document, true);
             StatusMessage = $"已打开文件：{filePath}";

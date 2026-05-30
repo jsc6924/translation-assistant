@@ -17,6 +17,9 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private ParserConfig _parserConfig;
 
+    [ObservableProperty]
+    private bool _editRestrictionEnabled = true;
+
     public EditorDocumentViewModel(
         string filePath,
         string content,
