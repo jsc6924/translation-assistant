@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using editor.Models;
@@ -24,6 +25,41 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _enableEditRestriction = true;
 
+    [ObservableProperty]
+    private string _editorFontFamilyName = "黑体";
+
+    [ObservableProperty]
+    private double _editorFontSize = 18;
+
+    private static readonly IReadOnlyDictionary<string, string> EditorFontFamilyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["黑体"] = "SimHei",
+        ["微软雅黑"] = "Microsoft YaHei",
+        ["宋体"] = "SimSun",
+    };
+
+    public IReadOnlyList<string> AvailableEditorFontFamilies { get; } = new[]
+    {
+        "黑体",
+        "微软雅黑",
+        "宋体",
+    };
+
+    public FontFamily EditorFontFamily => GetFontFamilyForName(EditorFontFamilyName);
+
+    public IReadOnlyList<double> AvailableEditorFontSizes { get; } = new[]
+    {
+        10.0,
+        12.0,
+        14.0,
+        16.0,
+        18.0,
+        20.0,
+        22.0,
+        24.0,
+        26.0,
+    };
+
     public ObservableCollection<string> RecentFolders { get; }
 
     public bool IsWorkspaceLoaded => !string.IsNullOrWhiteSpace(_workspacePath);
@@ -40,6 +76,43 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ParserSummary));
     }
 
+    partial void OnEditorFontFamilyNameChanged(string value)
+    {
+        var safeName = GetSafeFontFamilyName(value);
+        var fontFamily = GetFontFamilyForName(safeName);
+
+        if (OpenDocuments is not null)
+        {
+            foreach (var document in OpenDocuments)
+            {
+                document.ApplyEditorFontSettings(fontFamily, EditorFontSize);
+            }
+        }
+
+        if (!string.Equals(EditorFontFamilyName, safeName, StringComparison.Ordinal))
+        {
+            EditorFontFamilyName = safeName;
+            OnPropertyChanged(nameof(EditorFontFamily));
+            return;
+        }
+
+        OnPropertyChanged(nameof(EditorFontFamily));
+        SaveEditorSettings();
+    }
+
+    partial void OnEditorFontSizeChanged(double value)
+    {
+        if (OpenDocuments is not null)
+        {
+            foreach (var document in OpenDocuments)
+            {
+                document.ApplyEditorFontSettings(EditorFontFamily, value);
+            }
+        }
+
+        SaveEditorSettings();
+    }
+
     public MainWindowViewModel()
         : this(new EditorSettingsStore(), new RecentFoldersStore())
     {
@@ -49,10 +122,15 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _settingsStore = settingsStore;
         _recentFoldersStore = recentFoldersStore;
+
         ParserConfig = new ParserConfig();
         RootNodes = new ObservableCollection<FileNodeViewModel>();
         OpenDocuments = new ObservableCollection<EditorDocumentViewModel>();
         OpenDocuments.CollectionChanged += OnOpenDocumentsChanged;
+
+        var globalSettings = _settingsStore.LoadGlobalSettings();
+        EditorFontFamilyName = GetSafeFontFamilyName(globalSettings.EditorFontFamily);
+        EditorFontSize = globalSettings.EditorFontSize;
 
         RecentFolders = new ObservableCollection<string>(_recentFoldersStore.LoadRecentFolders());
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
@@ -117,13 +195,22 @@ public partial class MainWindowViewModel : ViewModelBase
             : "双行格式已关闭，当前文档恢复普通编辑。";
     }
 
+    private void SaveEditorSettings()
+    {
+        var settings = _settingsStore.LoadGlobalSettings();
+        settings.EditorFontFamily = EditorFontFamilyName;
+        settings.EditorFontSize = EditorFontSize;
+        _settingsStore.SaveGlobalSettings(settings);
+    }
+
     public void LoadWorkspace(string folderPath)
     {
         SaveAll();
         DisposeDocuments();
 
         _workspacePath = folderPath;
-        ParserConfig = _settingsStore.LoadParserConfig(folderPath);
+        var settings = _settingsStore.LoadSettings(folderPath);
+        ParserConfig = settings.ParserConfig.Clone();
         AddRecentFolder(folderPath);
         RefreshWorkspaceNodes();
 
@@ -494,6 +581,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 EditRestrictionEnabled = EnableEditRestriction,
             };
+            document.ApplyEditorFontSettings(EditorFontFamily, EditorFontSize);
             OpenDocuments.Add(document);
             SetSelectedDocument(document, true);
             StatusMessage = $"已打开文件：{filePath}";
@@ -619,6 +707,38 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SidebarTitle));
         OnPropertyChanged(nameof(WindowTitle));
         OnPropertyChanged(nameof(IsWorkspaceLoaded));
+    }
+
+    private static string GetSafeFontFamilyName(string fontFamilyName)
+    {
+        if (string.IsNullOrWhiteSpace(fontFamilyName))
+        {
+            return "黑体";
+        }
+
+        if (EditorFontFamilyMap.ContainsKey(fontFamilyName))
+        {
+            return fontFamilyName;
+        }
+
+        return "黑体";
+    }
+
+    private static FontFamily GetFontFamilyForName(string fontFamilyName)
+    {
+        if (!EditorFontFamilyMap.TryGetValue(fontFamilyName, out var actualName))
+        {
+            actualName = "SimHei";
+        }
+
+        try
+        {
+            return new FontFamily(actualName);
+        }
+        catch
+        {
+            return new FontFamily("Microsoft YaHei");
+        }
     }
 
     private static string GetLeafFolderName(string path)

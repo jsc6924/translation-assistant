@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Avalonia.Media;
 using AvaloniaEdit.Document;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,6 +20,12 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private bool _editRestrictionEnabled = true;
+
+    [ObservableProperty]
+    private FontFamily _fontFamily = new("Microsoft YaHei");
+
+    [ObservableProperty]
+    private double _fontSize = 14;
 
     public EditorDocumentViewModel(
         string filePath,
@@ -57,6 +64,12 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     public void ApplyParserConfig(ParserConfig parserConfig)
     {
         ParserConfig = parserConfig.Clone();
+    }
+
+    public void ApplyEditorFontSettings(FontFamily fontFamily, double fontSize)
+    {
+        FontFamily = fontFamily;
+        FontSize = fontSize;
     }
 
     public bool SaveIfDirty(out string? error)

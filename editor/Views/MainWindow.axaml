@@ -150,15 +150,27 @@
         </Grid>
 
         <Border Grid.Row="2" Padding="8,0" Background="{StaticResource FooterBackgroundBrush}" BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                 <TextBlock Text="{Binding StatusMessage}"
                            VerticalAlignment="Center"
                            Grid.Column="0" />
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Grid.Column="1" Margin="16,0">
+                    <TextBlock Text="字体：" VerticalAlignment="Center" />
+                    <ComboBox Width="140"
+                              ItemsSource="{Binding AvailableEditorFontFamilies}"
+                              SelectedItem="{Binding EditorFontFamilyName, Mode=TwoWay}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Grid.Column="2" Margin="16,0">
+                    <TextBlock Text="字号：" VerticalAlignment="Center" />
+                    <ComboBox Width="60"
+                              ItemsSource="{Binding AvailableEditorFontSizes}"
+                              SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
+                </StackPanel>
                 <CheckBox Content="启用编辑限制模式"
                           IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Right"
-                          Grid.Column="1" />
+                          Grid.Column="3" />
             </Grid>
         </Border>
     </Grid>
