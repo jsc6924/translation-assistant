@@ -14,6 +14,7 @@
         Height="800"
         MinWidth="960"
         MinHeight="640"
+        WindowStartupLocation="CenterScreen"
         Icon="/Assets/avalonia-logo.ico"
         Title="{Binding WindowTitle}">
 
@@ -44,6 +45,7 @@
                         <MenuItem Header="双行格式" Click="OnConfigureFormatClick" />
                         <MenuItem Header="术语库配置" Click="OnConfigureSimpleTmClick" />
                     </MenuItem>
+                    <MenuItem Header="关于" Click="OnAboutClick" />
                 </Menu>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                     <TextBlock Text="{Binding WorkspaceLabel}" VerticalAlignment="Center" />
@@ -144,12 +146,25 @@
 
                 <Border Padding="24" IsVisible="{Binding IsEditorEmpty}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                        <TextBlock Text="请先打开一个文件夹。每个文件夹里只能有一种格式的双行文本。建议将不同项目的文本放到不同文件夹后再打开。"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding IsWorkspaceLoaded, Converter={StaticResource InverseBooleanConverter}}" />
                         <TextBlock Text="从左侧文件树选择一个文本文件开始编辑"
                                    FontSize="22"
                                    FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" />
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding IsWorkspaceLoaded}" />
                         <TextBlock Text="切换标签会自动保存；配置双行格式后，原文将高亮且不可编辑。"
-                                   HorizontalAlignment="Center" />
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding IsWorkspaceLoaded}" />
                     </StackPanel>
                 </Border>
             </Grid>

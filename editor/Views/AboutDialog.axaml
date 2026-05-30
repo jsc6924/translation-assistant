@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:editor.Views"
+        x:Class="editor.Views.AboutDialog"
+        x:DataType="views:AboutDialog"
+        Title="关于"
+        Width="520"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20" Spacing="16">
+        <TextBlock Text="本软件是 galgame 汉化专用编辑器，以相对轻量级的方式实现了双行文本汉化解决方案 vscode+dltxt 插件的一部分基础功能。" TextWrapping="Wrap" />
+        <TextBlock Text="如果你想使用完整功能，请下载安装 vscode+dltxt 插件。" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding VersionText}" FontWeight="SemiBold" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="下载 vscode" Click="OnDownloadVsCodeClick" />
+            <Button Content="查看 dltxt" Click="OnViewDltxtClick" />
+            <Button Content="关闭" Click="OnCloseClick" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

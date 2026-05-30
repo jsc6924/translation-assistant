@@ -369,6 +369,73 @@ public partial class MainWindowViewModel : ViewModelBase
         return true;
     }
 
+    public static bool TryReadParserConfigFromJson(JsonElement root, out ParserConfig parserConfig)
+    {
+        parserConfig = new ParserConfig();
+        var found = false;
+
+        if (TryReadStringSetting(root, "dltxt.core.originalTextPrefixRegex", out var originalPrefixRegex))
+        {
+            parserConfig.OriginalPrefixRegex = originalPrefixRegex;
+            found = true;
+        }
+
+        if (TryReadStringSetting(root, "dltxt.core.translatedTextPrefixRegex", out var translatedPrefixRegex))
+        {
+            parserConfig.TranslatedPrefixRegex = translatedPrefixRegex;
+            found = true;
+        }
+
+        if (TryReadStringSetting(root, "dltxt.core.x.originalTextWhite", out var originalWhiteRegex))
+        {
+            parserConfig.OriginalWhiteRegex = originalWhiteRegex;
+            found = true;
+        }
+
+        if (TryReadStringSetting(root, "dltxt.core.x.translatedTextWhite", out var translatedWhiteRegex))
+        {
+            parserConfig.TranslatedWhiteRegex = translatedWhiteRegex;
+            found = true;
+        }
+
+        if (TryReadStringSetting(root, "dltxt.core.y.originalTextSuffix", out var originalSuffixRegex))
+        {
+            parserConfig.OriginalSuffixRegex = originalSuffixRegex;
+            found = true;
+        }
+
+        if (TryReadStringSetting(root, "dltxt.core.y.translatedTextSuffix", out var translatedSuffixRegex))
+        {
+            parserConfig.TranslatedSuffixRegex = translatedSuffixRegex;
+            found = true;
+        }
+
+        if (TryReadStringSetting(root, "dltxt.core.name.regex", out var nameRegex))
+        {
+            parserConfig.NameRegex = nameRegex;
+            found = true;
+        }
+
+        return found;
+    }
+
+    public bool TryApplyRemoteParserConfig(JsonElement root)
+    {
+        if (string.IsNullOrWhiteSpace(_workspacePath))
+        {
+            return false;
+        }
+
+        if (!TryReadParserConfigFromJson(root, out var remoteParserConfig))
+        {
+            return false;
+        }
+
+        var mergedConfig = MergeParserConfig(ParserConfig, remoteParserConfig);
+        ApplyParserConfig(mergedConfig);
+        return true;
+    }
+
     public void SetSimpleTmSharedUrl(string sharedUrl)
     {
         _simpleTmSharedUrl = sharedUrl?.Trim() ?? string.Empty;

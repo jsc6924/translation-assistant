@@ -26,3 +26,8 @@ dltxt支持用websocket实时获取服务器推送的术语更新，editor暂时
     "OriginalSuffixRegex": "[\u300D]?",
     "TranslatedSuffixRegex": "[\u300D]?"
   } 这个作为默认配置，并且尝试读目录里的.vscode/settings.json文件（如果该文件存在），尝试从里面读取"dltxt.core.originalTextPrefixRegex"，"dltxt.core.translatedTextPrefixRegex"，"dltxt.core.x.originalTextWhite"，"dltxt.core.x.translatedTextWhite"，"dltxt.core.y.originalTextSuffix"，"dltxt.core.y.translatedTextSuffix", "dltxt.core.name.regex"，读到就覆盖当前默认配置。将这个结果应用并保存到当前文件夹。
+
+# build
+dotnet build
+# publish
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true

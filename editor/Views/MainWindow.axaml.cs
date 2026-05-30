@@ -51,7 +51,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dialog = new SimpleTmSettingsWindow(viewModel.SimpleTmSharedUrl);
+        var dialog = new SimpleTmSettingsWindow(viewModel.SimpleTmSharedUrl, viewModel);
         var confirmed = await dialog.ShowDialog<bool?>(this) ?? false;
         if (!confirmed)
         {
@@ -244,6 +244,12 @@ public partial class MainWindow : Window
         }
 
         CommitRename(node);
+    }
+
+    private void OnAboutClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        var dialog = new AboutDialog();
+        _ = dialog.ShowDialog(this);
     }
 
     private void OnCreateNewFileClick(object? sender, RoutedEventArgs eventArgs)

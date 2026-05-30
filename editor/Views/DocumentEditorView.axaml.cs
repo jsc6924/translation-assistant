@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -53,6 +54,10 @@ public partial class DocumentEditorView : UserControl
         Editor.TextArea.KeyDown += OnEditorTextAreaKeyDown;
         Editor.TextArea.TextEntering += OnEditorTextEntering;
         Editor.TextArea.AddHandler(InputElement.KeyDownEvent, OnEditorTextAreaKeyDown, RoutingStrategies.Tunnel, true);
+        if (Editor.ContextMenu is not null)
+        {
+            Editor.ContextMenu.Opened += OnEditorContextMenuOpened;
+        }
         EnsureEditorHooks();
     }
 
@@ -228,6 +233,53 @@ public partial class DocumentEditorView : UserControl
     private async void OnEditTerminologyClick(object? sender, RoutedEventArgs e)
     {
         await OpenTerminologyDialogAsync("编辑术语");
+    }
+
+    private async void OnCopyTranslationClick(object? sender, RoutedEventArgs e)
+    {
+        var term = FindSelectedTerm();
+        if (term is null || string.IsNullOrWhiteSpace(term.Translation))
+        {
+            return;
+        }
+
+        // 1. 获取当前控件所属的 TopLevel (Window 或 UserControl 的基类)
+        // 如果这段代码在 Window/UserControl 的后端(Code-behind)里，直接传 this 即可
+        var topLevel = Avalonia.Controls.TopLevel.GetTopLevel(this);
+
+        // 安全兜底：如果是在外部类，可以通过点击事件的触发者(sender)来抓取顶级容器
+        // var topLevel = Avalonia.Controls.TopLevel.GetTopLevel(sender as Avalonia.Visual);
+
+        if (topLevel?.Clipboard is { } clipboard)
+        {
+            // 2. Avalonia 11 直接调用实例方法即可，不再需要额外的 ClipboardExtensions 扩展类
+            await clipboard.SetTextAsync(term.Translation.Trim());
+        }
+    }
+
+    private void OnEditorContextMenuOpened(object? sender, EventArgs e)
+    {
+        var menuItem = CopyTranslationMenuItem;
+        if (menuItem is null)
+        {
+            return;
+        }
+
+        var term = FindSelectedTerm();
+        var canCopyTranslation = term is not null && !string.IsNullOrWhiteSpace(term.Translation);
+        menuItem.IsVisible = canCopyTranslation;
+        menuItem.IsEnabled = canCopyTranslation;
+    }
+
+    private TerminologyEntry? FindSelectedTerm()
+    {
+        var selectedText = GetSelectedText();
+        if (selectedText is null)
+        {
+            return null;
+        }
+
+        return _terms.FirstOrDefault(term => string.Equals(term.Raw, selectedText, StringComparison.Ordinal));
     }
 
     private void MoveCaretInTranslationMode(int delta)

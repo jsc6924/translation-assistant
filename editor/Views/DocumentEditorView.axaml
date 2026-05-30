@@ -12,6 +12,7 @@
                              FontSize="{Binding FontSize}">
         <avaloniaEdit:TextEditor.ContextMenu>
             <ContextMenu>
+                <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
                 <MenuItem Header="编辑术语" Click="OnEditTerminologyClick" />
             </ContextMenu>
         </avaloniaEdit:TextEditor.ContextMenu>

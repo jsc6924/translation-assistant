@@ -53,6 +53,14 @@ public sealed class SimpleTmRemoteClient
         return await httpClient.GetStringAsync(BuildUrl(connection.BaseUrl, $"/api/querybygame/{Uri.EscapeDataString(connection.GameTitle)}")).ConfigureAwait(false);
     }
 
+    public async Task<string> FetchVscodeConfigJsonAsync(string sharedUrl)
+    {
+        var connection = ParseSharedUrl(sharedUrl);
+        using var httpClient = CreateHttpClient(connection);
+
+        return await httpClient.GetStringAsync(BuildUrl(connection.BaseUrl, $"/api2/vscodeConfig/{Uri.EscapeDataString(connection.GameTitle)}")).ConfigureAwait(false);
+    }
+
     private static HttpClient CreateHttpClient(SharedConnection connection)
     {
         var httpClient = new HttpClient();

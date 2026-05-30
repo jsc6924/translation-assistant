@@ -16,7 +16,8 @@ namespace editor;
 
 public partial class App : Application
 {
-    private const string CurrentVersion = "0.0.2";
+    private const string CurrentVersion = "1.0.0";
+    public static string Version => CurrentVersion;
     private const string LatestVersionUrl = "https://raw.githubusercontent.com/jsc6924/dltxt-editor-release/refs/heads/main/latest";
     private const string ReleasesUrl = "https://github.com/jsc6924/dltxt-editor-release/releases";
 
