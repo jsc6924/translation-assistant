@@ -45,7 +45,10 @@
                         <MenuItem Header="双行格式" Click="OnConfigureFormatClick" />
                         <MenuItem Header="术语库配置" Click="OnConfigureSimpleTmClick" />
                     </MenuItem>
-                    <MenuItem Header="关于" Click="OnAboutClick" />
+                    <MenuItem Header="帮助">
+                        <MenuItem Header="快捷键" Click="OnHelpShortcutClick" />
+                        <MenuItem Header="关于" Click="OnAboutClick" />
+                    </MenuItem>
                 </Menu>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                     <TextBlock Text="{Binding WorkspaceLabel}" VerticalAlignment="Center" />
@@ -182,21 +185,23 @@
                 <TextBlock Text="{Binding StatusMessage}"
                            VerticalAlignment="Center"
                            Grid.Column="0" />
-                <ComboBox Classes="OpenUp" Width="140" Grid.Column="1" Margin="8,0"
+                <ComboBox Classes="OpenUp" Width="140" Grid.Column="1" Margin="4,0"
                               ItemsSource="{Binding AvailableEditorFontFamilies}"
                               SelectedItem="{Binding EditorFontFamilyName, Mode=TwoWay}" />
-                <ComboBox Classes="OpenUp" Width="65" Grid.Column="2" Margin="8,0"
+                <ComboBox Classes="OpenUp" Width="65" Grid.Column="2" Margin="4,0"
                               ItemsSource="{Binding AvailableEditorFontSizes}"
                               SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
                 <CheckBox Content="翻译模式"
                           IsChecked="{Binding EnableTranslationMode, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Right"
+                          Margin="4,0"
                           Grid.Column="3" />
                 <CheckBox Content="启用编辑限制模式"
                           IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Right"
+                          Margin="4,0"
                           Grid.Column="4" />
             </Grid>
         </Border>

@@ -346,6 +346,8 @@ public partial class DocumentEditorView : UserControl
         var match = TranslationSegmentSeparatorRegex.Match(searchText);
         if (!match.Success)
         {
+            Editor.TextArea.Caret.Offset = editableEnd;
+            Editor.TextArea.Caret.BringCaretToView();
             return;
         }
 
@@ -357,6 +359,8 @@ public partial class DocumentEditorView : UserControl
 
         if (segmentHeadOffset <= currentOffset)
         {
+            Editor.TextArea.Caret.Offset = editableEnd;
+            Editor.TextArea.Caret.BringCaretToView();
             return;
         }
 

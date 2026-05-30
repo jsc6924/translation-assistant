@@ -246,6 +246,12 @@ public partial class MainWindow : Window
         CommitRename(node);
     }
 
+    private void OnHelpShortcutClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        var dialog = new HelpShortcutDialog();
+        _ = dialog.ShowDialog(this);
+    }
+
     private void OnAboutClick(object? sender, RoutedEventArgs eventArgs)
     {
         var dialog = new AboutDialog();

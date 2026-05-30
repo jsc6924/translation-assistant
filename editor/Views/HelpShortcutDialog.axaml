@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:editor.Views"
+        x:Class="editor.Views.HelpShortcutDialog"
+        x:DataType="views:HelpShortcutDialog"
+        Title="快捷键指南"
+        Width="520"
+        Height="340"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <ScrollViewer Padding="20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="16">
+            <TextBlock TextWrapping="Wrap" Width="480">
+                <Run Text="翻译模式是一种针对双行文本编辑的专用模式。" />
+                <LineBreak />
+                <Run Text="打开后，软件会聚焦在译文行的可编辑区域，让你专注于翻译而不破坏文本结构的同时，使用键盘快速移动光标。" />
+            </TextBlock>
+            <TextBlock Text="快捷键" FontSize="16" FontWeight="SemiBold" />
+            <StackPanel Spacing="6">
+                <TextBlock Text="Alt+T：切换到翻译模式" TextWrapping="Wrap" />
+                <TextBlock Text="Alt+T：退出翻译模式" TextWrapping="Wrap" />
+                <TextBlock Text="\\：移动到上一译文行" TextWrapping="Wrap" />
+                <TextBlock Text="Enter：移动到下一译文行" TextWrapping="Wrap" />
+                <TextBlock Text="[ 或 ]：在当前译文行内左右移动光标" TextWrapping="Wrap" />
+                <TextBlock Text="Shift+[ 或 Shift+]：切换到上一/下一译文分句" TextWrapping="Wrap" />
+                <TextBlock Text="Tab：向后删除到标点" TextWrapping="Wrap" />
+                <TextBlock Text="Delete：向后删除到行尾" TextWrapping="Wrap" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>
