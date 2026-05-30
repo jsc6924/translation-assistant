@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using editor.Models;
 using editor.ViewModels;
 
@@ -53,9 +54,17 @@ public partial class MainWindow : Window
 
         foreach (var item in eventArgs.AddedItems)
         {
-            if (item is FileNodeViewModel { IsDirectory: false } node)
+            if (item is FileNodeViewModel node)
             {
-                viewModel.OpenFile(node.FullPath);
+                if (node.IsDirectory)
+                {
+                    node.IsExpanded = !node.IsExpanded;
+                }
+                else
+                {
+                    viewModel.OpenFile(node.FullPath);
+                }
+
                 break;
             }
         }
@@ -177,6 +186,29 @@ public partial class MainWindow : Window
 
         node.ResetRenaming();
         viewModel.SetStatus($"已重命名：{node.RenameText}");
+    }
+
+    private void OnTreeViewItemPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
+        {
+            return;
+        }
+
+        if (sender is not Control control)
+        {
+            return;
+        }
+
+        if (e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        {
+            var treeViewItem = control.GetSelfAndVisualAncestors().OfType<TreeViewItem>().FirstOrDefault();
+            if (treeViewItem is not null && treeViewItem.DataContext is FileNodeViewModel node && node.IsDirectory)
+            {
+                treeViewItem.IsExpanded = !treeViewItem.IsExpanded;
+                e.Handled = true;
+            }
+        }
     }
 
     private async void OnOpened(object? sender, EventArgs eventArgs)
