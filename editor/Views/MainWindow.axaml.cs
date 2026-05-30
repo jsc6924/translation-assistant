@@ -188,7 +188,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnRenameTextBoxLostFocus(object? sender, RoutedEventArgs e)
+    private void OnRenameTextBoxLostFocus(object? sender, FocusChangedEventArgs e)
     {
         if (sender is not TextBox textBox || textBox.DataContext is not FileNodeViewModel node)
         {
