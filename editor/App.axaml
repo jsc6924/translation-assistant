@@ -5,6 +5,19 @@
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#C4DCF3" />
+            <SolidColorBrush x:Key="TreeviewBackgroundBrush" Color="#EEEEEE" />
+            <SolidColorBrush x:Key="FooterBackgroundBrush" Color="#75B2E7" />
+
+            <SolidColorBrush x:Key="TabItemBackgroundBrush" Color="#F4F8FC" />
+            <SolidColorBrush x:Key="TabItemSelectedBackgroundBrush" Color="#E4EEF7" />
+            <SolidColorBrush x:Key="TabItemBorderBrush" Color="#C8D8EB" />
+            <SolidColorBrush x:Key="TabItemSelectedForegroundBrush" Color="#000000" />
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
@@ -12,5 +25,16 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+
+        <Style Selector="TabItem">
+            <Setter Property="Background" Value="{StaticResource TabItemBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource TabItemBorderBrush}" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Background" Value="{StaticResource TabItemSelectedBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource TabItemBorderBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TabItemSelectedForegroundBrush}" />
+        </Style>
     </Application.Styles>
 </Application>

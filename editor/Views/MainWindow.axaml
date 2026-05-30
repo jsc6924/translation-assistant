@@ -31,7 +31,7 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*,Auto,Auto">
-        <Border Padding="12" BorderThickness="0,0,0,1">
+        <Border Padding="12" BorderThickness="0,0,0,1" Background="{StaticResource HeaderBackgroundBrush}">
             <DockPanel LastChildFill="False">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button Content="打开文件夹" Click="OnOpenFolderClick" />
@@ -47,7 +47,7 @@
         </Border>
 
         <Grid Grid.Row="1" ColumnDefinitions="300,*">
-            <Border Padding="12" BorderThickness="0,0,1,0">
+            <Border Padding="12" BorderThickness="0,0,1,0" Background="{StaticResource TreeviewBackgroundBrush}">
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Text="{Binding SidebarTitle}" FontSize="16" FontWeight="SemiBold" />
 
@@ -113,12 +113,17 @@
                     <TabControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:EditorDocumentViewModel">
                             <DockPanel LastChildFill="False">
-                                <TextBlock Text="{Binding Header}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Header}" Margin="0,0,8,0" VerticalAlignment="Center" FontSize="14" />
                                 <Button Content="×"
-                                        Width="24"
-                                        MinWidth="24"
-                                        Height="24"
+                                        Width="20"
+                                        MinWidth="20"
+                                        Height="20"
                                         Padding="0"
+                                        FontSize="14"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center"
                                         Command="{Binding CloseCommand}" />
                             </DockPanel>
                         </DataTemplate>
@@ -144,7 +149,7 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Padding="12" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Padding="8,0" Background="{StaticResource FooterBackgroundBrush}" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{Binding StatusMessage}"
                            VerticalAlignment="Center"
