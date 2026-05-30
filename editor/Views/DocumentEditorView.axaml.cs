@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -18,6 +19,8 @@ namespace editor.Views;
 
 public partial class DocumentEditorView : UserControl
 {
+    private static readonly Regex TranslationSegmentSeparatorRegex = new(@"[，。、？！…—；：“”‘’~～\s　「」『』\[\]\(\)（）【】{}]+|((\\r)?(\\)?\\n)|<br>", RegexOptions.Compiled);
+
     private readonly DualLineDocumentParser _parser = new();
     private readonly DualLineColorizer _colorizer = new();
     private readonly TerminologyHighlightService _terminologyHighlightService = new();
@@ -133,15 +136,215 @@ public partial class DocumentEditorView : UserControl
             return;
         }
 
+        if (e.Key == Key.Escape && _viewModel.TranslationModeEnabled)
+        {
+            SetTranslationMode(false);
+            e.Handled = true;
+            return;
+        }
+
+        if (!_viewModel.TranslationModeEnabled && e.Key == Key.T && e.KeyModifiers == KeyModifiers.Alt)
+        {
+            SetTranslationMode(true);
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.TranslationModeEnabled && (e.Key == Key.OemOpenBrackets || e.Key == Key.OemCloseBrackets))
+        {
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+            {
+                if (e.Key == Key.OemOpenBrackets)
+                {
+                    MoveCaretToPreviousSegmentInTranslatedLine();
+                }
+                else
+                {
+                    MoveCaretToNextSegmentInTranslatedLine();
+                }
+            }
+            else
+            {
+                MoveCaretInTranslationMode(e.Key == Key.OemCloseBrackets ? 1 : -1);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Enter || e.Key == Key.Return)
         {
             e.Handled = _viewModel.EditRestrictionEnabled;
         }
     }
 
+    private void SetTranslationMode(bool enabled)
+    {
+        var mainViewModel = FindMainWindowViewModel();
+        if (mainViewModel is not null)
+        {
+            mainViewModel.EnableTranslationMode = enabled;
+            return;
+        }
+
+        _viewModel!.TranslationModeEnabled = enabled;
+    }
+
+    private MainWindowViewModel? FindMainWindowViewModel()
+    {
+        var owner = this.VisualRoot as Window;
+        if (owner is null)
+        {
+            owner = Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+        }
+
+        return owner?.DataContext as MainWindowViewModel;
+    }
+
     private async void OnEditTerminologyClick(object? sender, RoutedEventArgs e)
     {
         await OpenTerminologyDialogAsync("编辑术语");
+    }
+
+    private void MoveCaretInTranslationMode(int delta)
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var nextOffset = currentOffset + delta;
+        nextOffset = Math.Max(0, Math.Min(document.Text.Length, nextOffset));
+
+        if (_viewModel.TranslationModeEnabled)
+        {
+            var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+            var currentLine = document.GetLineByOffset(currentOffset);
+            var expectedLineNumber = currentLine.LineNumber - 1;
+            var lineInfo = parsedDocument.GetLine(expectedLineNumber);
+            if (lineInfo is not null && lineInfo.Kind == ParsedLineKind.Translated)
+            {
+                var minOffset = lineInfo.EditableStartOffset;
+                var maxOffset = lineInfo.EditableStartOffset + lineInfo.EditableLength;
+                nextOffset = Math.Max(minOffset, Math.Min(maxOffset, nextOffset));
+            }
+        }
+
+        Editor.TextArea.Caret.Offset = nextOffset;
+    }
+
+    private void MoveCaretToNextSegmentInTranslatedLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated)
+        {
+            return;
+        }
+
+        var editableStart = lineInfo.EditableStartOffset;
+        var editableEnd = editableStart + lineInfo.EditableLength;
+        if (currentOffset < editableStart)
+        {
+            currentOffset = editableStart;
+        }
+
+        if (currentOffset >= editableEnd)
+        {
+            return;
+        }
+
+        var relativePosition = currentOffset - editableStart;
+        var text = document.GetText(editableStart, lineInfo.EditableLength);
+        var searchText = text.Substring(relativePosition);
+        var match = TranslationSegmentSeparatorRegex.Match(searchText);
+        if (!match.Success)
+        {
+            return;
+        }
+
+        var segmentHeadOffset = editableStart + relativePosition + match.Index + match.Length;
+        if (segmentHeadOffset > editableEnd)
+        {
+            segmentHeadOffset = editableEnd;
+        }
+
+        if (segmentHeadOffset <= currentOffset)
+        {
+            return;
+        }
+
+        Editor.TextArea.Caret.Offset = segmentHeadOffset;
+        Editor.TextArea.Caret.BringCaretToView();
+    }
+
+    private void MoveCaretToPreviousSegmentInTranslatedLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated)
+        {
+            return;
+        }
+
+        var editableStart = lineInfo.EditableStartOffset;
+        var editableEnd = editableStart + lineInfo.EditableLength;
+        if (currentOffset <= editableStart)
+        {
+            return;
+        }
+
+        var relativePosition = currentOffset - editableStart;
+        var text = document.GetText(editableStart, lineInfo.EditableLength);
+        var prefixText = text.Substring(0, Math.Min(relativePosition, text.Length));
+        var matches = TranslationSegmentSeparatorRegex.Matches(prefixText);
+        if (matches.Count == 0)
+        {
+            return;
+        }
+
+        var lastMatch = matches[^1];
+        var segmentHeadOffset = editableStart + lastMatch.Index + lastMatch.Length;
+        if (segmentHeadOffset >= currentOffset)
+        {
+            if (matches.Count < 2)
+            {
+                segmentHeadOffset = editableStart;
+            }
+            else
+            {
+                lastMatch = matches[^2];
+                segmentHeadOffset = editableStart + lastMatch.Index + lastMatch.Length;
+            }
+        }
+
+        if (segmentHeadOffset < editableStart)
+        {
+            segmentHeadOffset = editableStart;
+        }
+
+        Editor.TextArea.Caret.Offset = segmentHeadOffset;
+        Editor.TextArea.Caret.BringCaretToView();
     }
 
     private void OnEditorTextEntering(object? sender, TextInputEventArgs e)

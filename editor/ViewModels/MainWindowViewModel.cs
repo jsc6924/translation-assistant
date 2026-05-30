@@ -27,7 +27,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _enableEditRestriction = true;
 
     [ObservableProperty]
-    private bool _enableTranslationMode;
+    private bool _enableTranslationMode = true;
 
     [ObservableProperty]
     private string _editorFontFamilyName = "黑体";
