@@ -52,6 +52,7 @@ public partial class DocumentEditorView : UserControl
         Editor.PointerExited += OnEditorPointerExited;
         Editor.TextArea.KeyDown += OnEditorTextAreaKeyDown;
         Editor.TextArea.TextEntering += OnEditorTextEntering;
+        Editor.TextArea.AddHandler(InputElement.KeyDownEvent, OnEditorTextAreaKeyDown, RoutingStrategies.Tunnel, true);
         EnsureEditorHooks();
     }
 
@@ -168,6 +169,27 @@ public partial class DocumentEditorView : UserControl
                 MoveCaretInTranslationMode(e.Key == Key.OemCloseBrackets ? 1 : -1);
             }
 
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.TranslationModeEnabled && e.Key == Key.Tab)
+        {
+            DeleteToCurrentSegmentEndInTranslatedLine();
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.TranslationModeEnabled && e.Key == Key.Delete)
+        {
+            DeleteRestOfTranslatedLine();
+            e.Handled = true;
+            return;
+        }
+
+        if (_viewModel.TranslationModeEnabled && (e.Key == Key.Enter || e.Key == Key.Return))
+        {
+            MoveCaretToNextTranslatedLine();
             e.Handled = true;
             return;
         }
@@ -347,6 +369,82 @@ public partial class DocumentEditorView : UserControl
         Editor.TextArea.Caret.BringCaretToView();
     }
 
+    private void DeleteToCurrentSegmentEndInTranslatedLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated)
+        {
+            return;
+        }
+
+        var editableStart = lineInfo.EditableStartOffset;
+        var editableEnd = editableStart + lineInfo.EditableLength;
+        if (currentOffset < editableStart || currentOffset >= editableEnd)
+        {
+            return;
+        }
+
+        var relativePosition = currentOffset - editableStart;
+        var text = document.GetText(editableStart, lineInfo.EditableLength);
+        var searchText = text.Substring(relativePosition);
+        var match = TranslationSegmentSeparatorRegex.Match(searchText);
+        var deleteEndOffset = editableEnd;
+        if (match.Success)
+        {
+            if (match.Index == 0)
+            {
+                deleteEndOffset = editableStart + relativePosition + match.Length;
+            }
+            else
+            {
+                deleteEndOffset = editableStart + relativePosition + match.Index;
+            }
+        }
+
+        if (deleteEndOffset <= currentOffset)
+        {
+            return;
+        }
+
+        document.Replace(currentOffset, deleteEndOffset - currentOffset, string.Empty);
+    }
+
+    private void DeleteRestOfTranslatedLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated)
+        {
+            return;
+        }
+
+        var editableStart = lineInfo.EditableStartOffset;
+        var editableEnd = editableStart + lineInfo.EditableLength;
+        if (currentOffset < editableStart || currentOffset >= editableEnd)
+        {
+            return;
+        }
+
+        document.Replace(currentOffset, editableEnd - currentOffset, string.Empty);
+    }
+
     private void OnEditorTextEntering(object? sender, TextInputEventArgs e)
     {
         if (_viewModel is null || string.IsNullOrEmpty(e.Text))
@@ -361,16 +459,11 @@ public partial class DocumentEditorView : UserControl
             return;
         }
 
-        if (_viewModel.TranslationModeEnabled && (e.Text.Contains('\n') || e.Text.Contains('\r')))
+        if (_viewModel.TranslationModeEnabled && e.Text == "\\")
         {
-            MoveCaretToNextTranslatedLine();
+            MoveCaretToPreviousTranslatedLine();
             e.Handled = true;
             return;
-        }
-
-        if (_viewModel.EditRestrictionEnabled && (e.Text.Contains('\n') || e.Text.Contains('\r')))
-        {
-            e.Handled = true;
         }
     }
 
