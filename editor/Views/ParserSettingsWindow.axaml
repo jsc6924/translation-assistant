@@ -17,7 +17,7 @@
     </Design.DataContext>
 
     <ScrollViewer>
-        <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+        <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
             <TextBlock Text="参考 dltxt 的标准双行解析：原文和译文前缀都留空即可关闭高亮和只读限制。"
                        TextWrapping="Wrap" />
 
@@ -36,19 +36,24 @@
                 <TextBox Grid.Column="1" Text="{Binding OriginalWhiteRegex, Mode=TwoWay}" />
             </Grid>
 
-            <Grid Grid.Row="5" Margin="0,12,0,0" ColumnDefinitions="160,*">
+            <Grid Grid.Row="4" Margin="0,12,0,0" ColumnDefinitions="160,*">
                 <TextBlock VerticalAlignment="Center" Text="译文空白正则" />
                 <TextBox Grid.Column="1" Text="{Binding TranslatedWhiteRegex, Mode=TwoWay}" />
             </Grid>
 
-            <Grid Grid.Row="6" Margin="0,12,0,0" ColumnDefinitions="160,*">
+            <Grid Grid.Row="5" Margin="0,12,0,0" ColumnDefinitions="160,*">
                 <TextBlock VerticalAlignment="Center" Text="原文后缀正则" />
                 <TextBox Grid.Column="1" Text="{Binding OriginalSuffixRegex, Mode=TwoWay}" />
             </Grid>
 
-            <Grid Grid.Row="7" Margin="0,12,0,0" ColumnDefinitions="160,*">
+            <Grid Grid.Row="6" Margin="0,12,0,0" ColumnDefinitions="160,*">
                 <TextBlock VerticalAlignment="Center" Text="译文后缀正则" />
                 <TextBox Grid.Column="1" Text="{Binding TranslatedSuffixRegex, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Grid.Row="7" Margin="0,12,0,0" ColumnDefinitions="160,*">
+                <TextBlock VerticalAlignment="Center" Text="人名正则" />
+                <TextBox Grid.Column="1" Text="{Binding NameRegex, Mode=TwoWay}" />
             </Grid>
 
             <TextBlock Grid.Row="8"

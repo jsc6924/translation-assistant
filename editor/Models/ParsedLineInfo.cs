@@ -11,4 +11,6 @@ public sealed class ParsedLineInfo
     public int EditableLength { get; init; }
 
     public int PrefixLength { get; init; }
+
+    public string Name { get; init; } = string.Empty;
 }

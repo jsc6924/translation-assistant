@@ -24,6 +24,9 @@ public partial class ParserSettingsViewModel : ViewModelBase
     private string _translatedSuffixRegex = string.Empty;
 
     [ObservableProperty]
+    private string _nameRegex = string.Empty;
+
+    [ObservableProperty]
     private string _validationMessage = string.Empty;
 
     public ParserSettingsViewModel()
@@ -40,6 +43,7 @@ public partial class ParserSettingsViewModel : ViewModelBase
         TranslatedWhiteRegex = clonedConfig.TranslatedWhiteRegex;
         OriginalSuffixRegex = clonedConfig.OriginalSuffixRegex;
         TranslatedSuffixRegex = clonedConfig.TranslatedSuffixRegex;
+        NameRegex = clonedConfig.NameRegex;
     }
 
     public bool HasValidationMessage => !string.IsNullOrWhiteSpace(ValidationMessage);
@@ -54,6 +58,7 @@ public partial class ParserSettingsViewModel : ViewModelBase
             TranslatedWhiteRegex = TranslatedWhiteRegex,
             OriginalSuffixRegex = OriginalSuffixRegex,
             TranslatedSuffixRegex = TranslatedSuffixRegex,
+            NameRegex = NameRegex,
         };
     }
 

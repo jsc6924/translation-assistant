@@ -20,7 +20,7 @@ public sealed class DualLineDocumentParser
         var normalizedConfig = config.Clone();
         normalizedConfig.Normalize();
 
-        if (!TryCreateRegexes(normalizedConfig, out var originalRegex, out var translatedRegex, out _))
+        if (!TryCreateRegexes(normalizedConfig, out var originalRegex, out var translatedRegex, out var nameRegex, out _))
         {
             return new ParsedDocument(false);
         }
@@ -34,6 +34,18 @@ public sealed class DualLineDocumentParser
 
         foreach (var line in lines)
         {
+            if (nameRegex is not null)
+            {
+                var nameMatch = TryMatchName(nameRegex, line.TrimmedText);
+                if (nameMatch is not null)
+                {
+                    lineInfos[line.LineNumber] = BuildLineInfo(line.LineNumber, ParsedLineKind.Other, new MatchedGroups { Prefix = string.Empty, White = string.Empty, Text = line.TrimmedText, Suffix = string.Empty }, line.StartOffset, nameMatch);
+                    pendingOriginal = null;
+                    pendingOriginalLineNumber = -1;
+                    continue;
+                }
+            }
+
             var originalGroups = TryMatch(originalRegex!, line.TrimmedText);
             if (originalGroups is not null)
             {
@@ -101,7 +113,7 @@ public sealed class DualLineDocumentParser
             return false;
         }
 
-        return TryCreateRegexes(normalizedConfig, out _, out _, out error);
+        return TryCreateRegexes(normalizedConfig, out _, out _, out _, out error);
     }
 
     private static EditableSegment BuildEditableSegment(int lineStartOffset, MatchedGroups groups)
@@ -109,7 +121,7 @@ public sealed class DualLineDocumentParser
         return new EditableSegment(lineStartOffset + groups.Prefix.Length + groups.White.Length, groups.Text.Length);
     }
 
-    private static ParsedLineInfo BuildLineInfo(int lineNumber, ParsedLineKind kind, MatchedGroups groups, int lineStartOffset)
+    private static ParsedLineInfo BuildLineInfo(int lineNumber, ParsedLineKind kind, MatchedGroups groups, int lineStartOffset, string? name = null)
     {
         return new ParsedLineInfo
         {
@@ -120,6 +132,7 @@ public sealed class DualLineDocumentParser
                 : lineStartOffset,
             EditableLength = kind == ParsedLineKind.Translated ? groups.Text.Length : 0,
             PrefixLength = groups.Prefix.Length + groups.White.Length,
+            Name = name ?? string.Empty,
         };
     }
 
@@ -127,13 +140,16 @@ public sealed class DualLineDocumentParser
         ParserConfig config,
         out Regex? originalRegex,
         out Regex? translatedRegex,
+        out Regex? nameRegex,
         out string? error)
     {
         originalRegex = null;
         translatedRegex = null;
+        nameRegex = null;
 
         if (string.IsNullOrWhiteSpace(config.OriginalPrefixRegex)
-            && string.IsNullOrWhiteSpace(config.TranslatedPrefixRegex))
+            && string.IsNullOrWhiteSpace(config.TranslatedPrefixRegex)
+            && string.IsNullOrWhiteSpace(config.NameRegex))
         {
             error = null;
             return false;
@@ -154,6 +170,10 @@ public sealed class DualLineDocumentParser
             translatedRegex = new Regex(
                 $"^(?<prefix>{config.TranslatedPrefixRegex})(?<white>{config.TranslatedWhiteRegex})(?<text>.*?)(?<suffix>{config.TranslatedSuffixRegex})$",
                 RegexOptions.Compiled);
+            if (!string.IsNullOrWhiteSpace(config.NameRegex))
+            {
+                nameRegex = new Regex(config.NameRegex, RegexOptions.Compiled);
+            }
             error = null;
             return true;
         }
@@ -179,6 +199,18 @@ public sealed class DualLineDocumentParser
             Text = match.Groups["text"].Value,
             Suffix = match.Groups["suffix"].Value,
         };
+    }
+
+    private static string? TryMatchName(Regex regex, string line)
+    {
+        var match = regex.Match(line);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var nameGroup = match.Groups["name"];
+        return nameGroup.Success ? nameGroup.Value : null;
     }
 
     private static List<LineSnapshot> SplitLines(string text)

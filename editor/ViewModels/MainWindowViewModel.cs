@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -224,7 +225,28 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _workspacePath = folderPath;
         var settings = _settingsStore.LoadSettings(folderPath);
-        ParserConfig = settings.ParserConfig.Clone();
+        var parserConfig = settings.ParserConfig.Clone();
+        var settingsPath = Path.Combine(folderPath, "dltxt-editor-setting.json");
+        var settingsExists = File.Exists(settingsPath);
+
+        if (!settingsExists)
+        {
+            parserConfig = ParserConfig.Default();
+        }
+
+        if (TryLoadVscodeParserConfig(folderPath, out var vscodeParserConfig))
+        {
+            parserConfig = MergeParserConfig(parserConfig, vscodeParserConfig);
+            settings.ParserConfig = parserConfig.Clone();
+            _settingsStore.SaveSettings(folderPath, settings);
+        }
+        else if (!settingsExists)
+        {
+            settings.ParserConfig = parserConfig.Clone();
+            _settingsStore.SaveSettings(folderPath, settings);
+        }
+
+        ParserConfig = parserConfig;
         _simpleTmSharedUrl = settings.SimpleTmSharedUrl ?? string.Empty;
         AddRecentFolder(folderPath);
         RefreshWorkspaceNodes();
@@ -234,6 +256,117 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ParserConfig));
         OnPropertyChanged(nameof(ParserSummary));
         StatusMessage = $"已打开文件夹：{folderPath}";
+    }
+
+    private static ParserConfig MergeParserConfig(ParserConfig baseConfig, ParserConfig overrideConfig)
+    {
+        return new ParserConfig
+        {
+            OriginalPrefixRegex = string.IsNullOrWhiteSpace(overrideConfig.OriginalPrefixRegex) ? baseConfig.OriginalPrefixRegex : overrideConfig.OriginalPrefixRegex,
+            TranslatedPrefixRegex = string.IsNullOrWhiteSpace(overrideConfig.TranslatedPrefixRegex) ? baseConfig.TranslatedPrefixRegex : overrideConfig.TranslatedPrefixRegex,
+            OriginalWhiteRegex = string.IsNullOrWhiteSpace(overrideConfig.OriginalWhiteRegex) ? baseConfig.OriginalWhiteRegex : overrideConfig.OriginalWhiteRegex,
+            TranslatedWhiteRegex = string.IsNullOrWhiteSpace(overrideConfig.TranslatedWhiteRegex) ? baseConfig.TranslatedWhiteRegex : overrideConfig.TranslatedWhiteRegex,
+            OriginalSuffixRegex = string.IsNullOrWhiteSpace(overrideConfig.OriginalSuffixRegex) ? baseConfig.OriginalSuffixRegex : overrideConfig.OriginalSuffixRegex,
+            TranslatedSuffixRegex = string.IsNullOrWhiteSpace(overrideConfig.TranslatedSuffixRegex) ? baseConfig.TranslatedSuffixRegex : overrideConfig.TranslatedSuffixRegex,
+            NameRegex = string.IsNullOrWhiteSpace(overrideConfig.NameRegex) ? baseConfig.NameRegex : overrideConfig.NameRegex,
+        };
+    }
+
+    private static bool TryLoadVscodeParserConfig(string workspacePath, out ParserConfig parserConfig)
+    {
+        parserConfig = new ParserConfig();
+        var vscodeSettingsPath = Path.Combine(workspacePath, ".vscode", "settings.json");
+        if (!File.Exists(vscodeSettingsPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(vscodeSettingsPath);
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            var found = false;
+
+            if (TryReadStringSetting(root, "dltxt.core.originalTextPrefixRegex", out var originalPrefixRegex))
+            {
+                parserConfig.OriginalPrefixRegex = originalPrefixRegex;
+                found = true;
+            }
+
+            if (TryReadStringSetting(root, "dltxt.core.translatedTextPrefixRegex", out var translatedPrefixRegex))
+            {
+                parserConfig.TranslatedPrefixRegex = translatedPrefixRegex;
+                found = true;
+            }
+
+            if (TryReadStringSetting(root, "dltxt.core.x.originalTextWhite", out var originalWhiteRegex))
+            {
+                parserConfig.OriginalWhiteRegex = originalWhiteRegex;
+                found = true;
+            }
+
+            if (TryReadStringSetting(root, "dltxt.core.x.translatedTextWhite", out var translatedWhiteRegex))
+            {
+                parserConfig.TranslatedWhiteRegex = translatedWhiteRegex;
+                found = true;
+            }
+
+            if (TryReadStringSetting(root, "dltxt.core.y.originalTextSuffix", out var originalSuffixRegex))
+            {
+                parserConfig.OriginalSuffixRegex = originalSuffixRegex;
+                found = true;
+            }
+
+            if (TryReadStringSetting(root, "dltxt.core.y.translatedTextSuffix", out var translatedSuffixRegex))
+            {
+                parserConfig.TranslatedSuffixRegex = translatedSuffixRegex;
+                found = true;
+            }
+
+            if (TryReadStringSetting(root, "dltxt.core.name.regex", out var nameRegex))
+            {
+                parserConfig.NameRegex = nameRegex;
+                found = true;
+            }
+
+            return found;
+        }
+        catch
+        {
+            parserConfig = new ParserConfig();
+            return false;
+        }
+    }
+
+    private static bool TryReadStringSetting(JsonElement root, string path, out string value)
+    {
+        value = string.Empty;
+
+        if (root.TryGetProperty(path, out var directProperty) && directProperty.ValueKind == JsonValueKind.String)
+        {
+            value = directProperty.GetString() ?? string.Empty;
+            return true;
+        }
+
+        var currentElement = root;
+        foreach (var segment in path.Split('.'))
+        {
+            if (!currentElement.TryGetProperty(segment, out var nextElement))
+            {
+                return false;
+            }
+
+            currentElement = nextElement;
+        }
+
+        if (currentElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = currentElement.GetString() ?? string.Empty;
+        return true;
     }
 
     public void SetSimpleTmSharedUrl(string sharedUrl)
