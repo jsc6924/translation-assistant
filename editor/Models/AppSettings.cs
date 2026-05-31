@@ -17,6 +17,15 @@ public sealed class AppSettings
     [JsonPropertyName("editorTheme")]
     public string EditorTheme { get; set; } = "Default";
 
+    [JsonPropertyName("backgroundImageFileName")]
+    public string BackgroundImageFileName { get; set; } = string.Empty;
+
+    [JsonPropertyName("backgroundImageOpacity")]
+    public double BackgroundImageOpacity { get; set; } = 0.5;
+
+    [JsonPropertyName("backgroundImageFillMode")]
+    public bool BackgroundImageFillMode { get; set; } = false;
+
     [JsonPropertyName("openFiles")]
     public string[] OpenFiles { get; set; } = Array.Empty<string>();
 

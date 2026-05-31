@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 
 namespace editor.Models;
@@ -74,6 +76,7 @@ public static class EditorThemeManager
         app.Resources["FooterBackgroundBrush"] = new SolidColorBrush(themeDefinition.FooterBackground);
         app.Resources["EditorTextForegroundBrush"] = new SolidColorBrush(themeDefinition.EditorTextForeground);
         app.Resources["EditorBackgroundBrush"] = new SolidColorBrush(themeDefinition.EditorBackground);
+        app.Resources["EditorBackgroundImageBrush"] = new SolidColorBrush(themeDefinition.EditorBackground);
         app.Resources["EditorCaretBrush"] = new SolidColorBrush(themeDefinition.EditorCaret);
         app.Resources["EditorOriginalPrefixBrush"] = new SolidColorBrush(themeDefinition.OriginalPrefix);
         app.Resources["EditorOriginalTextBrush"] = new SolidColorBrush(themeDefinition.OriginalText);
@@ -83,6 +86,38 @@ public static class EditorThemeManager
         app.Resources["TabItemSelectedBackgroundBrush"] = new SolidColorBrush(themeDefinition.TabItemSelectedBackground);
         app.Resources["TabItemBorderBrush"] = new SolidColorBrush(themeDefinition.TabItemBorder);
         app.Resources["TabItemSelectedForegroundBrush"] = new SolidColorBrush(themeDefinition.TabItemSelectedForeground);
+    }
+
+    public static void ApplyEditorBackgroundImage(Application app, string? imagePath, double opacity, bool fillMode)
+    {
+        if (app is null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath))
+        {
+            try
+            {
+                var bitmap = new Bitmap(imagePath);
+                app.Resources["EditorBackgroundImageBrush"] = new ImageBrush
+                {
+                    Source = bitmap,
+                    Stretch = fillMode ? Stretch.UniformToFill : Stretch.Uniform,
+                    Opacity = Math.Clamp(opacity, 0.0, 1.0),
+                    AlignmentX = AlignmentX.Center,
+                    AlignmentY = AlignmentY.Center,
+                };
+                return;
+            }
+            catch
+            {
+                // ignore and fallback to solid color brush
+            }
+        }
+
+        var fallbackBrush = app.Resources["EditorBackgroundBrush"] as IBrush ?? new SolidColorBrush(Colors.White);
+        app.Resources["EditorBackgroundImageBrush"] = fallbackBrush;
     }
 }
 

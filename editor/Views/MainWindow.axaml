@@ -57,6 +57,7 @@
                         <MenuItem Header="自动识别双行格式"
                                   Click="OnAutoDetectFormatClick"
                                   IsEnabled="{Binding HasOpenDocuments}" />
+                        <MenuItem Header="背景" Click="OnConfigureBackgroundClick" />
                         <MenuItem Header="术语库配置" Click="OnConfigureSimpleTmClick" />
                     </MenuItem>
                     <MenuItem Header="帮助">

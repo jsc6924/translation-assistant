@@ -41,6 +41,21 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _editorTheme = "Default";
 
+    [ObservableProperty]
+    private string _backgroundImageFileName = string.Empty;
+
+    [ObservableProperty]
+    private double _backgroundImageOpacity = 0.5;
+
+    [ObservableProperty]
+    private bool _backgroundImageFillMode;
+
+    partial void OnBackgroundImageFillModeChanged(bool value)
+    {
+        SaveEditorSettings();
+        UpdateEditorBackgroundBrush();
+    }
+
     private static readonly IReadOnlyDictionary<string, string> EditorFontFamilyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["微软雅黑"] = "Microsoft YaHei",
@@ -153,6 +168,17 @@ public partial class MainWindowViewModel : ViewModelBase
         EditorFontFamilyName = GetSafeFontFamilyName(globalSettings.EditorFontFamily);
         EditorFontSize = globalSettings.EditorFontSize;
         EditorTheme = string.IsNullOrWhiteSpace(globalSettings.EditorTheme) ? EditorThemeManager.DefaultThemeName : globalSettings.EditorTheme;
+        BackgroundImageFileName = globalSettings.BackgroundImageFileName ?? string.Empty;
+        BackgroundImageOpacity = globalSettings.BackgroundImageOpacity >= 0.0 && globalSettings.BackgroundImageOpacity <= 1.0
+            ? globalSettings.BackgroundImageOpacity
+            : 0.5;
+        BackgroundImageFillMode = globalSettings.BackgroundImageFillMode;
+
+        if (Application.Current is Application app)
+        {
+            EditorThemeManager.ApplyTheme(app, EditorTheme);
+            EditorThemeManager.ApplyEditorBackgroundImage(app, GetGlobalBackgroundImagePath(BackgroundImageFileName), BackgroundImageOpacity, BackgroundImageFillMode);
+        }
 
         RecentFolders.Clear();
         foreach (var folder in globalSettings.RecentFolders ?? Array.Empty<string>())
@@ -229,6 +255,9 @@ public partial class MainWindowViewModel : ViewModelBase
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
         settings.EditorTheme = EditorTheme;
+        settings.BackgroundImageFileName = BackgroundImageFileName;
+        settings.BackgroundImageOpacity = BackgroundImageOpacity;
+        settings.BackgroundImageFillMode = BackgroundImageFillMode;
         settings.RecentFolders = RecentFolders?.ToArray() ?? Array.Empty<string>();
         _settingsStore.SaveGlobalSettings(settings);
     }
@@ -239,6 +268,9 @@ public partial class MainWindowViewModel : ViewModelBase
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
         settings.EditorTheme = EditorTheme;
+        settings.BackgroundImageFileName = BackgroundImageFileName;
+        settings.BackgroundImageOpacity = BackgroundImageOpacity;
+        settings.BackgroundImageFillMode = BackgroundImageFillMode;
         settings.RecentFolders = RecentFolders?.ToArray() ?? Array.Empty<string>();
         _settingsStore.SaveGlobalSettings(settings);
     }
@@ -256,9 +288,110 @@ public partial class MainWindowViewModel : ViewModelBase
         if (Application.Current is Application app)
         {
             EditorThemeManager.ApplyTheme(app, value);
+            EditorThemeManager.ApplyEditorBackgroundImage(app, GetGlobalBackgroundImagePath(BackgroundImageFileName), BackgroundImageOpacity, BackgroundImageFillMode);
         }
 
         SaveEditorSettings();
+    }
+
+    public void SetEditorBackgroundImage(string? sourceImagePath, double opacity, bool fillMode)
+    {
+        if (string.IsNullOrWhiteSpace(sourceImagePath))
+        {
+            BackgroundImageFileName = string.Empty;
+            BackgroundImageOpacity = Math.Clamp(opacity, 0.0, 1.0);
+            BackgroundImageFillMode = fillMode;
+            SaveEditorSettings();
+            UpdateEditorBackgroundBrush();
+            return;
+        }
+
+        if (!File.Exists(sourceImagePath))
+        {
+            StatusMessage = "选择的背景图片不存在，请重新选择。";
+            return;
+        }
+
+        var savedFileName = CopyBackgroundImageToGlobalSettings(sourceImagePath);
+        if (string.IsNullOrWhiteSpace(savedFileName))
+        {
+            StatusMessage = "无法保存背景图片到全局设置目录。";
+            return;
+        }
+
+        BackgroundImageFileName = savedFileName;
+        BackgroundImageOpacity = Math.Clamp(opacity, 0.0, 1.0);
+        BackgroundImageFillMode = fillMode;
+        SaveEditorSettings();
+        UpdateEditorBackgroundBrush();
+        StatusMessage = "编辑器背景图片已保存并应用。";
+    }
+
+    private void UpdateEditorBackgroundBrush()
+    {
+        if (Application.Current is not Application app)
+        {
+            return;
+        }
+
+        EditorThemeManager.ApplyEditorBackgroundImage(app, GetGlobalBackgroundImagePath(BackgroundImageFileName), BackgroundImageOpacity, BackgroundImageFillMode);
+    }
+
+    private static string? CopyBackgroundImageToGlobalSettings(string sourceImagePath)
+    {
+        try
+        {
+            var targetDirectory = EditorSettingsStore.GetGlobalSettingsDirectory();
+            if (string.IsNullOrWhiteSpace(targetDirectory))
+            {
+                return null;
+            }
+
+            Directory.CreateDirectory(targetDirectory);
+            var fileName = Path.GetFileName(sourceImagePath) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return null;
+            }
+
+            var targetPath = Path.Combine(targetDirectory, fileName);
+            var baseName = Path.GetFileNameWithoutExtension(fileName) ?? string.Empty;
+            var extension = Path.GetExtension(fileName);
+            var counter = 1;
+            while (File.Exists(targetPath) && !string.Equals(Path.GetFullPath(targetPath), Path.GetFullPath(sourceImagePath), StringComparison.OrdinalIgnoreCase))
+            {
+                targetPath = Path.Combine(targetDirectory, $"{baseName}_{counter}{extension}");
+                counter++;
+            }
+
+            if (string.Equals(Path.GetFullPath(targetPath), Path.GetFullPath(sourceImagePath), StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.GetFileName(targetPath);
+            }
+
+            File.Copy(sourceImagePath, targetPath, true);
+            return Path.GetFileName(targetPath);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? GetGlobalBackgroundImagePath(string? backgroundImageFileName)
+    {
+        if (string.IsNullOrWhiteSpace(backgroundImageFileName))
+        {
+            return null;
+        }
+
+        var directory = EditorSettingsStore.GetGlobalSettingsDirectory();
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        return Path.Combine(directory, backgroundImageFileName);
     }
 
     public void LoadWorkspace(string folderPath)

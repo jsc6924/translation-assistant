@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:editor.ViewModels"
+        xmlns:converters="using:editor.Converters"
+        x:Class="editor.Views.BackgroundSettingsWindow"
+        x:DataType="vm:BackgroundSettingsViewModel"
+        Width="600"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="编辑器背景设置">
+    <Window.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+    </Window.Resources>
+
+    <StackPanel Margin="16" Spacing="14">
+        <TextBlock Text="编辑器背景设置" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="选择一张背景图片，并设置透明度。留空路径后保存可以清除当前背景图。" TextWrapping="Wrap" />
+
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+            <TextBox Text="{Binding SelectedImagePath, Mode=TwoWay}"
+                     VerticalAlignment="Center"
+                     PlaceholderText="背景图片路径"
+                     Margin="0,0,8,0" />
+            <Button Content="选择图片"
+                    Click="OnSelectImageClick"
+                    Width="100"
+                    HorizontalAlignment="Right" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="透明度" VerticalAlignment="Center" />
+            <Slider Minimum="0"
+                    Maximum="1"
+                    Value="{Binding BackgroundOpacity, Mode=TwoWay}"
+                    Width="260"
+                    TickFrequency="0.1"
+                    IsSnapToTickEnabled="False" />
+            <TextBlock Text="{Binding OpacityLabel}" VerticalAlignment="Center" FontWeight="SemiBold" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="0,4,0,0">
+            <TextBlock Text="显示方式" VerticalAlignment="Center" />
+            <RadioButton Content="全部显示"
+                         IsChecked="{Binding BackgroundFillMode, Mode=TwoWay, Converter={StaticResource InverseBooleanConverter}}"
+                         VerticalAlignment="Center" />
+            <RadioButton Content="铺满区域"
+                         IsChecked="{Binding BackgroundFillMode, Mode=TwoWay}"
+                         VerticalAlignment="Center" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding StatusMessage}"
+                   Foreground="IndianRed"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasStatusMessage}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="清空" Width="80" Click="OnClearClick" />
+            <Button Content="取消" Width="80" Click="OnCancelClick" />
+            <Button Content="保存" Width="80" Click="OnSaveClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>

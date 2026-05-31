@@ -87,6 +87,30 @@ public partial class MainWindow : Window
 
         viewModel.SetSimpleTmSharedUrl(dialog.SharedUrl);
     }
+
+    private async void OnConfigureBackgroundClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var currentBackgroundPath = string.IsNullOrWhiteSpace(viewModel.BackgroundImageFileName)
+            ? string.Empty
+            : EditorSettingsStore.GetGlobalSettingsDirectory() is { } dir
+                ? Path.Combine(dir, viewModel.BackgroundImageFileName)
+                : string.Empty;
+
+        var dialog = new BackgroundSettingsWindow(currentBackgroundPath, viewModel.BackgroundImageOpacity, viewModel.BackgroundImageFillMode);
+        var confirmed = await dialog.ShowDialog<bool?>(this) ?? false;
+        if (!confirmed)
+        {
+            return;
+        }
+
+        viewModel.SetEditorBackgroundImage(dialog.SelectedImagePath, dialog.SelectedOpacity, dialog.SelectedFillMode);
+    }
+
     private void OnClosing(object? sender, WindowClosingEventArgs eventArgs)
     {
         _autoSaveTimer.Stop();

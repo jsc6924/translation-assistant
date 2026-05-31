@@ -110,6 +110,25 @@ public sealed class EditorSettingsStore
         }
     }
 
+    public static string? GetGlobalSettingsDirectory()
+    {
+        try
+        {
+            var settingsPath = GetGlobalSettingsPath();
+            if (string.IsNullOrWhiteSpace(settingsPath))
+            {
+                return null;
+            }
+
+            var directory = Path.GetDirectoryName(settingsPath);
+            return string.IsNullOrWhiteSpace(directory) ? null : directory;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static string? GetSettingsPath(string? workspacePath)
     {
         return string.IsNullOrWhiteSpace(workspacePath)

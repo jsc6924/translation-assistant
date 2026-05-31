@@ -4,19 +4,21 @@
              xmlns:vm="using:editor.ViewModels"
              x:Class="editor.Views.DocumentEditorView"
              x:DataType="vm:EditorDocumentViewModel">
-    <avaloniaEdit:TextEditor x:Name="Editor"
-                             ShowLineNumbers="True"
-                             HorizontalScrollBarVisibility="Auto"
-                             VerticalScrollBarVisibility="Auto"
-                             Background="{DynamicResource EditorBackgroundBrush}"
-                             Foreground="{DynamicResource EditorTextForegroundBrush}"
-                             FontFamily="{Binding FontFamily}"
-                             FontSize="{Binding FontSize}">
-        <avaloniaEdit:TextEditor.ContextMenu>
-            <ContextMenu>
-                <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
-                <MenuItem Header="编辑术语" Click="OnEditTerminologyClick" />
-            </ContextMenu>
-        </avaloniaEdit:TextEditor.ContextMenu>
-    </avaloniaEdit:TextEditor>
+    <Border Background="{DynamicResource EditorBackgroundImageBrush}">
+        <avaloniaEdit:TextEditor x:Name="Editor"
+                                 ShowLineNumbers="True"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource EditorTextForegroundBrush}"
+                                 FontFamily="{Binding FontFamily}"
+                                 FontSize="{Binding FontSize}">
+            <avaloniaEdit:TextEditor.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
+                    <MenuItem x:Name="EditTerminologyMenuItem" Header="编辑术语" Click="OnEditTerminologyClick" />
+                </ContextMenu>
+            </avaloniaEdit:TextEditor.ContextMenu>
+        </avaloniaEdit:TextEditor>
+    </Border>
 </UserControl>

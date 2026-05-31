@@ -297,16 +297,23 @@ public partial class DocumentEditorView : UserControl
 
     private void OnEditorContextMenuOpened(object? sender, EventArgs e)
     {
-        var menuItem = CopyTranslationMenuItem;
-        if (menuItem is null)
+        var copyMenuItem = CopyTranslationMenuItem;
+        if (copyMenuItem is not null)
         {
-            return;
+            var term = FindSelectedTerm();
+            var canCopyTranslation = term is not null && !string.IsNullOrWhiteSpace(term.Translation);
+            copyMenuItem.IsVisible = canCopyTranslation;
+            copyMenuItem.IsEnabled = canCopyTranslation;
         }
 
-        var term = FindSelectedTerm();
-        var canCopyTranslation = term is not null && !string.IsNullOrWhiteSpace(term.Translation);
-        menuItem.IsVisible = canCopyTranslation;
-        menuItem.IsEnabled = canCopyTranslation;
+        var editMenuItem = EditTerminologyMenuItem;
+        if (editMenuItem is not null)
+        {
+            var selectedText = GetSelectedText();
+            var canEditTerminology = !string.IsNullOrWhiteSpace(selectedText);
+            editMenuItem.IsVisible = canEditTerminology;
+            editMenuItem.IsEnabled = canEditTerminology;
+        }
     }
 
     private TerminologyEntry? FindSelectedTerm()
