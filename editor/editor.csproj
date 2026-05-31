@@ -6,11 +6,24 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+    <Win32Icon>Assets\logo.ico</Win32Icon>
+    <Company>jsc6924</Company>
+    <Authors>jsc6924</Authors>
+    <Product>dltxt editor</Product>
+    <Description>dltxt editor</Description>
+    <AssemblyTitle>dltxt editor</AssemblyTitle>
+    <AssemblyCompany>jsc6924</AssemblyCompany>
+    <AssemblyProduct>dltxt editor</AssemblyProduct>
+    <FileDescription>dltxt editor</FileDescription>
   </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="..\assets\logo.png">
+      <Link>Assets\logo.png</Link>
+    </AvaloniaResource>
   </ItemGroup>
 
   <ItemGroup>

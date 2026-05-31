@@ -23,6 +23,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private EditorDocumentViewModel? _selectedDocument;
     private string? _workspacePath;
     private string _simpleTmSharedUrl = string.Empty;
+    private bool _isInitializing;
 
     [ObservableProperty]
     private string _statusMessage = "请选择最近打开的文件夹，或打开一个新的文件夹。";
@@ -165,6 +166,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OpenDocuments = new ObservableCollection<EditorDocumentViewModel>();
         OpenDocuments.CollectionChanged += OnOpenDocumentsChanged;
 
+        _isInitializing = true;
         var globalSettings = _settingsStore.LoadGlobalSettings();
         EditorFontFamilyName = GetSafeFontFamilyName(globalSettings.EditorFontFamily);
         EditorFontSize = globalSettings.EditorFontSize;
@@ -187,6 +189,7 @@ public partial class MainWindowViewModel : ViewModelBase
             RecentFolders.Add(folder);
         }
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
+        _isInitializing = false;
     }
 
     public ObservableCollection<FileNodeViewModel> RootNodes { get; }
@@ -252,6 +255,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void SaveEditorSettings()
     {
+        if (_isInitializing)
+        {
+            return;
+        }
+
         var settings = _settingsStore.LoadGlobalSettings();
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
@@ -265,6 +273,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void SaveGlobalSettings()
     {
+        if (_isInitializing)
+        {
+            return;
+        }
+
         var settings = _settingsStore.LoadGlobalSettings();
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;

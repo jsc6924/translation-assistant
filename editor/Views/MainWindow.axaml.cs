@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ResizeToScreenIfNeeded();
         Closing += OnClosing;
 
         _autoSaveTimer = new DispatcherTimer
@@ -30,6 +31,40 @@ public partial class MainWindow : Window
         };
         _autoSaveTimer.Tick += OnAutoSaveTimerTick;
         _autoSaveTimer.Start();
+    }
+
+    private void ResizeToScreenIfNeeded()
+    {
+        var primaryScreen = Screens?.Primary;
+        if (primaryScreen is null)
+        {
+            return;
+        }
+
+        double scaling = primaryScreen.Scaling;
+        if (scaling <= 0)
+        {
+            scaling = 1.0; // 容错处理
+        }
+
+        var workingArea = primaryScreen.WorkingArea;
+        if (workingArea.Width <= 0 || workingArea.Height <= 0)
+        {
+            return;
+        }
+
+        // 将屏幕的【物理像素】除以【缩放比例】，得到真实的【逻辑像素】
+        double logicalScreenWidth = workingArea.Width / scaling;
+        double logicalScreenHeight = workingArea.Height / scaling;
+
+        // 此时 Width(1280) 与 logicalScreenWidth(1280) 处于同一单位维度了
+        if (Width > logicalScreenWidth * 0.9 || Height > logicalScreenHeight * 0.9)
+        {
+            // 赋值时同样要使用逻辑像素单位
+            Width = logicalScreenWidth * 0.8;
+            Height = logicalScreenHeight * 0.8;
+            WindowState = WindowState.Maximized;
+        }
     }
 
     private async void OnConfigureFormatClick(object? sender, RoutedEventArgs eventArgs)

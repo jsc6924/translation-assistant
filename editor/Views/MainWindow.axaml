@@ -15,7 +15,7 @@
         MinWidth="960"
         MinHeight="640"
         WindowStartupLocation="CenterScreen"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/logo.png"
         Title="{Binding WindowTitle}">
 
     <Window.Resources>
