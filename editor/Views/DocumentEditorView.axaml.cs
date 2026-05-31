@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -29,6 +30,7 @@ public partial class DocumentEditorView : UserControl
     private readonly DispatcherTimer _terminologyTimer;
     private readonly ThickCaretManager _thickCaretManager;
     private EditorDocumentViewModel? _viewModel;
+    private EditorDocumentViewModel? _pendingRestoreViewModel;
     private IReadOnlyList<TerminologyEntry> _terms = [];
     private IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> _namingRules =
         new Dictionary<string, IReadOnlyDictionary<string, NamingRuleValue>>();
@@ -69,6 +71,24 @@ public partial class DocumentEditorView : UserControl
         _thickCaretManager = new ThickCaretManager(Editor);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == DataContextProperty)
+        {
+            if (change.OldValue is EditorDocumentViewModel oldVm)
+            {
+                SaveEditorState(oldVm);
+            }
+
+            if (change.NewValue is EditorDocumentViewModel newVm)
+            {
+                _pendingRestoreViewModel = newVm;
+            }
+        }
+    }
+
     private void ApplyReadOnlySections(ParsedDocument parsedDocument)
     {
         if (Editor.Document is null || !parsedDocument.IsConfigured)
@@ -84,6 +104,7 @@ public partial class DocumentEditorView : UserControl
     {
         if (_viewModel is not null)
         {
+            SaveEditorState(_viewModel);
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _viewModel.Document.Changed -= OnDocumentChanged;
         }
@@ -105,7 +126,46 @@ public partial class DocumentEditorView : UserControl
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.Document.Changed += OnDocumentChanged;
         RefreshParserState();
+        TryRestorePendingState();
         _ = RefreshTerminologyFromServerAsync(force: true);
+    }
+
+    private void SaveEditorState(EditorDocumentViewModel viewModel)
+    {
+        if (viewModel is null)
+        {
+            return;
+        }
+
+        viewModel.SavedCaretOffset = Editor.TextArea.Caret.Offset;
+        viewModel.SavedScrollOffset = Editor.TextArea.TextView.ScrollOffset;
+    }
+
+    private void TryRestorePendingState()
+    {
+        if (_pendingRestoreViewModel is null || _pendingRestoreViewModel != _viewModel)
+        {
+            _pendingRestoreViewModel = null;
+            return;
+        }
+
+        var viewModel = _pendingRestoreViewModel;
+        _pendingRestoreViewModel = null;
+
+        if (Editor.Document is null)
+        {
+            return;
+        }
+
+        var offset = Math.Clamp(viewModel.SavedCaretOffset, 0, Editor.Document.TextLength);
+        Editor.TextArea.Caret.Offset = offset;
+
+        Editor.UpdateLayout();
+
+        if (Editor.TextArea is IScrollable scrollable)
+        {
+            scrollable.Offset = viewModel.SavedScrollOffset;
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs eventArgs)

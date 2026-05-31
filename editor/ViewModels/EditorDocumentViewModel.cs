@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Avalonia;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -60,6 +61,10 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     public string EncodingName => _encodingName;
 
     public Encoding FileEncoding => _fileEncoding;
+
+    public Vector SavedScrollOffset { get; set; } = Vector.Zero;
+
+    public int SavedCaretOffset { get; set; }
 
     public void UpdateFilePath(string newPath)
     {
