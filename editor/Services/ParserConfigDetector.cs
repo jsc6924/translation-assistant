@@ -73,14 +73,15 @@ public static class ParserConfigDetector
             return false;
         }
 
+        var defaultConfig = ParserConfig.Default();
         parserConfig = new ParserConfig
         {
             OriginalPrefixRegex = originalPrefix,
             TranslatedPrefixRegex = translatedPrefix,
-            OriginalWhiteRegex = "\\s*",
-            TranslatedWhiteRegex = "\\s*",
-            OriginalSuffixRegex = "[\u300D]?",
-            TranslatedSuffixRegex = "[\u300D]?",
+            OriginalWhiteRegex = defaultConfig.OriginalWhiteRegex,
+            TranslatedWhiteRegex = defaultConfig.TranslatedWhiteRegex,
+            OriginalSuffixRegex = defaultConfig.OriginalSuffixRegex,
+            TranslatedSuffixRegex = defaultConfig.TranslatedSuffixRegex,
         };
 
         if (!DualLineDocumentParser.TryValidate(parserConfig, out var validationError))
