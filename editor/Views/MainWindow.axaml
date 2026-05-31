@@ -33,7 +33,7 @@
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*,Auto,Auto">
-        <Border Padding="0,0,8,0" BorderThickness="0,0,0,1" Background="{StaticResource HeaderBackgroundBrush}" IsVisible="{Binding IsWorkspaceLoaded}">
+        <Border Padding="0,0,8,0" BorderThickness="0,0,0,1" Background="{DynamicResource HeaderBackgroundBrush}" IsVisible="{Binding IsWorkspaceLoaded}">
             <DockPanel LastChildFill="False">
                 <Menu>
                     <MenuItem Header="文件">
@@ -58,7 +58,7 @@
         </Border>
 
         <Grid Grid.Row="1" ColumnDefinitions="300,*">
-            <Border Padding="12" BorderThickness="0,0,1,0" Background="{StaticResource TreeviewBackgroundBrush}">
+            <Border Padding="12" BorderThickness="0,0,1,0" Background="{DynamicResource TreeviewBackgroundBrush}">
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Text="{Binding SidebarTitle}" FontSize="16" FontWeight="SemiBold" />
 
@@ -118,7 +118,8 @@
             </Border>
 
             <Grid Grid.Column="1">
-                <TabControl ItemsSource="{Binding OpenDocuments}"
+                <TabControl Background="{DynamicResource EditorBackgroundBrush}"
+                            ItemsSource="{Binding OpenDocuments}"
                             SelectedItem="{Binding SelectedDocument, Mode=TwoWay}"
                             IsVisible="{Binding HasOpenDocuments}">
                     <TabControl.ItemTemplate>
@@ -173,8 +174,8 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Padding="8,0" Background="{StaticResource FooterBackgroundBrush}" BorderThickness="0">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+        <Border Grid.Row="2" Padding="8,0" Background="{DynamicResource FooterBackgroundBrush}" BorderThickness="0">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                 <Grid.Styles>
                     <Style Selector="ComboBox.OpenUp /template/ Popup#PART_Popup">
                         <Setter Property="Placement" Value="Top" />
@@ -191,18 +192,21 @@
                 <ComboBox Classes="OpenUp" Width="65" Grid.Column="2" Margin="4,0"
                               ItemsSource="{Binding AvailableEditorFontSizes}"
                               SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
+                <ComboBox Classes="OpenUp" Width="140" Grid.Column="3" Margin="4,0"
+                          ItemsSource="{Binding AvailableThemes}"
+                          SelectedItem="{Binding EditorTheme, Mode=TwoWay}" />
                 <CheckBox Content="翻译模式"
                           IsChecked="{Binding EnableTranslationMode, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Right"
                           Margin="4,0"
-                          Grid.Column="3" />
+                          Grid.Column="4" />
                 <CheckBox Content="启用编辑限制模式"
                           IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Right"
                           Margin="4,0"
-                          Grid.Column="4" />
+                          Grid.Column="5" />
             </Grid>
         </Border>
     </Grid>

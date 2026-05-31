@@ -13,6 +13,9 @@ public sealed class AppSettings
     [JsonPropertyName("editorFontSize")]
     public double EditorFontSize { get; set; } = 18;
 
+    [JsonPropertyName("editorTheme")]
+    public string EditorTheme { get; set; } = "Default";
+
     [JsonPropertyName("simpleTmSharedUrl")]
     public string SimpleTmSharedUrl { get; set; } = string.Empty;
 }

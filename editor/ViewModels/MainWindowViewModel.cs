@@ -5,7 +5,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Avalonia;
 using Avalonia.Media;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using editor.Models;
@@ -36,6 +38,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private double _editorFontSize = 18;
 
+    [ObservableProperty]
+    private string _editorTheme = "Default";
+
     private static readonly IReadOnlyDictionary<string, string> EditorFontFamilyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["微软雅黑"] = "Microsoft YaHei",
@@ -64,6 +69,8 @@ public partial class MainWindowViewModel : ViewModelBase
         24.0,
         26.0,
     };
+
+    public IReadOnlyList<string> AvailableThemes => EditorThemeManager.ThemeNames;
 
     public ObservableCollection<string> RecentFolders { get; }
 
@@ -144,6 +151,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var globalSettings = _settingsStore.LoadGlobalSettings();
         EditorFontFamilyName = GetSafeFontFamilyName(globalSettings.EditorFontFamily);
         EditorFontSize = globalSettings.EditorFontSize;
+        EditorTheme = string.IsNullOrWhiteSpace(globalSettings.EditorTheme) ? EditorThemeManager.DefaultThemeName : globalSettings.EditorTheme;
 
         RecentFolders = new ObservableCollection<string>(_recentFoldersStore.LoadRecentFolders());
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
@@ -215,7 +223,26 @@ public partial class MainWindowViewModel : ViewModelBase
         var settings = _settingsStore.LoadGlobalSettings();
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
+        settings.EditorTheme = EditorTheme;
         _settingsStore.SaveGlobalSettings(settings);
+    }
+
+    partial void OnEditorThemeChanged(string value)
+    {
+        var safeTheme = string.IsNullOrWhiteSpace(value) ? EditorThemeManager.DefaultThemeName : value;
+        if (!string.Equals(value, safeTheme, StringComparison.Ordinal))
+        {
+            _editorTheme = safeTheme;
+            OnPropertyChanged(nameof(EditorTheme));
+            value = safeTheme;
+        }
+
+        if (Application.Current is Application app)
+        {
+            EditorThemeManager.ApplyTheme(app, value);
+        }
+
+        SaveEditorSettings();
     }
 
     public void LoadWorkspace(string folderPath)

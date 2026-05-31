@@ -10,7 +10,6 @@ public class ThickCaretManager
     private readonly TextEditor _editor;
     private readonly DispatcherTimer _blinkTimer;
     private readonly double _thickness;
-    private readonly IBrush _caretColor;
     private bool _blinkOn = true;
 
     public ThickCaretManager(TextEditor editor, double thickness = 2)
@@ -18,10 +17,7 @@ public class ThickCaretManager
         _editor = editor;
         _thickness = thickness;
         
-        // 1. 获取并备份原有的光标颜色
-        _caretColor = _editor.TextArea.CaretBrush ?? Brushes.Black;
-
-        // 2. 将原生光标变透明（隐藏它）
+        // 1. 让原生光标透明，使用自定义的粗光标渲染。
         _editor.TextArea.CaretBrush = Brushes.Transparent;
 
         // 3. 挂载自定义渲染器来画粗光标
@@ -80,7 +76,19 @@ public class ThickCaretManager
             Rect thickCaretRect = new Rect(x, y, _manager._thickness, rect.Height);
 
             // 画出加粗光标
-            drawingContext.DrawRectangle(_manager._caretColor, null, thickCaretRect);
+            var caretBrush = _manager.GetCaretBrush();
+            drawingContext.DrawRectangle(caretBrush, null, thickCaretRect);
         }
+    }
+
+    private IBrush GetCaretBrush()
+    {
+        if (Application.Current?.Resources.TryGetResource("EditorCaretBrush", null, out var resource) == true
+            && resource is IBrush resourceBrush)
+        {
+            return resourceBrush;
+        }
+
+        return _editor.TextArea.CaretBrush ?? Brushes.White;
     }
 }

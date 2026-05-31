@@ -8,6 +8,8 @@
                              ShowLineNumbers="True"
                              HorizontalScrollBarVisibility="Auto"
                              VerticalScrollBarVisibility="Auto"
+                             Background="{DynamicResource EditorBackgroundBrush}"
+                             Foreground="{DynamicResource EditorTextForegroundBrush}"
                              FontFamily="{Binding FontFamily}"
                              FontSize="{Binding FontSize}">
         <avaloniaEdit:TextEditor.ContextMenu>

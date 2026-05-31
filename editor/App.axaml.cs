@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Markup.Xaml;
+using editor.Models;
 using editor.ViewModels;
 using editor.Views;
 
@@ -30,6 +31,8 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            EditorThemeManager.ApplyTheme(this, EditorThemeManager.DefaultThemeName);
+
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(),
