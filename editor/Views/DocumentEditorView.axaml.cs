@@ -185,6 +185,12 @@ public partial class DocumentEditorView : UserControl
 
         ResetAltBracketState();
 
+        if (_viewModel.TranslationModeEnabled && TryHandleTranslationShortcut(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (_viewModel.TranslationModeEnabled && (e.Key == Key.OemOpenBrackets || e.Key == Key.OemCloseBrackets))
         {
             if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
@@ -810,6 +816,61 @@ public partial class DocumentEditorView : UserControl
 
         document.Insert(currentOffset, selectedTranslation);
         Editor.TextArea.Caret.Offset = currentOffset + selectedTranslation.Length;
+        Editor.TextArea.Caret.BringCaretToView();
+        return true;
+    }
+
+    private bool TryHandleTranslationShortcut(KeyEventArgs e)
+    {
+        if (_viewModel is null || !_viewModel.TranslationModeEnabled || Editor.Document is null)
+        {
+            return false;
+        }
+
+        if (e.KeyModifiers != KeyModifiers.None
+            && !(e.Key == Key.Oem3 && e.KeyModifiers == KeyModifiers.Shift))
+        {
+            return false;
+        }
+
+        var text = e.Key switch
+        {
+            Key.F1 => "1",
+            Key.F2 => "2",
+            Key.F3 => "3",
+            Key.F4 => "4",
+            Key.F5 => "5",
+            Key.F6 => "6",
+            Key.F7 => "7",
+            Key.F8 => "8",
+            Key.F9 => "9",
+            Key.F10 => "0",
+            Key.Oem3 when e.KeyModifiers == KeyModifiers.Shift => "～",
+            Key.D1 or Key.NumPad1 => "！",
+            Key.D2 or Key.NumPad2 => "♪",
+            Key.D3 or Key.NumPad3 => "？",
+            Key.D4 or Key.NumPad4 => "、",
+            Key.D5 or Key.NumPad5 => "♥",
+            Key.D6 or Key.NumPad6 => "……",
+            Key.OemMinus or Key.Subtract => "——",
+            Key.Space => "　",
+            _ => null,
+        };
+
+        if (text is null)
+        {
+            return false;
+        }
+
+        var document = Editor.Document;
+        if (Editor.SelectionLength > 0)
+        {
+            document.Remove(Editor.SelectionStart, Editor.SelectionLength);
+        }
+
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        document.Insert(currentOffset, text);
+        Editor.TextArea.Caret.Offset = currentOffset + text.Length;
         Editor.TextArea.Caret.BringCaretToView();
         return true;
     }

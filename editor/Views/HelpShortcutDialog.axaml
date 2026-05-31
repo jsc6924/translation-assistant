@@ -5,27 +5,48 @@
         x:DataType="views:HelpShortcutDialog"
         Title="快捷键指南"
         Width="520"
-        Height="340"
+        Height="520"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
-    <ScrollViewer Padding="20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="16">
-            <TextBlock TextWrapping="Wrap" Width="480">
-                <Run Text="翻译模式是一种针对双行文本编辑的专用模式。" />
-                <LineBreak />
-                <Run Text="打开后，软件会聚焦在译文行的可编辑区域，让你专注于翻译而不破坏文本结构的同时，使用键盘快速移动光标。" />
-            </TextBlock>
-            <TextBlock Text="快捷键" FontSize="16" FontWeight="SemiBold" />
-            <StackPanel Spacing="6">
-                <TextBlock Text="Alt+T：切换到翻译模式" TextWrapping="Wrap" />
-                <TextBlock Text="Alt+T：退出翻译模式" TextWrapping="Wrap" />
-                <TextBlock Text="\\：移动到上一译文行" TextWrapping="Wrap" />
-                <TextBlock Text="Enter：移动到下一译文行" TextWrapping="Wrap" />
-                <TextBlock Text="[ 或 ]：在当前译文行内左右移动光标" TextWrapping="Wrap" />
-                <TextBlock Text="Shift+[ 或 Shift+]：切换到上一/下一译文分句" TextWrapping="Wrap" />
-                <TextBlock Text="Tab：向后删除到标点" TextWrapping="Wrap" />
-                <TextBlock Text="Delete：向后删除到行尾" TextWrapping="Wrap" />
+    
+    <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                  HorizontalScrollBarVisibility="Disabled" 
+                  HorizontalAlignment="Stretch" 
+                  VerticalAlignment="Stretch">
+        
+        <Border Padding="20">
+            <StackPanel Spacing="16">
+                
+                <TextBlock TextWrapping="Wrap">
+                    <Run Text="翻译模式是一种针对双行文本编辑的专用模式。" />
+                    <LineBreak />
+                    <Run Text="打开后，软件会聚焦在译文行的可编辑区域，让你专注于翻译而不破坏文本结构的同时，使用键盘快速移动光标。" />
+                </TextBlock>
+                
+                <TextBlock Text="快捷键" FontSize="16" FontWeight="SemiBold" />
+                
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Alt+T：切换到翻译模式" TextWrapping="Wrap" />
+                    <TextBlock Text="Alt+T：退出翻译模式" TextWrapping="Wrap" />
+                    <TextBlock Text="\" TextWrapping="Wrap" /> <TextBlock Text="Enter：移动到下一译文行" TextWrapping="Wrap" />
+                    <TextBlock Text="[ 或 ]：在译文行内左右移动光标" TextWrapping="Wrap" />
+                    <TextBlock Text="Alt+[ 或 Alt+]：在译文中以二分探索的方式左右移动" TextWrapping="Wrap" />
+                    <TextBlock Text="Ctrl+[ 或 Ctrl+]：移动到译文行首或行尾" TextWrapping="Wrap" />
+                    <TextBlock Text="Shift+[ 或 Shift+]：移动到上一/下一译文分句" TextWrapping="Wrap" />
+                    <TextBlock Text="Tab：向后删除到标点" TextWrapping="Wrap" />
+                    <TextBlock Text="Delete：向后删除到行尾" TextWrapping="Wrap" />
+                    <TextBlock Text="F1-F10：输入数字 1-0" TextWrapping="Wrap" />
+                    <TextBlock Text="Shift+`：输入 ～" TextWrapping="Wrap" />
+                    <TextBlock Text="1：输入 ！" TextWrapping="Wrap" />
+                    <TextBlock Text="2：输入 ♪" TextWrapping="Wrap" />
+                    <TextBlock Text="3：输入 ？" TextWrapping="Wrap" />
+                    <TextBlock Text="4：输入 、" TextWrapping="Wrap" />
+                    <TextBlock Text="5：输入 ♥" TextWrapping="Wrap" />
+                    <TextBlock Text="6：输入 ……" TextWrapping="Wrap" />
+                    <TextBlock Text="-：输入 ——" TextWrapping="Wrap" />
+                    <TextBlock Text="Space：输入全角空格" TextWrapping="Wrap" />
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+        </Border>
     </ScrollViewer>
 </Window>
