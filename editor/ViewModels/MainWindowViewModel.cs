@@ -247,6 +247,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void LoadWorkspace(string folderPath)
     {
+        SaveWorkspaceTabState();
         SaveAll();
         DisposeDocuments();
 
@@ -279,10 +280,48 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshWorkspaceNodes();
 
         SetSelectedDocument(null, false);
+        RestoreWorkspaceTabs(settings);
         RaiseShellPropertyChanges();
         OnPropertyChanged(nameof(ParserConfig));
         OnPropertyChanged(nameof(ParserSummary));
         StatusMessage = $"已打开文件夹：{folderPath}";
+    }
+
+    public void SaveWorkspaceTabState()
+    {
+        if (string.IsNullOrWhiteSpace(_workspacePath))
+        {
+            return;
+        }
+
+        var settings = _settingsStore.LoadSettings(_workspacePath);
+        settings.OpenFiles = OpenDocuments.Select(document => document.FilePath).ToArray();
+        settings.ActiveFile = SelectedDocument?.FilePath ?? string.Empty;
+        _settingsStore.SaveSettings(_workspacePath, settings);
+    }
+
+    private void RestoreWorkspaceTabs(AppSettings settings)
+    {
+        if (settings.OpenFiles?.Length > 0)
+        {
+            var comparer = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            foreach (var filePath in settings.OpenFiles)
+            {
+                if (File.Exists(filePath))
+                {
+                    OpenFile(filePath);
+                }
+            }
+
+            if (OpenDocuments.Count > 0)
+            {
+                var active = OpenDocuments.FirstOrDefault(document =>
+                    !string.IsNullOrWhiteSpace(settings.ActiveFile) &&
+                    string.Equals(document.FilePath, settings.ActiveFile, comparer));
+
+                SetSelectedDocument(active ?? OpenDocuments[0], false);
+            }
+        }
     }
 
     private static ParserConfig MergeParserConfig(ParserConfig baseConfig, ParserConfig overrideConfig)

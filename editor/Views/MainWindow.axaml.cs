@@ -70,7 +70,10 @@ public partial class MainWindow : Window
             {
                 viewModel.SetStatus($"关闭时保存失败：{error}");
                 eventArgs.Cancel = true;
+                return;
             }
+
+            viewModel.SaveWorkspaceTabState();
         }
     }
 

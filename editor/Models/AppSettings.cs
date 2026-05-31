@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace editor.Models;
@@ -15,6 +16,12 @@ public sealed class AppSettings
 
     [JsonPropertyName("editorTheme")]
     public string EditorTheme { get; set; } = "Default";
+
+    [JsonPropertyName("openFiles")]
+    public string[] OpenFiles { get; set; } = Array.Empty<string>();
+
+    [JsonPropertyName("activeFile")]
+    public string ActiveFile { get; set; } = string.Empty;
 
     [JsonPropertyName("simpleTmSharedUrl")]
     public string SimpleTmSharedUrl { get; set; } = string.Empty;
