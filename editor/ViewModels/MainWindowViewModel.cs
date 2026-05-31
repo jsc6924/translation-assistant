@@ -1186,6 +1186,29 @@ public partial class MainWindowViewModel : ViewModelBase
         return true;
     }
 
+    public bool SaveSelectedAs(string targetFilePath, out string? error)
+    {
+        if (SelectedDocument is null)
+        {
+            error = "未选择任何文档。";
+            return false;
+        }
+
+        try
+        {
+            File.WriteAllText(targetFilePath, SelectedDocument.Document.Text, SelectedDocument.FileEncoding);
+            SelectedDocument.UpdateFilePath(targetFilePath);
+            SelectedDocument.IsDirty = false;
+            error = null;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+            return false;
+        }
+    }
+
     [RelayCommand]
     private void SaveSelected()
     {

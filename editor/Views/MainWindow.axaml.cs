@@ -224,6 +224,80 @@ public partial class MainWindow : Window
         viewModel.RefreshWorkspace();
     }
 
+    private async void OnSaveAsClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedDocument is null)
+        {
+            viewModel.SetStatus("请先选择一个文档进行另存为。");
+            return;
+        }
+
+        var storageProvider = StorageProvider;
+        if (storageProvider is null)
+        {
+            viewModel.SetStatus("当前平台不支持另存为操作。请在桌面环境中使用。");
+            return;
+        }
+
+        var currentFilePath = viewModel.SelectedDocument.FilePath;
+        var defaultFileName = Path.GetFileName(currentFilePath);
+
+        // ================== 【核心新增逻辑】 ==================
+        IStorageFolder? startLocation = null;
+        try
+        {
+            // 1. 获取当前文件所在的目录路径
+            var currentDirectory = Path.GetDirectoryName(currentFilePath);
+
+            // 2. 如果路径合法且文件夹确实存在，将其转换为 Avalonia 的 IStorageFolder 抽象
+            if (!string.IsNullOrWhiteSpace(currentDirectory) && Directory.Exists(currentDirectory))
+            {
+                startLocation = await storageProvider.TryGetFolderFromPathAsync(currentDirectory);
+            }
+        }
+        catch
+        {
+            // 容错处理：如果路径解析失败（例如是未保存过的临时虚拟路径），则保持 startLocation 为 null 即可
+        }
+        // ====================================================
+
+        var options = new FilePickerSaveOptions
+        {
+            Title = "请选择另存为目标文件",
+            DefaultExtension = Path.GetExtension(defaultFileName),
+            SuggestedFileName = defaultFileName,
+            // 3. 将解析出来的文件夹对象赋值给 SuggestedStartLocation
+            SuggestedStartLocation = startLocation
+        };
+
+        var file = await storageProvider.SaveFilePickerAsync(options);
+        if (file is null)
+        {
+            return;
+        }
+
+        var targetPath = file.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            viewModel.SetStatus("另存为失败：无法获得本地文件路径。");
+            return;
+        }
+
+        if (viewModel.SaveSelectedAs(targetPath, out var error))
+        {
+            viewModel.SetStatus($"已另存为：{targetPath}");
+        }
+        else
+        {
+            viewModel.SetStatus($"另存为失败：{error}");
+        }
+    }
+
     private async void OnReloadWithEncodingClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is not MainWindowViewModel viewModel)
@@ -233,7 +307,7 @@ public partial class MainWindow : Window
 
         if (viewModel.SelectedDocument is null)
         {
-            viewModel.SetStatus("请先选择一个要重新加载的文件。" );
+            viewModel.SetStatus("请先选择一个要重新加载的文件。");
             return;
         }
 
@@ -502,7 +576,7 @@ public partial class MainWindow : Window
         var path = folder.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(path))
         {
-            viewModel.SetStatus("所选文件夹无法映射到本地路径。请重新选择。" );
+            viewModel.SetStatus("所选文件夹无法映射到本地路径。请重新选择。");
             return !requireSelection;
         }
 
