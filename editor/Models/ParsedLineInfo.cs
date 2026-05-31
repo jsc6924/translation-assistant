@@ -12,5 +12,7 @@ public sealed class ParsedLineInfo
 
     public int PrefixLength { get; init; }
 
+    public int SuffixLength { get; init; }
+
     public string Name { get; init; } = string.Empty;
 }

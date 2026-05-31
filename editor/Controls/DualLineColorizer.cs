@@ -42,39 +42,79 @@ public sealed class DualLineColorizer : DocumentColorizingTransformer
         var lineInfo = _parsedDocument.GetLine(line.LineNumber - 1);
         if (lineInfo is null || lineInfo.Kind == ParsedLineKind.Other)
         {
+            ApplyTerminologyHighlights(line);
             return;
         }
 
         var prefixLength = lineInfo.PrefixLength;
         if (prefixLength <= 0)
         {
+            ApplyTerminologyHighlights(line);
             return;
         }
 
         var start = line.Offset;
         var end = line.EndOffset;
         var mid = start + prefixLength;
-        if (lineInfo.Kind == ParsedLineKind.Original)  
+        var suffixStart = Math.Max(mid, end - lineInfo.SuffixLength);
+
+        if (lineInfo.Kind == ParsedLineKind.Original)
         {
+            var prefixBrush = GetResourceBrush("EditorOriginalPrefixBrush", new SolidColorBrush(Color.Parse("#80006c28")));
+            var textBrush = GetResourceBrush("EditorOriginalTextBrush", new SolidColorBrush(Color.Parse("#008E44")));
+
             ChangeLinePart(start, mid, element =>
             {
-                element.TextRunProperties.SetForegroundBrush(GetResourceBrush("EditorOriginalPrefixBrush", new SolidColorBrush(Color.Parse("#80006c28"))));
+                element.TextRunProperties.SetForegroundBrush(prefixBrush);
             });
-            ChangeLinePart(mid, end, element =>
+
+            if (suffixStart > mid)
             {
-                element.TextRunProperties.SetForegroundBrush(GetResourceBrush("EditorOriginalTextBrush", new SolidColorBrush(Color.Parse("#008E44"))));
-            });
-        } 
-        else if (lineInfo.Kind == ParsedLineKind.Translated) 
+                ChangeLinePart(mid, suffixStart, element =>
+                {
+                    element.TextRunProperties.SetForegroundBrush(textBrush);
+                });
+                ChangeLinePart(suffixStart, end, element =>
+                {
+                    element.TextRunProperties.SetForegroundBrush(prefixBrush);
+                });
+            }
+            else
+            {
+                ChangeLinePart(mid, end, element =>
+                {
+                    element.TextRunProperties.SetForegroundBrush(textBrush);
+                });
+            }
+        }
+        else if (lineInfo.Kind == ParsedLineKind.Translated)
         {
+            var prefixBrush = GetResourceBrush("EditorTranslatedPrefixBrush", new SolidColorBrush(Color.Parse("#80000000")));
+            var textBrush = GetResourceBrush("EditorTranslatedTextBrush", new SolidColorBrush(Color.Parse("#000000")));
+
             ChangeLinePart(start, mid, element =>
             {
-                element.TextRunProperties.SetForegroundBrush(GetResourceBrush("EditorTranslatedPrefixBrush", new SolidColorBrush(Color.Parse("#80000000"))));
+                element.TextRunProperties.SetForegroundBrush(prefixBrush);
             });
-            ChangeLinePart(mid, end, element =>
+
+            if (suffixStart > mid)
             {
-                element.TextRunProperties.SetForegroundBrush(GetResourceBrush("EditorTranslatedTextBrush", new SolidColorBrush(Color.Parse("#000000"))));
-            });
+                ChangeLinePart(mid, suffixStart, element =>
+                {
+                    element.TextRunProperties.SetForegroundBrush(textBrush);
+                });
+                ChangeLinePart(suffixStart, end, element =>
+                {
+                    element.TextRunProperties.SetForegroundBrush(prefixBrush);
+                });
+            }
+            else
+            {
+                ChangeLinePart(mid, end, element =>
+                {
+                    element.TextRunProperties.SetForegroundBrush(textBrush);
+                });
+            }
         }
 
         ApplyTerminologyHighlights(line);
