@@ -20,6 +20,11 @@
 
 **[视频教程（v3.45-3.50)](https://www.bilibili.com/video/BV1NVw3zcEyX/)**
 
+## 轻量级方案
+如果你觉得下载安装vscode再安装dltxt太麻烦，占用资源太多，你也可以尝试使用[dltxt-editor](https://github.com/jsc6924/dltxt-editor-release/releases)
+
+这是一款独立的文字游戏汉化专用编辑器，实现了dltxt的核心基础功能，下载即用无需安装（需要Windows10以上）。
+
 ## 目录
 - [基本使用流程](#基本使用流程)
 - [格式支持](#格式支持)

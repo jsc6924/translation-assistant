@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Media;
@@ -717,6 +718,18 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public void RefreshWorkspace()
+    {
+        if (string.IsNullOrWhiteSpace(_workspacePath) || !Directory.Exists(_workspacePath))
+        {
+            StatusMessage = "当前工作区文件夹不可用，无法刷新。";
+            return;
+        }
+
+        RefreshWorkspaceNodes();
+        StatusMessage = $"已刷新当前工作区：{_workspacePath}";
+    }
+
     public FileNodeViewModel? CreateNewFile(string folderPath, out string? error)
     {
         error = null;
@@ -1051,13 +1064,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var content = File.ReadAllText(filePath);
+            var fileBytes = File.ReadAllBytes(filePath);
+            var (encoding, encodingName) = EditorDocumentViewModel.DetectEncoding(fileBytes);
+            var content = encoding.GetString(fileBytes);
             var document = new EditorDocumentViewModel(filePath, content, ParserConfig, CloseDocumentInternal)
             {
                 EditRestrictionEnabled = EnableEditRestriction,
                 TranslationModeEnabled = EnableTranslationMode,
                 SimpleTmSharedUrl = _simpleTmSharedUrl,
             };
+            document.SetFileEncoding(encoding, encodingName);
             document.ApplyEditorFontSettings(EditorFontFamily, EditorFontSize);
             OpenDocuments.Add(document);
             SetSelectedDocument(document, true);
@@ -1094,6 +1110,58 @@ public partial class MainWindowViewModel : ViewModelBase
     public void SaveAll()
     {
         _ = SaveAll(out _);
+    }
+
+    public bool ReloadSelectedDocumentWithEncoding(string encodingName)
+    {
+        if (SelectedDocument is null)
+        {
+            StatusMessage = "请先选择一个当前打开的文件。";
+            return false;
+        }
+
+        if (SelectedDocument.IsDirty)
+        {
+            StatusMessage = "请先保存当前文件，再以指定编码重新加载。";
+            return false;
+        }
+
+        if (!File.Exists(SelectedDocument.FilePath))
+        {
+            StatusMessage = $"当前文件不存在：{SelectedDocument.FilePath}";
+            return false;
+        }
+
+        try
+        {
+            var fileBytes = File.ReadAllBytes(SelectedDocument.FilePath);
+            var encoding = CreateEncodingByName(encodingName);
+            var content = encoding.GetString(fileBytes);
+            SelectedDocument.ReloadContent(content, encoding, encodingName);
+            StatusMessage = $"已按 {encodingName} 重新加载：{SelectedDocument.FilePath}";
+            return true;
+        }
+        catch (Exception exception)
+        {
+            StatusMessage = $"重新加载失败：{exception.Message}";
+            return false;
+        }
+    }
+
+    private static Encoding CreateEncodingByName(string encodingName)
+    {
+        if (string.IsNullOrWhiteSpace(encodingName))
+        {
+            return new UTF8Encoding(false);
+        }
+
+        return encodingName.Trim().ToLowerInvariant() switch
+        {
+            "utf8" => new UTF8Encoding(false),
+            "utf16le" => new UnicodeEncoding(false, true),
+            "utf16be" => new UnicodeEncoding(true, true),
+            _ => Encoding.GetEncoding(encodingName),
+        };
     }
 
     public void SetStatus(string status)

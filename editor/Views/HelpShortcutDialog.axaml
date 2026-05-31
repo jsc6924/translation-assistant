@@ -45,6 +45,7 @@
                     <TextBlock Text="6：输入 ……" TextWrapping="Wrap" />
                     <TextBlock Text="-：输入 ——" TextWrapping="Wrap" />
                     <TextBlock Text="Space：输入全角空格" TextWrapping="Wrap" />
+                    <TextBlock Text="Ctrl+Alt+.：翻译特殊句子" TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
         </Border>

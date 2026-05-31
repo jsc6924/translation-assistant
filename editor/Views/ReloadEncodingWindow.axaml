@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:editor.Views"
+        x:Class="editor.Views.ReloadEncodingWindow"
+        x:DataType="local:ReloadEncodingWindow"
+        Width="380"
+        Height="180"
+        WindowStartupLocation="CenterOwner"
+        Title="指定编码重新加载">
+
+    <StackPanel Margin="16" Spacing="12">
+        <TextBlock Text="请选择用于重新加载当前文件的编码："
+                   FontWeight="SemiBold" />
+
+        <ComboBox ItemsSource="{Binding Encodings}"
+                  SelectedItem="{Binding SelectedEncoding}"
+                  Width="320"
+                  HorizontalAlignment="Left"
+                  IsEditable="False" />
+
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,8,0,0">
+            <Button Content="取消"
+                    Width="80"
+                    Click="OnCancelClick" />
+            <Button Content="确定"
+                    Width="80"
+                    IsDefault="True"
+                    Click="OnConfirmClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>

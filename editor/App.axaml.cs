@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Markup.Xaml;
 using editor.Models;
@@ -29,6 +30,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             EditorThemeManager.ApplyTheme(this, EditorThemeManager.DefaultThemeName);

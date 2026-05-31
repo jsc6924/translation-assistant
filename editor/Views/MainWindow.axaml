@@ -49,8 +49,10 @@
                         <MenuItem Header="在文件资源管理器中打开文件夹"
                                   Click="OnOpenWorkspaceInExplorerClick"
                                   IsEnabled="{Binding IsWorkspaceLoaded}" />
+                        <MenuItem Header="刷新当前文件夹" Click="OnRefreshWorkspaceClick" IsEnabled="{Binding IsWorkspaceLoaded}" />
                         <MenuItem Header="新建文件" Click="OnCreateNewFileClick" />
                         <MenuItem Header="保存" Command="{Binding SaveSelectedCommand}" />
+                        <MenuItem Header="以指定编码重新加载当前文件" Click="OnReloadWithEncodingClick" IsEnabled="{Binding HasOpenDocuments}" />
                     </MenuItem>
                     <MenuItem Header="设置">
                         <MenuItem Header="双行格式" Click="OnConfigureFormatClick" />
@@ -211,9 +213,13 @@
                     </Style>
                 </Grid.Styles>
 
-                <TextBlock Text="{Binding StatusMessage}"
-                           VerticalAlignment="Center"
-                           Grid.Column="0" />
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Grid.Column="0">
+                    <TextBlock Text="{Binding StatusMessage}"
+                               VerticalAlignment="Center" />
+                    <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource EditorTextForegroundBrush}">
+                        <Run Text="{Binding SelectedDocument.EncodingName}" />
+                    </TextBlock>
+                </StackPanel>
                 <ComboBox Classes="OpenUp" Width="140" Grid.Column="1" Margin="4,0"
                               ItemsSource="{Binding AvailableEditorFontFamilies}"
                               SelectedItem="{Binding EditorFontFamilyName, Mode=TwoWay}" />

@@ -9,7 +9,7 @@
         CanResize="False"
         WindowStartupLocation="CenterOwner">
     <StackPanel Margin="20" Spacing="16">
-        <TextBlock Text="本软件是 galgame 汉化专用编辑器，以相对轻量级的方式实现了双行文本汉化解决方案 vscode+dltxt 插件的一部分基础功能。" TextWrapping="Wrap" />
+        <TextBlock Text="本软件是 galgame 汉化专用编辑器，是vscode插件dltxt的一个子项目。以相对轻量级的方式实现了dltxt插件的一部分基础功能。" TextWrapping="Wrap" />
         <TextBlock Text="如果你想使用完整功能，请下载安装 vscode+dltxt 插件。" TextWrapping="Wrap" />
         <TextBlock Text="{Binding VersionText}" FontWeight="SemiBold" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

@@ -214,6 +214,39 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnRefreshWorkspaceClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.RefreshWorkspace();
+    }
+
+    private async void OnReloadWithEncodingClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedDocument is null)
+        {
+            viewModel.SetStatus("请先选择一个要重新加载的文件。" );
+            return;
+        }
+
+        var dialog = new ReloadEncodingWindow(viewModel.SelectedDocument.EncodingName);
+        var confirmed = await dialog.ShowDialog<bool?>(this) ?? false;
+        if (!confirmed)
+        {
+            return;
+        }
+
+        viewModel.ReloadSelectedDocumentWithEncoding(dialog.SelectedEncoding);
+    }
+
     private void OnOpenRecentFolderClick(object? sender, RoutedEventArgs eventArgs)
     {
         string? folderPath = null;

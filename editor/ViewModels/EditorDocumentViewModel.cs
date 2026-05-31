@@ -1,16 +1,20 @@
 using System;
 using System.IO;
+using System.Text;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using editor.Models;
+using Ude;
 
 namespace editor.ViewModels;
 
 public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
 {
     private readonly Action<EditorDocumentViewModel> _closeRequested;
+    private Encoding _fileEncoding = new UTF8Encoding(false);
+    private string _encodingName = "UTF8";
 
     [ObservableProperty]
     private bool _isDirty;
@@ -53,6 +57,10 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
 
     public string Header => IsDirty ? $"{DisplayName} *" : DisplayName;
 
+    public string EncodingName => _encodingName;
+
+    public Encoding FileEncoding => _fileEncoding;
+
     public void UpdateFilePath(string newPath)
     {
         FilePath = newPath;
@@ -93,7 +101,7 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            File.WriteAllText(FilePath, Document.Text);
+            File.WriteAllText(FilePath, Document.Text, _fileEncoding);
             IsDirty = false;
             error = null;
             return true;
@@ -103,6 +111,16 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
             error = exception.Message;
             return false;
         }
+    }
+
+    public void ReloadContent(string content, Encoding encoding, string encodingName)
+    {
+        Document.Changed -= OnDocumentChanged;
+        Document.Text = content;
+        Document.UndoStack.ClearAll();
+        Document.Changed += OnDocumentChanged;
+        SetFileEncoding(encoding, encodingName);
+        IsDirty = false;
     }
 
     public void Undo()
@@ -134,5 +152,39 @@ public partial class EditorDocumentViewModel : ViewModelBase, IDisposable
     private void OnDocumentChanged(object? sender, EventArgs eventArgs)
     {
         IsDirty = true;
+    }
+
+    public void SetFileEncoding(Encoding encoding, string encodingName)
+    {
+        _fileEncoding = encoding ?? new UTF8Encoding(false);
+        _encodingName = string.IsNullOrWhiteSpace(encodingName) ? "UTF8" : encodingName;
+        OnPropertyChanged(nameof(EncodingName));
+    }
+
+    public static (Encoding Encoding, string EncodingName) DetectEncoding(byte[] bytes)
+    {
+        var detector = new CharsetDetector();
+        detector.Feed(bytes, 0, bytes.Length);
+        detector.DataEnd();
+
+        if (detector.Charset is not null && detector.Confidence > 0.3)
+        {
+            try
+            {
+                var encoding = Encoding.GetEncoding(detector.Charset);
+                var name = detector.Charset;
+                if (string.Equals(name, "utf-8", StringComparison.OrdinalIgnoreCase))
+                {
+                    name = "UTF8";
+                }
+                return (encoding, name);
+            }
+            catch
+            {
+                // fall through to UTF8 fallback
+            }
+        }
+
+        return (new UTF8Encoding(false), "UTF8");
     }
 }
