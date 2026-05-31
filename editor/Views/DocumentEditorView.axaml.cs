@@ -27,6 +27,7 @@ public partial class DocumentEditorView : UserControl
     private readonly TerminologyHighlightService _terminologyHighlightService = new();
     private readonly SimpleTmRemoteClient _simpleTmRemoteClient = new();
     private readonly DispatcherTimer _terminologyTimer;
+    private readonly ThickCaretManager _thickCaretManager;
     private EditorDocumentViewModel? _viewModel;
     private IReadOnlyList<TerminologyEntry> _terms = [];
     private IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> _namingRules =
@@ -35,6 +36,9 @@ public partial class DocumentEditorView : UserControl
     private DateTime _lastTerminologyFetchUtc = DateTime.MinValue;
     private bool _terminologyFetchInProgress;
     private string? _lastHoverText;
+    private bool _altBracketStateValid;
+    private int _altBracketLastDistance;
+    private bool _suppressAltBracketReset;
 
     public DocumentEditorView()
     {
@@ -51,14 +55,17 @@ public partial class DocumentEditorView : UserControl
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         Editor.PointerMoved += OnEditorPointerMoved;
         Editor.PointerExited += OnEditorPointerExited;
+        Editor.PointerPressed += OnEditorPointerPressed;
         Editor.TextArea.KeyDown += OnEditorTextAreaKeyDown;
         Editor.TextArea.TextEntering += OnEditorTextEntering;
+        Editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
         Editor.TextArea.AddHandler(InputElement.KeyDownEvent, OnEditorTextAreaKeyDown, RoutingStrategies.Tunnel, true);
         if (Editor.ContextMenu is not null)
         {
             Editor.ContextMenu.Opened += OnEditorContextMenuOpened;
         }
         EnsureEditorHooks();
+        _thickCaretManager = new ThickCaretManager(Editor);
     }
 
     private void ApplyReadOnlySections(ParsedDocument parsedDocument)
@@ -155,6 +162,27 @@ public partial class DocumentEditorView : UserControl
             e.Handled = true;
             return;
         }
+
+        var isCtrlBracket = e.KeyModifiers.HasFlag(KeyModifiers.Control) &&
+                            (e.Key == Key.OemOpenBrackets || e.Key == Key.OemCloseBrackets);
+        if (isCtrlBracket)
+        {
+            MoveCaretToTextEdge(e.Key == Key.OemCloseBrackets ? 1 : -1);
+            ResetAltBracketState();
+            e.Handled = true;
+            return;
+        }
+
+        var isAltBracket = e.KeyModifiers.HasFlag(KeyModifiers.Alt) &&
+                           (e.Key == Key.OemOpenBrackets || e.Key == Key.OemCloseBrackets);
+        if (isAltBracket)
+        {
+            MoveCaretWithAltBrackets(e.Key == Key.OemCloseBrackets ? 1 : -1);
+            e.Handled = true;
+            return;
+        }
+
+        ResetAltBracketState();
 
         if (_viewModel.TranslationModeEnabled && (e.Key == Key.OemOpenBrackets || e.Key == Key.OemCloseBrackets))
         {
@@ -366,6 +394,110 @@ public partial class DocumentEditorView : UserControl
 
         Editor.TextArea.Caret.Offset = segmentHeadOffset;
         Editor.TextArea.Caret.BringCaretToView();
+    }
+
+    private void MoveCaretWithAltBrackets(int direction)
+    {
+        if (Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        if (document.TextLength == 0)
+        {
+            return;
+        }
+
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var parsedDocument = _parser.Parse(document.Text, _viewModel?.ParserConfig ?? ParserConfig.Default(), _viewModel?.EditRestrictionEnabled ?? false);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated || lineInfo.EditableLength <= 0)
+        {
+            return;
+        }
+
+        var textStart = lineInfo.EditableStartOffset;
+        var textEnd = lineInfo.EditableStartOffset + lineInfo.EditableLength;
+        var current = Math.Min(Math.Max(currentOffset, textStart), textEnd);
+        var distanceToEdge = direction > 0
+            ? textEnd - current
+            : current - textStart;
+
+        if (distanceToEdge <= 0)
+        {
+            return;
+        }
+
+        var moveDistance = _altBracketStateValid
+            ? Math.Max(1, _altBracketLastDistance / 2)
+            : Math.Max(1, distanceToEdge / 2);
+
+        _altBracketLastDistance = moveDistance;
+        _altBracketStateValid = true;
+
+        var nextOffset = direction > 0
+            ? Math.Min(textEnd, current + moveDistance)
+            : Math.Max(textStart, current - moveDistance);
+
+        _suppressAltBracketReset = true;
+        Editor.TextArea.Caret.Offset = nextOffset;
+        Editor.TextArea.Caret.BringCaretToView();
+        _suppressAltBracketReset = false;
+    }
+
+    private void MoveCaretToTextEdge(int direction)
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        if (document.TextLength == 0)
+        {
+            return;
+        }
+
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated || lineInfo.EditableLength <= 0)
+        {
+            return;
+        }
+
+        var textStart = lineInfo.EditableStartOffset;
+        var textEnd = lineInfo.EditableStartOffset + lineInfo.EditableLength;
+        var nextOffset = direction > 0 ? textEnd : textStart;
+
+        _suppressAltBracketReset = true;
+        Editor.TextArea.Caret.Offset = nextOffset;
+        Editor.TextArea.Caret.BringCaretToView();
+        _suppressAltBracketReset = false;
+    }
+
+    private void ResetAltBracketState()
+    {
+        _altBracketStateValid = false;
+        _altBracketLastDistance = 0;
+    }
+
+    private void OnCaretPositionChanged(object? sender, EventArgs e)
+    {
+        if (_suppressAltBracketReset)
+        {
+            return;
+        }
+
+        ResetAltBracketState();
+    }
+
+    private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        ResetAltBracketState();
     }
 
     private void MoveCaretToPreviousSegmentInTranslatedLine()

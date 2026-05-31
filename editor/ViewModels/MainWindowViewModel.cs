@@ -31,22 +31,22 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _enableTranslationMode = true;
 
     [ObservableProperty]
-    private string _editorFontFamilyName = "黑体";
+    private string _editorFontFamilyName = "微软雅黑";
 
     [ObservableProperty]
     private double _editorFontSize = 18;
 
     private static readonly IReadOnlyDictionary<string, string> EditorFontFamilyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["黑体"] = "SimHei",
         ["微软雅黑"] = "Microsoft YaHei",
+        ["黑体"] = "SimHei",
         ["宋体"] = "SimSun",
     };
 
     public IReadOnlyList<string> AvailableEditorFontFamilies { get; } = new[]
     {
-        "黑体",
         "微软雅黑",
+        "黑体",
         "宋体",
     };
 
