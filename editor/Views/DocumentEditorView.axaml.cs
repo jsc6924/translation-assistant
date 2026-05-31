@@ -185,6 +185,15 @@ public partial class DocumentEditorView : UserControl
 
         ResetAltBracketState();
 
+        if (e.Key == Key.OemPeriod && e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+        {
+            if (TryAutoTranslateCurrentLine())
+            {
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (_viewModel.TranslationModeEnabled && TryHandleTranslationShortcut(e))
         {
             e.Handled = true;
@@ -746,6 +755,104 @@ public partial class DocumentEditorView : UserControl
         }
 
         document.Replace(currentOffset, editableEnd - currentOffset, string.Empty);
+    }
+
+    private bool TryAutoTranslateCurrentLine()
+    {
+        if (_viewModel is null || Editor.Document is null)
+        {
+            return false;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var lineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (lineInfo is null || lineInfo.Kind != ParsedLineKind.Translated || lineInfo.EditableLength <= 0)
+        {
+            return false;
+        }
+
+        var editableStart = lineInfo.EditableStartOffset;
+        var editableLength = lineInfo.EditableLength;
+        var editableText = document.GetText(editableStart, editableLength);
+        var translatedText = AutoTranslateText(editableText);
+        if (translatedText == editableText)
+        {
+            return false;
+        }
+
+        document.Replace(editableStart, editableLength, translatedText);
+        return true;
+    }
+
+    private static string AutoTranslateText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        foreach (var rule in AutoTranslationRules)
+        {
+            text = rule.Pattern.Replace(text, rule.Replace);
+        }
+
+        return text;
+    }
+
+    private static readonly IReadOnlyList<(Regex Pattern, MatchEvaluator Replace)> AutoTranslationRules = new (Regex Pattern, MatchEvaluator Replace)[]
+    {
+        (new Regex("[っ゛]", RegexOptions.Compiled), _ => string.Empty),
+        (new Regex("だめ", RegexOptions.Compiled), _ => "不行"),
+        (new Regex("[れぺ]ぇ?[ろる]+", RegexOptions.Compiled), m => "啾" + RepeatStr("噜", m.Value.Length - 1, false)),
+        (new Regex("[ぴぷ]ち[ゃゅ]", RegexOptions.Compiled), _ => "噗啾"),
+        (new Regex("[ちじぢ]ゅ[ぷぶぽぼ]+", RegexOptions.Compiled), m => "啾" + RepeatStr("噗", Math.Max(0, m.Value.Length - 2), false)),
+        (new Regex("[ちじぢ]ゅ[うぅ]?", RegexOptions.Compiled), _ => "啾"),
+        (new Regex("りゅ", RegexOptions.Compiled), _ => "噜"),
+        (new Regex("[こご]くん", RegexOptions.Compiled), _ => "咕噜"),
+        (new Regex("ど?[びぴ]ゅる+[うぅ]*", RegexOptions.Compiled), m => "咻" + RepeatStr("噜", Math.Max(0, m.Value.Length - 1), true)),
+        (new Regex("ど?[びぴ]ゅ(く[うぅ]*)?", RegexOptions.Compiled), m => RepeatStr("咻", m.Value.Length, false)),
+        (new Regex("ど[ぷく]+", RegexOptions.Compiled), m => "咻" + RepeatStr("噗", Math.Max(0, m.Value.Length - 1), false)),
+        (new Regex("や[あぁ]*", RegexOptions.Compiled), m => "呀" + RepeatStr("啊", Math.Max(0, m.Value.Length - 1), true)),
+        (new Regex("[あぁ]+", RegexOptions.Compiled), m => RepeatStr("啊", m.Value.Length, true)),
+        (new Regex("[おぉ]+", RegexOptions.Compiled), m => RepeatStr("哦", m.Value.Length, false)),
+        (new Regex("ず+", RegexOptions.Compiled), m => RepeatStr("滋", m.Value.Length, false)),
+        (new Regex("ふ+", RegexOptions.Compiled), m => RepeatStr("呼", m.Value.Length, false)),
+        (new Regex("ふう?", RegexOptions.Compiled), _ => "呼"),
+        (new Regex("う(?=あ)", RegexOptions.Compiled), _ => "哇"),
+        (new Regex("[うぅ]+", RegexOptions.Compiled), m => RepeatStr("呜", m.Value.Length, false)),
+        (new Regex("[ひき][ゃぃ]?", RegexOptions.Compiled), _ => "呀"),
+        (new Regex("く", RegexOptions.Compiled), _ => "咕"),
+        (new Regex("ぐ", RegexOptions.Compiled), _ => "咕"),
+        (new Regex("ぬ", RegexOptions.Compiled), _ => "呶"),
+        (new Regex("ぱ[ん]?", RegexOptions.Compiled), _ => "啪"),
+        (new Regex("は[ん]?", RegexOptions.Compiled), _ => "哈"),
+        (new Regex("[ぷぶ][ん]?", RegexOptions.Compiled), _ => "噗"),
+        (new Regex("む[ん]?", RegexOptions.Compiled), _ => "姆"),
+        (new Regex("る", RegexOptions.Compiled), _ => "噜"),
+        (new Regex("ん+ぅ*", RegexOptions.Compiled), m => RepeatStr("嗯", m.Value.Length, true)),
+        (new Regex("～、", RegexOptions.Compiled), _ => "～"),
+        (new Regex("嗯呜", RegexOptions.Compiled), _ => "嗯"),
+        (new Regex("呼呜", RegexOptions.Compiled), _ => "呼"),
+    };
+
+    private static string RepeatStr(string text, int count, bool addSuffix)
+    {
+        if (count <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (addSuffix && count >= 3)
+        {
+            var suffixCount = count / 3;
+            var repeatCount = count - suffixCount;
+            return string.Concat(Enumerable.Repeat(text, repeatCount)) + string.Concat(Enumerable.Repeat("～", suffixCount));
+        }
+
+        return string.Concat(Enumerable.Repeat(text, count));
     }
 
     private bool TryInsertCurrentLineTerminologyTranslation(Key key)
