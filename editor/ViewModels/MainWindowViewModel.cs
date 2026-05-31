@@ -74,7 +74,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public IReadOnlyList<string> AvailableThemes => EditorThemeManager.ThemeNames;
 
-    public ObservableCollection<string> RecentFolders { get; }
+    public ObservableCollection<string> RecentFolders { get; } = new();
 
     public bool IsWorkspaceLoaded => !string.IsNullOrWhiteSpace(_workspacePath);
 
@@ -159,7 +159,11 @@ public partial class MainWindowViewModel : ViewModelBase
             ? globalSettings.RecentFolders
             : _recentFoldersStore.LoadRecentFolders();
 
-        RecentFolders = new ObservableCollection<string>(recentFolders ?? Array.Empty<string>());
+        RecentFolders.Clear();
+        foreach (var folder in recentFolders ?? Array.Empty<string>())
+        {
+            RecentFolders.Add(folder);
+        }
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
 
         if ((globalSettings.RecentFolders?.Length ?? 0) == 0 && RecentFolders.Count > 0)
@@ -233,7 +237,7 @@ public partial class MainWindowViewModel : ViewModelBase
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
         settings.EditorTheme = EditorTheme;
-        settings.RecentFolders = RecentFolders.ToArray();
+        settings.RecentFolders = RecentFolders?.ToArray() ?? Array.Empty<string>();
         _settingsStore.SaveGlobalSettings(settings);
     }
 
@@ -243,7 +247,7 @@ public partial class MainWindowViewModel : ViewModelBase
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
         settings.EditorTheme = EditorTheme;
-        settings.RecentFolders = RecentFolders.ToArray();
+        settings.RecentFolders = RecentFolders?.ToArray() ?? Array.Empty<string>();
         _settingsStore.SaveGlobalSettings(settings);
     }
 

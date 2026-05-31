@@ -186,13 +186,22 @@ public static class ParserConfigDetector
 
             if (HasAlphaNumPrefix(reminders))
             {
-                regStr += "[A-Za-z0-9]+";
+                regStr += "[0-9a-zA-Z]+";
                 continue;
             }
 
             var candidate = GetCommonPrefix(reminders.ToArray());
             if (!string.IsNullOrEmpty(candidate))
             {
+                if (TryReplaceTrailingAlphaNumWithWildcard(candidate, lines, out var optimizedPrefix))
+                {
+                    if (!string.Equals(optimizedPrefix, Regex.Escape(candidate), StringComparison.Ordinal))
+                    {
+                        regStr += optimizedPrefix;
+                        continue;
+                    }
+                }
+
                 if (ParaMap.ContainsKey(candidate))
                 {
                     openingParens.Add(candidate);
@@ -239,6 +248,45 @@ public static class ParserConfigDetector
             }
         }
 
+        return true;
+    }
+
+    private static bool TryReplaceTrailingAlphaNumWithWildcard(string candidate, string[] lines, out string optimizedPrefix)
+    {
+        optimizedPrefix = candidate;
+        if (string.IsNullOrEmpty(candidate))
+        {
+            return false;
+        }
+
+        var lastNonAlphaNum = candidate.Length - 1;
+        while (lastNonAlphaNum >= 0 && IsAlphaNum(candidate[lastNonAlphaNum]))
+        {
+            lastNonAlphaNum--;
+        }
+
+        if (lastNonAlphaNum == candidate.Length - 1)
+        {
+            return false;
+        }
+
+        var nextCharIsAlphaNum = false;
+        foreach (var line in lines)
+        {
+            if (line.Length > candidate.Length && IsAlphaNum(line[candidate.Length]))
+            {
+                nextCharIsAlphaNum = true;
+                break;
+            }
+        }
+
+        if (!nextCharIsAlphaNum)
+        {
+            return false;
+        }
+
+        var fixedPart = candidate.Substring(0, lastNonAlphaNum + 1);
+        optimizedPrefix = Regex.Escape(fixedPart) + "[0-9a-zA-Z]+";
         return true;
     }
 
