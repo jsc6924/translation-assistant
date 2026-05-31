@@ -17,6 +17,7 @@
                 <ContextMenu>
                     <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
                     <MenuItem x:Name="EditTerminologyMenuItem" Header="编辑术语" Click="OnEditTerminologyClick" />
+                    <MenuItem x:Name="FormatTextMenuItem" Header="格式化文本" Click="OnFormatTextClick" />
                 </ContextMenu>
             </avaloniaEdit:TextEditor.ContextMenu>
         </avaloniaEdit:TextEditor>

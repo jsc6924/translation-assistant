@@ -314,6 +314,98 @@ public partial class DocumentEditorView : UserControl
             editMenuItem.IsVisible = canEditTerminology;
             editMenuItem.IsEnabled = canEditTerminology;
         }
+
+        var formatMenuItem = FormatTextMenuItem;
+        if (formatMenuItem is not null)
+        {
+            formatMenuItem.IsVisible = Editor.Document is not null;
+            formatMenuItem.IsEnabled = Editor.Document is not null;
+        }
+    }
+
+    private async void OnFormatTextClick(object? sender, RoutedEventArgs e)
+    {
+        if (Editor.Document is null)
+        {
+            return;
+        }
+
+        var document = Editor.Document;
+        var documentText = document.Text ?? string.Empty;
+        var parsedDocument = _parser.Parse(documentText, _viewModel?.ParserConfig ?? ParserConfig.Default(), true);
+        if (!parsedDocument.IsConfigured)
+        {
+            return;
+        }
+
+        var selectionStart = Editor.SelectionStart;
+        var selectionLength = Editor.SelectionLength;
+        var replacements = GetTranslatedLineReplacements(document, parsedDocument, selectionStart, selectionLength);
+        if (replacements.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = replacements.Count - 1; i >= 0; i--)
+        {
+            var replacement = replacements[i];
+            document.Replace(replacement.Offset, replacement.Length, replacement.NewText);
+        }
+    }
+
+    private static IReadOnlyList<(int Offset, int Length, string NewText)> GetTranslatedLineReplacements(
+        TextDocument document,
+        ParsedDocument parsedDocument,
+        int selectionStart,
+        int selectionLength)
+    {
+        var replacements = new List<(int Offset, int Length, string NewText)>();
+        var selectionEnd = selectionStart + selectionLength;
+        var hasSelection = selectionLength > 0;
+
+        foreach (var lineInfo in parsedDocument.Lines)
+        {
+            if (lineInfo.Kind != ParsedLineKind.Translated)
+            {
+                continue;
+            }
+
+            var line = document.GetLineByNumber(lineInfo.LineNumber + 1);
+            var lineOffset = line.Offset;
+            var lineLength = line.Length;
+            if (hasSelection)
+            {
+                if (selectionEnd <= lineOffset || selectionStart >= lineOffset + lineLength)
+                {
+                    continue;
+                }
+            }
+
+            var lineText = document.GetText(lineOffset, lineLength);
+            var formattedText = FormatText(lineText);
+            if (formattedText != lineText)
+            {
+                replacements.Add((lineOffset, lineLength, formattedText));
+            }
+        }
+
+        return replacements;
+    }
+
+    private static string FormatText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        text = Regex.Replace(text, @"\.{2,}", "……");
+        text = Regex.Replace(text, @"。{2,}", "……");
+        text = Regex.Replace(text, @"[~∼〜]+", "～");
+        text = Regex.Replace(text, @"[ー－-]{2,}", "————");
+        text = Regex.Replace(text, @"……。", "……");
+        text = Regex.Replace(text, @"。」", "」");
+        return text;
     }
 
     private TerminologyEntry? FindSelectedTerm()
