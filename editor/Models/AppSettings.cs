@@ -9,7 +9,7 @@ public sealed class AppSettings
     public ParserConfig ParserConfig { get; set; } = new();
 
     [JsonPropertyName("editorFontFamily")]
-    public string EditorFontFamily { get; set; } = "黑体";
+    public string EditorFontFamily { get; set; } = "微软雅黑";
 
     [JsonPropertyName("editorFontSize")]
     public double EditorFontSize { get; set; } = 18;
@@ -22,6 +22,9 @@ public sealed class AppSettings
 
     [JsonPropertyName("activeFile")]
     public string ActiveFile { get; set; } = string.Empty;
+
+    [JsonPropertyName("recentFolders")]
+    public string[] RecentFolders { get; set; } = Array.Empty<string>();
 
     [JsonPropertyName("simpleTmSharedUrl")]
     public string SimpleTmSharedUrl { get; set; } = string.Empty;

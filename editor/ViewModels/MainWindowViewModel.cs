@@ -155,8 +155,17 @@ public partial class MainWindowViewModel : ViewModelBase
         EditorFontSize = globalSettings.EditorFontSize;
         EditorTheme = string.IsNullOrWhiteSpace(globalSettings.EditorTheme) ? EditorThemeManager.DefaultThemeName : globalSettings.EditorTheme;
 
-        RecentFolders = new ObservableCollection<string>(_recentFoldersStore.LoadRecentFolders());
+        var recentFolders = (globalSettings.RecentFolders?.Length ?? 0) > 0
+            ? globalSettings.RecentFolders
+            : _recentFoldersStore.LoadRecentFolders();
+
+        RecentFolders = new ObservableCollection<string>(recentFolders ?? Array.Empty<string>());
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
+
+        if ((globalSettings.RecentFolders?.Length ?? 0) == 0 && RecentFolders.Count > 0)
+        {
+            SaveGlobalSettings();
+        }
     }
 
     public ObservableCollection<FileNodeViewModel> RootNodes { get; }
@@ -224,6 +233,17 @@ public partial class MainWindowViewModel : ViewModelBase
         settings.EditorFontFamily = EditorFontFamilyName;
         settings.EditorFontSize = EditorFontSize;
         settings.EditorTheme = EditorTheme;
+        settings.RecentFolders = RecentFolders.ToArray();
+        _settingsStore.SaveGlobalSettings(settings);
+    }
+
+    private void SaveGlobalSettings()
+    {
+        var settings = _settingsStore.LoadGlobalSettings();
+        settings.EditorFontFamily = EditorFontFamilyName;
+        settings.EditorFontSize = EditorFontSize;
+        settings.EditorTheme = EditorTheme;
+        settings.RecentFolders = RecentFolders.ToArray();
         _settingsStore.SaveGlobalSettings(settings);
     }
 
@@ -545,7 +565,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 RecentFolders.RemoveAt(10);
             }
 
-            _recentFoldersStore.SaveRecentFolders(RecentFolders);
+            SaveGlobalSettings();
             OnPropertyChanged(nameof(HasRecentFolders));
         }
         catch

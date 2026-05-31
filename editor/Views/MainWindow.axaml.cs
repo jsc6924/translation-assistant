@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using editor.Models;
+using editor.Services;
 using editor.ViewModels;
 
 namespace editor.Views;
@@ -44,6 +46,31 @@ public partial class MainWindow : Window
             viewModel.ApplyParserConfig(parserConfig);
         }
     }
+
+    private void OnAutoDetectFormatClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedDocument is null)
+        {
+            viewModel.SetStatus("请先打开一个文本文件以自动识别双行格式。");
+            return;
+        }
+
+        var text = viewModel.SelectedDocument.Document.Text;
+        if (!ParserConfigDetector.TryDetect(text, out var parserConfig, out var error))
+        {
+            viewModel.SetStatus($"自动识别失败：{error}");
+            return;
+        }
+
+        viewModel.ApplyParserConfig(parserConfig);
+        viewModel.SetStatus("已自动识别双行格式并应用到当前工作区。");
+    }
+
     private async void OnConfigureSimpleTmClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is not MainWindowViewModel viewModel)
@@ -119,9 +146,63 @@ public partial class MainWindow : Window
         await PickFolderAndLoadAsync(false);
     }
 
+    private void OnOpenWorkspaceInExplorerClick(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var folderPath = viewModel.WorkspacePath;
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+        {
+            viewModel.SetStatus("当前没有打开可用的工作区文件夹。");
+            return;
+        }
+
+        try
+        {
+            var path = Path.GetFullPath(folderPath);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+                Verb = "open",
+            };
+
+            Process.Start(startInfo);
+        }
+        catch
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{folderPath}\"",
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception exception)
+            {
+                viewModel.SetStatus($"无法在文件资源管理器中打开文件夹：{exception.Message}");
+            }
+        }
+    }
+
     private void OnOpenRecentFolderClick(object? sender, RoutedEventArgs eventArgs)
     {
-        if (sender is not Button button || button.DataContext is not string folderPath)
+        string? folderPath = null;
+        if (sender is Button button && button.DataContext is string buttonPath)
+        {
+            folderPath = buttonPath;
+        }
+        else if (sender is MenuItem menuItem && menuItem.DataContext is string menuPath)
+        {
+            folderPath = menuPath;
+        }
+
+        if (string.IsNullOrWhiteSpace(folderPath))
         {
             return;
         }

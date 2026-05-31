@@ -38,11 +38,25 @@
                 <Menu>
                     <MenuItem Header="文件">
                         <MenuItem Header="打开文件夹" Click="OnOpenFolderClick" />
+                        <MenuItem Header="打开最近的项目" ItemsSource="{Binding RecentFolders}">
+                            <MenuItem.ItemTemplate>
+                                <DataTemplate>
+                                    <MenuItem Header="{Binding}"
+                                              Click="OnOpenRecentFolderClick" />
+                                </DataTemplate>
+                            </MenuItem.ItemTemplate>
+                        </MenuItem>
+                        <MenuItem Header="在文件资源管理器中打开文件夹"
+                                  Click="OnOpenWorkspaceInExplorerClick"
+                                  IsEnabled="{Binding IsWorkspaceLoaded}" />
                         <MenuItem Header="新建文件" Click="OnCreateNewFileClick" />
                         <MenuItem Header="保存" Command="{Binding SaveSelectedCommand}" />
                     </MenuItem>
                     <MenuItem Header="设置">
                         <MenuItem Header="双行格式" Click="OnConfigureFormatClick" />
+                        <MenuItem Header="自动识别双行格式"
+                                  Click="OnAutoDetectFormatClick"
+                                  IsEnabled="{Binding HasOpenDocuments}" />
                         <MenuItem Header="术语库配置" Click="OnConfigureSimpleTmClick" />
                     </MenuItem>
                     <MenuItem Header="帮助">
