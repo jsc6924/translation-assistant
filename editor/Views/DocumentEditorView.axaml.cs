@@ -33,6 +33,7 @@ public partial class DocumentEditorView : UserControl
     private IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> _namingRules =
         new Dictionary<string, IReadOnlyDictionary<string, NamingRuleValue>>();
     private TerminologySnapshot _terminologySnapshot = TerminologySnapshot.Empty;
+    private IReadOnlyDictionary<int, IReadOnlyList<TerminologyHighlight>> _terminologyHighlightsByLine = new Dictionary<int, IReadOnlyList<TerminologyHighlight>>();
     private DateTime _lastTerminologyFetchUtc = DateTime.MinValue;
     private bool _terminologyFetchInProgress;
     private string? _lastHoverText;
@@ -218,6 +219,15 @@ public partial class DocumentEditorView : UserControl
             DeleteRestOfTranslatedLine();
             e.Handled = true;
             return;
+        }
+
+        if (_viewModel.TranslationModeEnabled && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            if (TryInsertCurrentLineTerminologyTranslation(e.Key))
+            {
+                e.Handled = true;
+                return;
+            }
         }
 
         if (_viewModel.TranslationModeEnabled && (e.Key == Key.Enter || e.Key == Key.Return))
@@ -633,6 +643,159 @@ public partial class DocumentEditorView : UserControl
         document.Replace(currentOffset, editableEnd - currentOffset, string.Empty);
     }
 
+    private bool TryInsertCurrentLineTerminologyTranslation(Key key)
+    {
+        var ordinal = GetNumberKey(key);
+        if (ordinal <= 0 || _viewModel is null || Editor.Document is null)
+        {
+            return false;
+        }
+
+        var document = Editor.Document;
+        var currentOffset = Editor.TextArea.Caret.Offset;
+        var currentLine = document.GetLineByOffset(currentOffset);
+        var parsedDocument = _parser.Parse(document.Text, _viewModel.ParserConfig, _viewModel.EditRestrictionEnabled);
+        var translatedLineInfo = parsedDocument.GetLine(currentLine.LineNumber - 1);
+        if (translatedLineInfo is null || translatedLineInfo.Kind != ParsedLineKind.Translated)
+        {
+            return false;
+        }
+
+        var originalLineInfo = translatedLineInfo.LineNumber > 0
+            ? parsedDocument.GetLine(translatedLineInfo.LineNumber - 1)
+            : null;
+        if (originalLineInfo is null || originalLineInfo.Kind != ParsedLineKind.Original)
+        {
+            return false;
+        }
+
+        var originalTextLine = document.GetLineByNumber(originalLineInfo.LineNumber + 1);
+        var originalStartOffset = originalTextLine.Offset;
+        var originalEndOffset = originalStartOffset + originalTextLine.Length;
+        if (originalEndOffset <= originalStartOffset)
+        {
+            return false;
+        }
+
+        var termMap = _terms.ToDictionary(term => term.Raw, term => term.Translation, StringComparer.Ordinal);
+        var invertedNamingMap = BuildInvertedNamingMap(_namingRules);
+        var candidates = new List<(int Offset, string Translation)>();
+
+        if (_terminologyHighlightsByLine.TryGetValue(originalLineInfo.LineNumber, out var highlights))
+        {
+            foreach (var highlight in highlights)
+            {
+                var raw = document.GetText(highlight.StartOffset, highlight.Length);
+                var translation = highlight.IsNaming
+                    ? ResolveNamingTranslation(raw, originalLineInfo.Name, _namingRules, invertedNamingMap)
+                    : termMap.TryGetValue(raw, out var termTranslation) ? termTranslation : string.Empty;
+
+                if (string.IsNullOrWhiteSpace(translation))
+                {
+                    continue;
+                }
+
+                candidates.Add((highlight.StartOffset, translation.Trim()));
+            }
+        }
+
+        if (ordinal > candidates.Count)
+        {
+            return false;
+        }
+
+        var selectedTranslation = candidates
+            .OrderBy(candidate => candidate.Offset)
+            .ElementAt(ordinal - 1)
+            .Translation;
+
+        document.Insert(currentOffset, selectedTranslation);
+        Editor.TextArea.Caret.Offset = currentOffset + selectedTranslation.Length;
+        Editor.TextArea.Caret.BringCaretToView();
+        return true;
+    }
+
+    private static int GetNumberKey(Key key)
+    {
+        return key switch
+        {
+            Key.D1 or Key.NumPad1 => 1,
+            Key.D2 or Key.NumPad2 => 2,
+            Key.D3 or Key.NumPad3 => 3,
+            Key.D4 or Key.NumPad4 => 4,
+            Key.D5 or Key.NumPad5 => 5,
+            Key.D6 or Key.NumPad6 => 6,
+            Key.D7 or Key.NumPad7 => 7,
+            Key.D8 or Key.NumPad8 => 8,
+            Key.D9 or Key.NumPad9 => 9,
+            _ => 0,
+        };
+    }
+
+    private static string ResolveNamingTranslation(
+        string called,
+        string? callerName,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> invertedNamingMap)
+    {
+        const string MatchAnyTalker = "*";
+
+        if (!string.IsNullOrWhiteSpace(callerName)
+            && namingRules.TryGetValue(callerName, out var directRules)
+            && directRules.TryGetValue(called, out var directRule))
+        {
+            return GetNamingRuleTranslation(directRule);
+        }
+
+        if (namingRules.TryGetValue(MatchAnyTalker, out var wildcardRules)
+            && wildcardRules.TryGetValue(called, out var wildcardRule))
+        {
+            return GetNamingRuleTranslation(wildcardRule);
+        }
+
+        if (!invertedNamingMap.TryGetValue(called, out var callerMap))
+        {
+            return string.Empty;
+        }
+
+        foreach (var rule in callerMap.Values)
+        {
+            var translation = GetNamingRuleTranslation(rule);
+            if (!string.IsNullOrWhiteSpace(translation))
+            {
+                return translation;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetNamingRuleTranslation(NamingRuleValue ruleValue)
+    {
+        return (ruleValue.Transcaller ?? string.Empty).Replace("\"", string.Empty, StringComparison.Ordinal);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> BuildInvertedNamingMap(
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules)
+    {
+        var inverted = new Dictionary<string, Dictionary<string, NamingRuleValue>>(StringComparer.Ordinal);
+        foreach (var (caller, calledMap) in namingRules)
+        {
+            foreach (var (called, ruleValue) in calledMap)
+            {
+                if (!inverted.TryGetValue(called, out var callerMap))
+                {
+                    callerMap = new Dictionary<string, NamingRuleValue>(StringComparer.Ordinal);
+                    inverted[called] = callerMap;
+                }
+
+                callerMap[caller] = ruleValue;
+            }
+        }
+
+        return inverted.ToDictionary(pair => pair.Key, pair => (IReadOnlyDictionary<string, NamingRuleValue>)pair.Value, StringComparer.Ordinal);
+    }
+
     private void OnEditorTextEntering(object? sender, TextInputEventArgs e)
     {
         if (_viewModel is null || string.IsNullOrEmpty(e.Text))
@@ -668,9 +831,30 @@ public partial class DocumentEditorView : UserControl
             .Where(line => !string.IsNullOrWhiteSpace(line.Name))
             .ToDictionary(line => line.LineNumber, line => line.Name);
         _terminologySnapshot = _terminologyHighlightService.Build(Editor.Document.Text, _terms, _namingRules, lineNumberToTalker);
+        _terminologyHighlightsByLine = BuildTerminologyHighlightsByLine(Editor.Document, _terminologySnapshot);
         _colorizer.Update(parsedDocument, _terminologySnapshot);
         ApplyReadOnlySections(parsedDocument);
         Editor.TextArea.TextView.Redraw();
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<TerminologyHighlight>> BuildTerminologyHighlightsByLine(
+        TextDocument document,
+        TerminologySnapshot terminologySnapshot)
+    {
+        var index = new Dictionary<int, List<TerminologyHighlight>>();
+        foreach (var highlight in terminologySnapshot.Highlights)
+        {
+            var lineNumber = document.GetLineByOffset(highlight.StartOffset).LineNumber - 1;
+            if (!index.TryGetValue(lineNumber, out var highlights))
+            {
+                highlights = new List<TerminologyHighlight>();
+                index[lineNumber] = highlights;
+            }
+
+            highlights.Add(highlight);
+        }
+
+        return index.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<TerminologyHighlight>)pair.Value);
     }
 
     private void MoveCaretToNextTranslatedLine()
@@ -799,6 +983,7 @@ public partial class DocumentEditorView : UserControl
         _terms = [];
         _namingRules = new Dictionary<string, IReadOnlyDictionary<string, NamingRuleValue>>();
         _terminologySnapshot = TerminologySnapshot.Empty;
+        _terminologyHighlightsByLine = new Dictionary<int, IReadOnlyList<TerminologyHighlight>>();
         _lastTerminologyFetchUtc = DateTime.MinValue;
         _lastHoverText = null;
         ToolTip.SetTip(Editor, null);
