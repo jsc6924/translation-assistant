@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Media;
@@ -18,7 +19,6 @@ namespace editor.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly EditorSettingsStore _settingsStore;
-    private readonly RecentFoldersStore _recentFoldersStore;
     private EditorDocumentViewModel? _selectedDocument;
     private string? _workspacePath;
     private string _simpleTmSharedUrl = string.Empty;
@@ -136,14 +136,13 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public MainWindowViewModel()
-        : this(new EditorSettingsStore(), new RecentFoldersStore())
+        : this(new EditorSettingsStore())
     {
     }
 
-    public MainWindowViewModel(EditorSettingsStore settingsStore, RecentFoldersStore recentFoldersStore)
+    public MainWindowViewModel(EditorSettingsStore settingsStore)
     {
         _settingsStore = settingsStore;
-        _recentFoldersStore = recentFoldersStore;
 
         ParserConfig = new ParserConfig();
         RootNodes = new ObservableCollection<FileNodeViewModel>();
@@ -155,21 +154,12 @@ public partial class MainWindowViewModel : ViewModelBase
         EditorFontSize = globalSettings.EditorFontSize;
         EditorTheme = string.IsNullOrWhiteSpace(globalSettings.EditorTheme) ? EditorThemeManager.DefaultThemeName : globalSettings.EditorTheme;
 
-        var recentFolders = (globalSettings.RecentFolders?.Length ?? 0) > 0
-            ? globalSettings.RecentFolders
-            : _recentFoldersStore.LoadRecentFolders();
-
         RecentFolders.Clear();
-        foreach (var folder in recentFolders ?? Array.Empty<string>())
+        foreach (var folder in globalSettings.RecentFolders ?? Array.Empty<string>())
         {
             RecentFolders.Add(folder);
         }
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
-
-        if ((globalSettings.RecentFolders?.Length ?? 0) == 0 && RecentFolders.Count > 0)
-        {
-            SaveGlobalSettings();
-        }
     }
 
     public ObservableCollection<FileNodeViewModel> RootNodes { get; }
@@ -186,7 +176,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string SimpleTmSharedUrl => _simpleTmSharedUrl;
 
-    public string WindowTitle => string.IsNullOrWhiteSpace(_workspacePath) ? "dltxt editor" : $"dltxt editor - {WorkspaceName}";
+    public string WindowTitle => string.IsNullOrWhiteSpace(_workspacePath)
+        ? $"dltxt editor {AppVersion}"
+        : $"dltxt editor {AppVersion} - {WorkspaceName}";
 
     public string ParserSummary
     {
@@ -1125,10 +1117,19 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public string AppVersion { get; } = GetAppVersion();
+
     private static string GetLeafFolderName(string path)
     {
         var trimmedPath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var folderName = Path.GetFileName(trimmedPath);
         return string.IsNullOrWhiteSpace(folderName) ? trimmedPath : folderName;
+    }
+
+    private static string GetAppVersion()
+    {
+        var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+        var version = assembly.GetName().Version;
+        return version is null ? "v0.0.0" : $"v{version.Major}.{version.Minor}.{version.Build}";
     }
 }

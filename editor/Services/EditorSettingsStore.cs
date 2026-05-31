@@ -94,7 +94,15 @@ public sealed class EditorSettingsStore
     {
         try
         {
-            return Path.Combine(AppContext.BaseDirectory, GlobalSettingsFileName);
+            var appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(appDataFolder))
+            {
+                return Path.Combine(AppContext.BaseDirectory, GlobalSettingsFileName);
+            }
+
+            var appFolder = Path.Combine(appDataFolder, "dltxt-editor");
+            Directory.CreateDirectory(appFolder);
+            return Path.Combine(appFolder, GlobalSettingsFileName);
         }
         catch
         {
