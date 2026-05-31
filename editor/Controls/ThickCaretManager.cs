@@ -67,7 +67,7 @@ public class ThickCaretManager
             Rect rect = _manager._editor.TextArea.Caret.CalculateCaretRectangle();
             if (rect.Width == 0 || rect.Height == 0) return;
 
-            // 【核心修复】：将文档绝对坐标减去当前的滚动偏移量（ScrollOffset）
+            // 将文档绝对坐标减去当前的滚动偏移量（ScrollOffset）
             // 这样就能精准转换为当前屏幕可视区域的相对坐标
             double x = rect.X - textView.ScrollOffset.X;
             double y = rect.Y - textView.ScrollOffset.Y;

@@ -51,7 +51,6 @@
                     </MenuItem>
                 </Menu>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding WorkspaceLabel}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding ParserSummary}" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>

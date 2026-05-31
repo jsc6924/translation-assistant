@@ -46,6 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ["微软雅黑"] = "Microsoft YaHei",
         ["黑体"] = "SimHei",
         ["宋体"] = "SimSun",
+        ["Consolas"] = "Consolas",
     };
 
     public IReadOnlyList<string> AvailableEditorFontFamilies { get; } = new[]
@@ -53,6 +54,7 @@ public partial class MainWindowViewModel : ViewModelBase
         "微软雅黑",
         "黑体",
         "宋体",
+        "Consolas",
     };
 
     public FontFamily EditorFontFamily => GetFontFamilyForName(EditorFontFamilyName);
@@ -166,8 +168,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public string WorkspacePath => _workspacePath ?? string.Empty;
 
     public string WorkspaceName => string.IsNullOrWhiteSpace(_workspacePath) ? "未打开文件夹" : GetLeafFolderName(_workspacePath);
-
-    public string WorkspaceLabel => $"工作区：{WorkspaceName}";
 
     public string SidebarTitle => string.IsNullOrWhiteSpace(_workspacePath) ? "文件浏览器" : $"文件浏览器 - {WorkspaceName}";
 
@@ -1025,7 +1025,6 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(WorkspacePath));
         OnPropertyChanged(nameof(WorkspaceName));
-        OnPropertyChanged(nameof(WorkspaceLabel));
         OnPropertyChanged(nameof(SidebarTitle));
         OnPropertyChanged(nameof(WindowTitle));
         OnPropertyChanged(nameof(IsWorkspaceLoaded));
