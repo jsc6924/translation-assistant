@@ -5,7 +5,7 @@
 	"icon": "assets/logo.png",
 	"description": "",
 	"license": "Custom-NonCommercial-Software",
-	"version": "4.6.2",
+	"version": "4.7.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -673,7 +673,7 @@
 			{
 				"command": "Extension.dltxt.backspace",
 				"key": "backspace",
-				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.strictEditingEffective"
+				"when": "editorTextFocus && resourceLangId == dltxt && dltxt.strictEditing"
 			},
 			{
 				"command": "Extension.dltxt.repeatFirst",
@@ -1385,11 +1385,6 @@
 					"type": "string",
 					"default": "",
 					"description": "其他合法的开头的正则表达式"
-				},
-				"dltxt.core.strictEditing": {
-					"type": "boolean",
-					"default": true,
-					"description": "编辑限制模式：原文不可修改，不可删除或插入行"
 				},
 				"dltxt.core.name.position": {
 					"type": "string",

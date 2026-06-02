@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { countInString, VSCodeContext } from './utils';
+import { countInString, registerCommand, VSCodeContext } from './utils';
 import { DocumentParser } from './parser';
-export enum Mode {
-	Normal,
-	Translate
+export enum TranslateMode {
+    Normal,
+    Translate
 }
 const nextModeMap = new Map([
     ['Normal', 'Translate'],
@@ -16,17 +16,20 @@ export function getNextMode(mode: string): string {
     }
     return 'Normal';
 }
-export const ModeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-ModeStatusBarItem.command = 'Extension.dltxt.toggleMode';
-ModeStatusBarItem.tooltip = 'Click to toggle mode'
+export const TranslateModeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+TranslateModeStatusBarItem.command = 'Extension.dltxt.toggleMode';
+TranslateModeStatusBarItem.tooltip = 'Click to toggle mode'
+export const RestrictEditModeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+RestrictEditModeStatusBarItem.command = 'Extension.dltxt.toggleRestrictEditMode';
+RestrictEditModeStatusBarItem.tooltip = 'Click to toggle restrict edit mode'
 
-export function setMode(newMode: Mode) {
-    VSCodeContext.set('dltxt.mode', Mode[newMode]);
-    ModeStatusBarItem.text = `DLTXT Mode: ${Mode[newMode]}`;
-    ModeStatusBarItem.show();
+export function setTranslateMode(newMode: TranslateMode) {
+    VSCodeContext.set('dltxt.mode', TranslateMode[newMode]);
+    TranslateModeStatusBarItem.text = `DLTXT 模式: ${TranslateMode[newMode]}`;
+    TranslateModeStatusBarItem.show();
 }
 
-export function setModeStr(newMode: string) {
+export function setTranslateModeStr(newMode: string) {
     VSCodeContext.set('dltxt.mode', newMode);
     if (!VSCodeContext.get('dltxt.modeSwitchedMsgShowed')) {
         if (newMode != 'Normal') {
@@ -36,33 +39,32 @@ export function setModeStr(newMode: string) {
         }
         VSCodeContext.set('dltxt.modeSwitchedMsgShowed', true);
     }
-    ModeStatusBarItem.text = `DLTXT Mode: ${newMode}`;
-    ModeStatusBarItem.show();
+    TranslateModeStatusBarItem.text = `DLTXT 模式: ${newMode}`;
+    TranslateModeStatusBarItem.show();
 }
 
-let tempDisableStrictEditing = false;
-
-export function refreshStrictEditingContext() {
-    const strictEditing = vscode.workspace.getConfiguration('dltxt.core').get<boolean>('strictEditing') === true;
-    void VSCodeContext.set('dltxt.strictEditingEffective', strictEditing && !tempDisableStrictEditing);
+export function setRestrictEditMode(enabled: boolean) {
+    VSCodeContext.set('dltxt.strictEditing', enabled);
+    RestrictEditModeStatusBarItem.text = `限制编辑模式: ${enabled ? '开启' : '关闭'}`;
+    RestrictEditModeStatusBarItem.show();
 }
+
 
 export function ShowRestrictEditingWarning(msg: string) {
-    vscode.window.showWarningMessage(msg, '临时关闭').then(selection => {
-        if (selection === '临时关闭') {
-            tempDisableStrictEditing = true;
-            refreshStrictEditingContext();
+    vscode.window.showWarningMessage(msg, '允许编辑').then(selection => {
+        if (selection === '允许编辑') {
+            setRestrictEditMode(false);
         }
     });
 }
 
 function isInStrictEditingMode(): boolean {
-    return vscode.workspace.getConfiguration('dltxt.core').get<boolean>('strictEditing') === true && !tempDisableStrictEditing;
+    return VSCodeContext.get('dltxt.strictEditing') === true;
 }
 
 export function processOnDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): boolean {
-    const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo || 
-                        event.reason === vscode.TextDocumentChangeReason.Redo);
+    const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo ||
+        event.reason === vscode.TextDocumentChangeReason.Redo);
     if (!noStrict && isInStrictEditingMode()) {
         for (const change of event.contentChanges) {
             const startLine = change.range.start.line;
@@ -91,11 +93,18 @@ export function processOnDidChangeTextDocument(event: vscode.TextDocumentChangeE
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    refreshStrictEditingContext();
+    setTranslateMode(TranslateMode.Normal);
+    setRestrictEditMode(true);
 
-    vscode.workspace.onDidChangeConfiguration(event => {
-        if (event.affectsConfiguration('dltxt.core.strictEditing')) {
-            refreshStrictEditingContext();
-        }
-    }, null, context.subscriptions);
+    registerCommand(context, "Extension.dltxt.setMode", (args) => {
+        setTranslateModeStr(args.arg);
+    });
+    registerCommand(context, "Extension.dltxt.toggleMode", () => {
+        const m = VSCodeContext.get('dltxt.mode') as string;
+        setTranslateModeStr(getNextMode(m));
+    });
+    registerCommand(context, "Extension.dltxt.toggleRestrictEditMode", () => {
+        setRestrictEditMode(!isInStrictEditingMode());
+    });
+
 }

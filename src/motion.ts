@@ -7,43 +7,43 @@ import { updateNewlineDecorations } from './decoration';
 import { ShowRestrictEditingWarning } from './mode';
 
 export function activate(context: vscode.ExtensionContext) {
-	registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
-	registerCommand(context, 'Extension.dltxt.cursorToLineEnd', cursorToLineEnd);
+  registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
+  registerCommand(context, 'Extension.dltxt.cursorToLineEnd', cursorToLineEnd);
   registerCommand(context, 'Extension.dltxt.cursorToNextLine', () => cursorToNextLine(false));
   registerCommand(context, 'Extension.dltxt.cursorToNextLineNested', () => cursorToNextLine(true));
-	registerCommand(context, 'Extension.dltxt.cursorToPrevLine', () => cursorToPrevLine(false));
-	registerCommand(context, 'Extension.dltxt.cursorToPrevLineNested', () => cursorToPrevLine(true));
-	registerCommand(context, 'Extension.dltxt.cursorToNextWord', cursorToNextWord);
-	registerCommand(context, 'Extension.dltxt.cursorToPrevWord', cursorToPrevWord);
+  registerCommand(context, 'Extension.dltxt.cursorToPrevLine', () => cursorToPrevLine(false));
+  registerCommand(context, 'Extension.dltxt.cursorToPrevLineNested', () => cursorToPrevLine(true));
+  registerCommand(context, 'Extension.dltxt.cursorToNextWord', cursorToNextWord);
+  registerCommand(context, 'Extension.dltxt.cursorToPrevWord', cursorToPrevWord);
   registerCommand(context, 'Extension.dltxt.cursorToSublineHead', () => {
-		cursorToSublineHead();
-	});
+    cursorToSublineHead();
+  });
 
-	registerCommand(context, 'Extension.dltxt.cursorToSublineEnd', () => {
-		nextPuncInText(false);
-	});
+  registerCommand(context, 'Extension.dltxt.cursorToSublineEnd', () => {
+    nextPuncInText(false);
+  });
 
   registerCommand(context, 'Extension.dltxt.cursorToNextSentenceInLine', cursorToNextSentenceInLine);
-  
+
   registerCommand(context, 'Extension.dltxt.cursorToPrevBinarySearch', cursorToPrevBinarySearch);
 
   registerCommand(context, 'Extension.dltxt.cursorToNextBinarySearch', cursorToNextBinarySearch);
 
-	registerCommand(context, 'Extension.dltxt.moveToNextLine', () => {
-		moveToNextLine();
-	});
+  registerCommand(context, 'Extension.dltxt.moveToNextLine', () => {
+    moveToNextLine();
+  });
 
-	registerCommand(context, 'Extension.dltxt.moveToPrevLine', () => {
-		moveToPrevLine();
-	});
+  registerCommand(context, 'Extension.dltxt.moveToPrevLine', () => {
+    moveToPrevLine();
+  });
 
-	registerCommand(context, 'Extension.dltxt.deleteUntilPunc', () => {
-		nextPuncInText(true);
-	});
+  registerCommand(context, 'Extension.dltxt.deleteUntilPunc', () => {
+    nextPuncInText(true);
+  });
 
-	registerCommand(context, 'Extension.dltxt.deleteAllAfter', () => {
-		deleteAllAfter();
-	});
+  registerCommand(context, 'Extension.dltxt.deleteAllAfter', () => {
+    deleteAllAfter();
+  });
 
   registerCommand(context, 'Extension.dltxt.backspace', async () => {
     if (dltxtBackspace()) {
@@ -53,15 +53,15 @@ export function activate(context: vscode.ExtensionContext) {
     await vscode.commands.executeCommand('deleteLeft');
   });
 
-	registerCommand(context, 'Extension.dltxt.replaceAllKeywordsAtCurrentPosition', (arg) => {
-		replaceAllKeywordsAtCurrentPosition();
-	})
+  registerCommand(context, 'Extension.dltxt.replaceAllKeywordsAtCurrentPosition', (arg) => {
+    replaceAllKeywordsAtCurrentPosition();
+  })
 
   registerCommand(context, 'Extension.dltxt.replaceAllInLine', (arg) => {
-		replaceAllInLine(arg.old_text, arg.new_text, arg.line);
-	})
-	
-	registerCommand(context, 'Extension.dltxt.translateCurrentLine', translateCurrentLine);
+    replaceAllInLine(arg.old_text, arg.new_text, arg.line);
+  })
+
+  registerCommand(context, 'Extension.dltxt.translateCurrentLine', translateCurrentLine);
 
   registerCommand(context, 'Extension.dltxt.switchNewlineTokenDisplay', () => {
     const config = vscode.workspace.getConfiguration("dltxt");
@@ -135,7 +135,7 @@ function cursorToNextLine(nested: boolean) {
   if (nested && !!config.get('nestedLine.token')) {
     const c = editor.selection.start;
     const text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
-      
+
     const token = config.get('nestedLine.token') as string;
     const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`);
@@ -159,7 +159,7 @@ function getNewLineTokenMatches(text: string): RegExpMatchArray[] {
   const token = config.get('nestedLine.token') as string;
   const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`, "g");
-  
+
   const matches = [];
   do {
     const match = tokenRegex.exec(text);
@@ -189,7 +189,7 @@ function cursorToPrevLine(nested: boolean) {
     }
     const base = groups?.prefix.length + groups?.white.length;
     const text = groups?.text.substring(0, c.character - base);
-    
+
     const matches = getNewLineTokenMatches(text);
 
     if (matches.length > 1) {
@@ -259,7 +259,7 @@ function cursorToNextSentenceInLine() {
     utils.setCursorAndScroll(editor, 0, c.character + delta, false);
     return;
   }
-  
+
   delimiterPattern.lastIndex = 0; // reset lastIndex to search from the start again
   const cuttedLen = match.index;
   text = text.substring(match.index, text.length); // text starting from the first delimiter
@@ -277,31 +277,31 @@ function cursorToNextSentenceInLine() {
 
 
 function execBothPattern(a: RegExp, b: RegExp, text: string): RegExpExecArray | null {
-    const nextMatchA = a.exec(text);
-    const nextMatchB = b.exec(text);
-    if (!nextMatchA && !nextMatchB) {
-      return null;
-    }
-    // perfer match where index is smaller, if equal perfer the longer match
-    if (!nextMatchA) {
+  const nextMatchA = a.exec(text);
+  const nextMatchB = b.exec(text);
+  if (!nextMatchA && !nextMatchB) {
+    return null;
+  }
+  // perfer match where index is smaller, if equal perfer the longer match
+  if (!nextMatchA) {
+    return nextMatchB;
+  } else if (!nextMatchB) {
+    return nextMatchA;
+  } else {
+    if (nextMatchA.index < nextMatchB.index) {
+      b.lastIndex = a.lastIndex
+      return nextMatchA;
+    } else if (nextMatchA.index > nextMatchB.index) {
+      a.lastIndex = b.lastIndex
       return nextMatchB;
-    } else if (!nextMatchB) {
+    } else if (nextMatchA[0].length > nextMatchB[0].length) {
+      b.lastIndex = a.lastIndex
       return nextMatchA;
     } else {
-      if (nextMatchA.index < nextMatchB.index) {
-        b.lastIndex = a.lastIndex
-        return nextMatchA;
-      } else if (nextMatchA.index > nextMatchB.index) {
-        a.lastIndex = b.lastIndex
-        return nextMatchB;
-      } else if (nextMatchA[0].length > nextMatchB[0].length) {
-        b.lastIndex = a.lastIndex
-        return nextMatchA;
-      } else {
-        a.lastIndex = b.lastIndex
-        return nextMatchB;
-      }
+      a.lastIndex = b.lastIndex
+      return nextMatchB;
     }
+  }
 
 }
 
@@ -324,7 +324,7 @@ function cursorToNextBinarySearch() {
     let relativePos = c.character - textStartIdx;
     const textAfter = curGroups.text.substring(relativePos);
     const upperBound = textStartIdx + curGroups.text.length;
-    
+
     const st = BinarySearchState;
     let step = 1;
     if (st.filename === editor.document.fileName && st.lineNumber === c.line && st.pos === c.character) {
@@ -378,12 +378,12 @@ function moveToNextLine() {
   if (!curIsTranslation) {
     return;
   }
-  
+
   const config = vscode.workspace.getConfiguration("dltxt");
   if (!!config.get('nestedLine.token')) {
     const c = editor.selection.start;
     const text = editor.document.getText(new vscode.Range(c, c.with(c.line, 10000)));
-      
+
     const token = config.get('nestedLine.token') as string;
     const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const tokenRegex = new RegExp(`${escapedToken}[\\s　]*`);
@@ -441,7 +441,7 @@ function moveToPrevLine() {
     const c = editor.selection.start;
     const base = g.prefix.length + g.white.length;
     const text = g.text.substring(0, c.character - base);
-      
+
     const matches = getNewLineTokenMatches(text);
 
     if (matches.length > 0) {
@@ -473,7 +473,7 @@ function moveToPrevLine() {
   if (!ok2 || !curLine || !curg) {
     return;
   }
-  
+
   const t = curg.prefix.length + curg.white.length;
   const toMove = new vscode.Range(
     position.with(position.line, t),
@@ -551,8 +551,8 @@ function dltxtBackspace(): boolean {
   if (!curIsTranslation || !curLine || !curGroups) {
     return false;
   }
-  const prefixLen = curGroups.prefix.length;
-  if (position.character <= prefixLen) {
+  const unEditableLen = curGroups.prefix.length + curGroups.white.length;
+  if (position.character <= unEditableLen) {
     return true; // block this edit
   }
   return false;
@@ -565,7 +565,7 @@ function cursorToSublineHead() {
 
   const delimiterPattern = getTextDelimiter();
   const position = editor.selection.active;
-  
+
   const [isCurTrans, curLine, groups] = DocumentParser.getCurrentTranslationLine(editor);
   if (!isCurTrans || !curLine || !groups) {
     return;
@@ -588,7 +588,7 @@ function cursorToSublineHead() {
   if (i == curChar && i > 0) {
     i--;
     const text = editor.document.getText(new vscode.Range(
-      position.with(position.line, i-1), position.with(position.line, i+1)));
+      position.with(position.line, i - 1), position.with(position.line, i + 1)));
     if (text === '……') {
       i--;
     }
@@ -607,12 +607,12 @@ function replaceAllKeywordsAtCurrentPosition() {
   }
   const position = editor.selection.active;
   const dictNames = DictSettings.getAllDictNames();
-  const lookupTable = new Map<string, string | ((arg: string)=>string) >();
-	for (const dictName of dictNames) {
+  const lookupTable = new Map<string, string | ((arg: string) => string)>();
+  for (const dictName of dictNames) {
     const decoID = `${editor.document.uri.fsPath}::${dictName}`;
     const decos = DecorationMemoryStorage.get(decoID);
-    if(Array.isArray(decos)) {
-      for(const d of decos) {
+    if (Array.isArray(decos)) {
+      for (const d of decos) {
         const deco: vscode.DecorationOptions & { __dltxt: any } = d;
         if (deco.range.contains(position)) {
           lookupTable.set(deco.__dltxt.old_text, deco.__dltxt.new_text);
@@ -620,59 +620,59 @@ function replaceAllKeywordsAtCurrentPosition() {
       }
     }
   }
-  if(lookupTable.size > 0) {
+  if (lookupTable.size > 0) {
     translateCurrentLine(lookupTable, false, position.line);
   }
- 
+
 }
 
 function replaceAllInLine(old_text: string, new_text: string, line: number) {
-  const lookupTable = new Map<string, string | ((arg: string)=>string) >([
+  const lookupTable = new Map<string, string | ((arg: string) => string)>([
     [old_text, new_text],
   ]);
   translateCurrentLine(lookupTable, false, line);
 }
 
 
-const lineTranslateTable = new Map<RegExp, string | ((arg: string)=>string) >([
-    [/[っ゛]/g, ''],
-    [/だめ/g, '不行'],
-    [/[れぺ]ぇ?[ろる]+/g, (s)=>'啾' + repeatStr('噜',s.length-1, false)],
-    [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
-    [/[ちじぢ]ゅ[ぷぶぽぼ]+/g, (s)=> '啾' + repeatStr('噗',s.length-2, false)],
-    [/[ちじぢ]ゅ[うぅ]?/g, '啾'],
-    [/りゅ/g, '噜'],
-    [/[こご]くん/g, '咕噜'],
-    [/ど?[びぴ]ゅる+[うぅ]*/g, (s)=>'咻' + repeatStr('噜',s.length-1, true)],
-    [/ど?[びぴ]ゅ(く[うぅ]*)?/g, (s)=>repeatStr('咻',s.length, false)],
-    [/ど[ぷく]+/g, (s)=>'咻' + repeatStr('噗',s.length-1, false)],
-    [/や[あぁ]*/g, (s)=>'呀'+repeatStr('啊',s.length-1, true)],
-    [/[あぁ]+/g, (s)=>repeatStr('啊',s.length, true)],
-    [/[おぉ]+/g, (s)=>repeatStr('哦',s.length, false)],
-    [/ず+/g, (s)=>repeatStr('滋',s.length, false)],
-    [/ふ+/g, (s)=>repeatStr('呼',s.length, false)],
-    [/ふう?/g, '呼'],
-    [/う(?=あ)/g, '哇'],
-    [/[うぅ]+/g, (s)=>repeatStr('呜',s.length, false)],
-    [/[ひき][ゃぃ]?/g, '呀'],
-    [/く/g, '咕'],
-    [/ぐ/g, '咕'],
-    [/ぬ/g, '呶'],
-    [/ぱ[ん]?/g, '啪'],
-    [/は[ん]?/g, '哈'],
-    [/[ぷぶ][ん]?/g, '噗'],
-    [/む[ん]?/g, '姆'],
-    [/る/g, '噜'],
-    [/ん+ぅ*/g, (s)=>repeatStr('嗯',s.length, true)],
-    [/～、/g, "～"],
-    [/嗯呜/g, "嗯"],
-    [/呼呜/g, "呼"],
+const lineTranslateTable = new Map<RegExp, string | ((arg: string) => string)>([
+  [/[っ゛]/g, ''],
+  [/だめ/g, '不行'],
+  [/[れぺ]ぇ?[ろる]+/g, (s) => '啾' + repeatStr('噜', s.length - 1, false)],
+  [/[ぴぷ]ち[ゃゅ]/g, '噗啾'],
+  [/[ちじぢ]ゅ[ぷぶぽぼ]+/g, (s) => '啾' + repeatStr('噗', s.length - 2, false)],
+  [/[ちじぢ]ゅ[うぅ]?/g, '啾'],
+  [/りゅ/g, '噜'],
+  [/[こご]くん/g, '咕噜'],
+  [/ど?[びぴ]ゅる+[うぅ]*/g, (s) => '咻' + repeatStr('噜', s.length - 1, true)],
+  [/ど?[びぴ]ゅ(く[うぅ]*)?/g, (s) => repeatStr('咻', s.length, false)],
+  [/ど[ぷく]+/g, (s) => '咻' + repeatStr('噗', s.length - 1, false)],
+  [/や[あぁ]*/g, (s) => '呀' + repeatStr('啊', s.length - 1, true)],
+  [/[あぁ]+/g, (s) => repeatStr('啊', s.length, true)],
+  [/[おぉ]+/g, (s) => repeatStr('哦', s.length, false)],
+  [/ず+/g, (s) => repeatStr('滋', s.length, false)],
+  [/ふ+/g, (s) => repeatStr('呼', s.length, false)],
+  [/ふう?/g, '呼'],
+  [/う(?=あ)/g, '哇'],
+  [/[うぅ]+/g, (s) => repeatStr('呜', s.length, false)],
+  [/[ひき][ゃぃ]?/g, '呀'],
+  [/く/g, '咕'],
+  [/ぐ/g, '咕'],
+  [/ぬ/g, '呶'],
+  [/ぱ[ん]?/g, '啪'],
+  [/は[ん]?/g, '哈'],
+  [/[ぷぶ][ん]?/g, '噗'],
+  [/む[ん]?/g, '姆'],
+  [/る/g, '噜'],
+  [/ん+ぅ*/g, (s) => repeatStr('嗯', s.length, true)],
+  [/～、/g, "～"],
+  [/嗯呜/g, "嗯"],
+  [/呼呜/g, "呼"],
 ]);
 
 export function translateCurrentLine(
-  lookupTable:  Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable,
+  lookupTable: Map<RegExp | string, string | ((arg: string) => string)> = lineTranslateTable,
   kTohConversion: boolean = true,
-  lineNum? : number) {
+  lineNum?: number) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
@@ -688,11 +688,11 @@ export function translateCurrentLine(
   });
 }
 
-export function translateString(line: string, lookupTable: Map<RegExp | string, string | ((arg: string)=>string) > = lineTranslateTable, kTohConversion: boolean = true): string {
+export function translateString(line: string, lookupTable: Map<RegExp | string, string | ((arg: string) => string)> = lineTranslateTable, kTohConversion: boolean = true): string {
   if (kTohConversion) {
     line = utils.katakanaToHiragana(line);
   }
-  for (const [k,v] of lookupTable) {
+  for (const [k, v] of lookupTable) {
     if (typeof v == "string") {
       line = line.replace(k, v);
     } else {
@@ -706,11 +706,11 @@ export function editorWriteString(s: string) {
   const editor = vscode.window.activeTextEditor;
   if (!editor)
     return;
-    editor.edit((editbuilder) => {
-      if (editor.selection.start != editor.selection.end) {
-        editbuilder.replace(editor.selection, s);
-      } else {
-        editbuilder.insert(editor.selection.active, s);
-      }
-    });
+  editor.edit((editbuilder) => {
+    if (editor.selection.start != editor.selection.end) {
+      editbuilder.replace(editor.selection, s);
+    } else {
+      editbuilder.insert(editor.selection.active, s);
+    }
+  });
 }

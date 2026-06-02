@@ -116,30 +116,21 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		stage = 'register commands';
 		logStartup(stage);
-		mode.setMode(mode.Mode.Normal);
-		registerCommand(context, "Extension.dltxt.setMode", (args) => {
-			mode.setModeStr(args.arg);
-		});
-		registerCommand(context, "Extension.dltxt.toggleMode", () => {
-			const m = VSCodeContext.get('dltxt.mode') as string;
-			mode.setModeStr(mode.getNextMode(m));
-		});
-
 		registerCommand(context, 'Extension.dltxt.executeFunction', async (args) => {
 			const callback = args.callback;
 			if (callback) callback();
 		});
 
 		registerCommand(context, 'Extension.dltxt.copyToClipboard', (arg) => {
-        vscode.env.clipboard.writeText(arg.text).then(
-			() => {
-				vscode.window.showInformationMessage(`已复制`);
-			},
-			(reason) => {
-				vscode.window.showInformationMessage(`复制失败: ${reason}`);
-			}
-		)
-    });
+			vscode.env.clipboard.writeText(arg.text).then(
+				() => {
+					vscode.window.showInformationMessage(`已复制`);
+				},
+				(reason) => {
+					vscode.window.showInformationMessage(`复制失败: ${reason}`);
+				}
+			)
+		});
 
 		let activeEditor = vscode.window.activeTextEditor;
 
@@ -188,7 +179,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeTextDocument(event => {
 			let activeEditor = vscode.window.activeTextEditor;
 			// Skip non-file documents (terminal, output, etc.) and non-.txt files
-			if (event.document.uri.scheme !== 'file' 
+			if (event.document.uri.scheme !== 'file'
 				|| !event.document.uri.fsPath.endsWith('.txt')
 				|| event.document.uri.fsPath.includes('CMakeLists.txt')) {
 				return;
@@ -219,17 +210,17 @@ export async function activate(context: vscode.ExtensionContext) {
 		motion.activate(context);
 
 		const repeatFirstFunc = () => {
-		let editor = vscode.window.activeTextEditor;
-		let document = editor?.document;
-		if (!editor || !document) 
-			return;
-		editor.edit(editBuilder => {
-			repeatFirstChar(context, editor as vscode.TextEditor, editBuilder);
-		})
-		setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
+			let editor = vscode.window.activeTextEditor;
+			let document = editor?.document;
+			if (!editor || !document)
+				return;
+			editor.edit(editBuilder => {
+				repeatFirstChar(context, editor as vscode.TextEditor, editBuilder);
+			})
+			setCursorAndScroll(editor, 0, editor.selection.start.character + 2, false);
 		};
 		registerCommand(context, 'Extension.dltxt.repeatFirst', repeatFirstFunc);
-	
+
 		registerCommand(context, 'Extension.dltxt.convertToEncoding', batchConvertFilesEncoding);
 
 		registerCommand(context, 'Extension.dltxt.spellCheck', () => {
@@ -251,7 +242,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			const token = config.get<string>("nestedLine.token") || "\\r\\n";
 			motion.editorWriteString(token);
 		})
-	
+
 		registerCommand(context, 'Extension.dltxt.detectEncoding', async () => {
 			const editor = vscode.window.activeTextEditor;
 			if (!editor) return;
@@ -277,7 +268,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		batch_regex_replace.activate(context);
 		crossref.activate(context);
 		error_check.activate(context);
-	
+
 		stage = 'register formatting provider';
 		logStartup(stage);
 		vscode.languages.registerDocumentFormattingEditProvider('dltxt', {
@@ -327,12 +318,12 @@ async function migration(context: vscode.ExtensionContext) {
 	if (!curVersion || oldVersion.length < 1 || curVersion.length < 1) {
 		return;
 	}
-	
+
 	if (compareVersions(oldVersion, "3.0.0") < 0) {
 		simpletm.migration(context);
 	}
 
-	if(compareVersions(oldVersion, "3.18.0") < 0) {
+	if (compareVersions(oldVersion, "3.18.0") < 0) {
 		const baiduConfig = vscode.workspace.getConfiguration("dltxt.z.api.baidu");
 		const accessKey = baiduConfig.get("AccessKey");
 		const secretKey = baiduConfig.get("SecretKey");
@@ -345,6 +336,6 @@ async function migration(context: vscode.ExtensionContext) {
 	}
 
 	ContextHolder.setGlobalState('dltxt.version', curVersion);
-	
+
 }
 

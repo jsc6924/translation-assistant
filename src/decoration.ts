@@ -87,8 +87,7 @@ export function updateParserSyntaxDecorations() {
             addSegmentRanges(activeEditor.document, c_index, cgrps, translatedPrefixRanges, translatedTextRanges, nameLineSegments.get(c_index) ?? []);
         });
     } catch {
-        clearParserSyntaxDecorations(activeEditor);
-        return;
+        // pass
     }
 
     activeEditor.setDecorations(parserSyntaxDecorationTypes.baseText, baseRanges);
@@ -209,7 +208,7 @@ export function updateKeywordDecorations() {
 
     const dictNames = DictSettings.getAllDictNames();
     for (const dictName of dictNames) {
-        const {deco, oldDeco, changed} = DictSettings.getDictDecoration(dictName);
+        const { deco, oldDeco, changed } = DictSettings.getDictDecoration(dictName);
         const namingDecoType = DictSettings.getNamingDecoration(dictName);
         const keywordsDecoSink = new DecorationSink();
         const type = DictSettings.getDictType(dictName);
@@ -234,7 +233,7 @@ export function updateKeywordDecorations() {
         if (type === DictType.Local) {
             keywords = DictSettings.getLocalDictKeys(dictName);
         } else if (type == DictType.RemoteUser || type == DictType.RemoteURL) {
-            let game : string | undefined = DictSettings.getGameTitle(dictName);
+            let game: string | undefined = DictSettings.getGameTitle(dictName);
             if (!game) {
                 continue;
             }
@@ -245,7 +244,7 @@ export function updateKeywordDecorations() {
         for (let i = 0; i < keywords.length; i++) {
             let v = keywords[i];
             let vr = String(v.raw);
-            if(vr)
+            if (vr)
                 testArray.push(vr);
         }
         if (testArray.length > 0) {
@@ -290,14 +289,14 @@ export function updateKeywordDecorations() {
             }
             activeEditor.setDecorations(deco, keywordsDecoSink.getAll());
         }
-        
+
 
         const namingDecoSink = new DecorationSink();
         if (Object.keys(naming).length > 0) {
             const testArrays = new Map<string, string[]>(); // caller -> called[]
             for (const caller in naming) {
                 const testArray: string[] = [];
-                for(const called in naming[caller]) {
+                for (const called in naming[caller]) {
                     testArray.push(called);
                 }
                 testArrays.set(caller, testArray);
@@ -349,73 +348,73 @@ export function updateKeywordDecorations() {
                     namingDecoSink.add(decoration);
                 }
             }
-        } 
-        
+        }
+
         if (namingDecoType) {
             activeEditor.setDecorations(namingDecoType, namingDecoSink.getAll());
         }
 
         DecorationMemoryStorage.set(decoID, keywordsDecoSink.getAll().concat(namingDecoSink.getAll()));
     }
-    
+
 }
 
 
 interface NamingResolution {
-	trans?: string;
-	fallbackComment?: string;
-	ruleComment?: string;
+    trans?: string;
+    fallbackComment?: string;
+    ruleComment?: string;
 }
 
 class CalledTranslationResolver {
-	private inversed = new Map<string, Map<string, DictNamingValue>>(); // called -> caller -> rule
-	constructor(private naming: DictNamingRule, private lineNumberToTalker: Map<number, string>) {
-		for (const caller in naming) {
-			for (const called in naming[caller]) {
-				if (!this.inversed.has(called)) {
-					this.inversed.set(called, new Map<string, string>());
-				}
-				this.inversed.get(called)?.set(caller, naming[caller][called]);
-			}
-		}
-	}
-	resolve(called: string, position: vscode.Position): NamingResolution {
-		const talkingName = this.lineNumberToTalker.get(position.line);
-		let trans = '';
-		let ruleComment = undefined;
-		if (talkingName && this.naming[talkingName]?.[called]) {
-			const directRule = this.naming[talkingName][called];
-			trans = getDictNamingTranslation(directRule).replace(/"/g, '');
-			ruleComment = getDictNamingComment(directRule);
-		}
-		let fallbackComment = undefined;
-		if (!trans) {
-			const MatchAnyTalker = '*';
-			const fallbackRule = this.naming[MatchAnyTalker]?.[called];
-			trans = getDictNamingTranslation(fallbackRule).replace(/"/g, '');
-			ruleComment = getDictNamingComment(fallbackRule);
-		}
-		if (!trans) {
-			const possibleTrans: string[] = [];
-			const callerMap = this.inversed.get(called);
-			if (callerMap) {
-				for (const [caller, callerRule] of callerMap) {
-					const callerTrans = getDictNamingTranslation(callerRule);
-					if (callerTrans) {
-						possibleTrans.push(`${caller}: ${callerTrans}`);
-						if (!trans) {
-							trans = callerTrans.replace(/"/g, '') as string;
-							ruleComment = getDictNamingComment(callerRule);
-						}
-					}
-				}
-			}
-			if (possibleTrans.length > 0) {
-				fallbackComment = possibleTrans.join(', ');
-			}
-		}
-		return { trans, fallbackComment, ruleComment };
-	}
+    private inversed = new Map<string, Map<string, DictNamingValue>>(); // called -> caller -> rule
+    constructor(private naming: DictNamingRule, private lineNumberToTalker: Map<number, string>) {
+        for (const caller in naming) {
+            for (const called in naming[caller]) {
+                if (!this.inversed.has(called)) {
+                    this.inversed.set(called, new Map<string, string>());
+                }
+                this.inversed.get(called)?.set(caller, naming[caller][called]);
+            }
+        }
+    }
+    resolve(called: string, position: vscode.Position): NamingResolution {
+        const talkingName = this.lineNumberToTalker.get(position.line);
+        let trans = '';
+        let ruleComment = undefined;
+        if (talkingName && this.naming[talkingName]?.[called]) {
+            const directRule = this.naming[talkingName][called];
+            trans = getDictNamingTranslation(directRule).replace(/"/g, '');
+            ruleComment = getDictNamingComment(directRule);
+        }
+        let fallbackComment = undefined;
+        if (!trans) {
+            const MatchAnyTalker = '*';
+            const fallbackRule = this.naming[MatchAnyTalker]?.[called];
+            trans = getDictNamingTranslation(fallbackRule).replace(/"/g, '');
+            ruleComment = getDictNamingComment(fallbackRule);
+        }
+        if (!trans) {
+            const possibleTrans: string[] = [];
+            const callerMap = this.inversed.get(called);
+            if (callerMap) {
+                for (const [caller, callerRule] of callerMap) {
+                    const callerTrans = getDictNamingTranslation(callerRule);
+                    if (callerTrans) {
+                        possibleTrans.push(`${caller}: ${callerTrans}`);
+                        if (!trans) {
+                            trans = callerTrans.replace(/"/g, '') as string;
+                            ruleComment = getDictNamingComment(callerRule);
+                        }
+                    }
+                }
+            }
+            if (possibleTrans.length > 0) {
+                fallbackComment = possibleTrans.join(', ');
+            }
+        }
+        return { trans, fallbackComment, ruleComment };
+    }
 }
 
 class DecorationSink {
