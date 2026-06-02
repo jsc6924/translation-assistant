@@ -2,7 +2,203 @@ import * as vscode from 'vscode';
 import { DictSettings, DictKeyInfo, DictType, DictNamingRule, DictNamingValue, getDictNamingComment, getDictNamingTranslation } from './utils';
 const AhoCorasick = require('ahocorasick');
 import { DecorationMemoryStorage } from './simpletm';
-import { DocumentParser } from './parser';
+import { DocumentParser, MatchedGroups } from './parser';
+
+interface LineSegment {
+    start: number;
+    end: number;
+}
+
+const parserSyntaxDecorationTypes = {
+    baseText: vscode.window.createTextEditorDecorationType({
+        color: new vscode.ThemeColor('editor.foreground')
+    }),
+    originalPrefix: vscode.window.createTextEditorDecorationType({
+        light: {
+            color: '#78a57e'
+        },
+        dark: {
+            color: '#5f8b66'
+        }
+    }),
+    originalText: vscode.window.createTextEditorDecorationType({
+        light: {
+            color: '#0f6b2e'
+        },
+        dark: {
+            color: '#d7ffd7'
+        }
+    }),
+    translatedPrefix: vscode.window.createTextEditorDecorationType({
+        light: {
+            color: '#8c8c8c'
+        },
+        dark: {
+            color: '#8c8c8c'
+        }
+    }),
+    translatedText: vscode.window.createTextEditorDecorationType({
+        light: {
+            color: '#202020'
+        },
+        dark: {
+            color: '#f0f0f0'
+        }
+    }),
+    nameText: vscode.window.createTextEditorDecorationType({
+        light: {
+            color: '#114b8d'
+        },
+        dark: {
+            color: '#7cb8c5'
+        }
+    })
+};
+
+export function updateParserSyntaxDecorations() {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+        return;
+    }
+
+    if (!shouldApplyParserSyntaxDecorations(activeEditor)) {
+        clearParserSyntaxDecorations(activeEditor);
+        return;
+    }
+
+    const baseRanges: vscode.Range[] = [];
+    const originalPrefixRanges: vscode.Range[] = [];
+    const originalTextRanges: vscode.Range[] = [];
+    const translatedPrefixRanges: vscode.Range[] = [];
+    const translatedTextRanges: vscode.Range[] = [];
+    const nameRanges = DocumentParser.collectNameRanges(activeEditor.document);
+    const nameLineSegments = buildLineSegmentsByLine(activeEditor.document, nameRanges);
+
+    for (let line = 0; line < activeEditor.document.lineCount; line++) {
+        const textLine = activeEditor.document.lineAt(line);
+        if (textLine.text.length > 0) {
+            baseRanges.push(new vscode.Range(line, 0, line, textLine.text.length));
+        }
+    }
+
+    try {
+        DocumentParser.processPairedLines(activeEditor.document, (jgrps, cgrps, j_index, c_index) => {
+            addSegmentRanges(activeEditor.document, j_index, jgrps, originalPrefixRanges, originalTextRanges, nameLineSegments.get(j_index) ?? []);
+            addSegmentRanges(activeEditor.document, c_index, cgrps, translatedPrefixRanges, translatedTextRanges, nameLineSegments.get(c_index) ?? []);
+        });
+    } catch {
+        clearParserSyntaxDecorations(activeEditor);
+        return;
+    }
+
+    activeEditor.setDecorations(parserSyntaxDecorationTypes.baseText, baseRanges);
+    activeEditor.setDecorations(parserSyntaxDecorationTypes.originalPrefix, originalPrefixRanges);
+    activeEditor.setDecorations(parserSyntaxDecorationTypes.originalText, originalTextRanges);
+    activeEditor.setDecorations(parserSyntaxDecorationTypes.translatedPrefix, translatedPrefixRanges);
+    activeEditor.setDecorations(parserSyntaxDecorationTypes.translatedText, translatedTextRanges);
+    activeEditor.setDecorations(parserSyntaxDecorationTypes.nameText, nameRanges);
+}
+
+export function clearParserSyntaxDecorations(editor?: vscode.TextEditor) {
+    if (!editor) {
+        return;
+    }
+
+    editor.setDecorations(parserSyntaxDecorationTypes.baseText, []);
+    editor.setDecorations(parserSyntaxDecorationTypes.originalPrefix, []);
+    editor.setDecorations(parserSyntaxDecorationTypes.originalText, []);
+    editor.setDecorations(parserSyntaxDecorationTypes.translatedPrefix, []);
+    editor.setDecorations(parserSyntaxDecorationTypes.translatedText, []);
+    editor.setDecorations(parserSyntaxDecorationTypes.nameText, []);
+}
+
+function shouldApplyParserSyntaxDecorations(editor: vscode.TextEditor): boolean {
+    if (editor.document.uri.scheme !== 'file') {
+        return false;
+    }
+
+    if (editor.document.uri.fsPath.includes('CMakeLists.txt')) {
+        return false;
+    }
+
+    return editor.document.languageId === 'dltxt'
+        || editor.document.languageId === 'formattxt'
+        || editor.document.uri.fsPath.endsWith('.txt');
+}
+
+function addSegmentRanges(
+    document: vscode.TextDocument,
+    lineIndex: number,
+    groups: MatchedGroups,
+    prefixRanges: vscode.Range[],
+    textRanges: vscode.Range[],
+    excludedSegments: LineSegment[]
+) {
+    const lineLength = document.lineAt(lineIndex).text.length;
+    const prefixLength = Math.min(lineLength, groups.prefix.length + groups.white.length);
+    const textStart = prefixLength;
+    const textEnd = Math.min(lineLength, textStart + groups.text.length);
+    const suffixEnd = Math.min(lineLength, textEnd + groups.suffix.length);
+
+    pushRange(prefixRanges, lineIndex, 0, prefixLength, excludedSegments);
+    pushRange(textRanges, lineIndex, textStart, textEnd, excludedSegments);
+    pushRange(prefixRanges, lineIndex, textEnd, suffixEnd, excludedSegments);
+}
+
+function pushRange(ranges: vscode.Range[], lineIndex: number, start: number, end: number, excludedSegments: LineSegment[] = []) {
+    if (end <= start) {
+        return;
+    }
+
+    let currentStart = start;
+    for (const segment of excludedSegments) {
+        if (segment.end <= currentStart) {
+            continue;
+        }
+
+        if (segment.start >= end) {
+            break;
+        }
+
+        if (segment.start > currentStart) {
+            ranges.push(new vscode.Range(lineIndex, currentStart, lineIndex, Math.min(segment.start, end)));
+        }
+
+        currentStart = Math.max(currentStart, segment.end);
+        if (currentStart >= end) {
+            return;
+        }
+    }
+
+    ranges.push(new vscode.Range(lineIndex, currentStart, lineIndex, end));
+}
+
+function buildLineSegmentsByLine(document: vscode.TextDocument, ranges: vscode.Range[]): Map<number, LineSegment[]> {
+    const lineSegments = new Map<number, LineSegment[]>();
+
+    for (const range of ranges) {
+        for (let lineIndex = range.start.line; lineIndex <= range.end.line; lineIndex++) {
+            const lineLength = document.lineAt(lineIndex).text.length;
+            const start = lineIndex === range.start.line ? range.start.character : 0;
+            const end = lineIndex === range.end.line ? range.end.character : lineLength;
+            if (end <= start) {
+                continue;
+            }
+
+            if (!lineSegments.has(lineIndex)) {
+                lineSegments.set(lineIndex, []);
+            }
+
+            lineSegments.get(lineIndex)?.push({ start, end });
+        }
+    }
+
+    for (const segments of lineSegments.values()) {
+        segments.sort((a, b) => a.start - b.start);
+    }
+
+    return lineSegments;
+}
 
 export function updateKeywordDecorations() {
 

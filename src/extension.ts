@@ -13,7 +13,7 @@ import { trdb_view } from './treeview';
 import { cc_view } from './command-center';
 import { spellCheck, clearSpellCheck } from './spellcheck';
 import { updateErrorDecorations } from './error-check';
-import { updateNewlineDecorations } from './decoration';
+import { clearParserSyntaxDecorations, updateNewlineDecorations, updateParserSyntaxDecorations } from './decoration';
 import * as mode from './mode';
 import * as clipboard from './clipboard';
 import * as trdb from './translation-db';
@@ -149,6 +149,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				timeout = undefined;
 			}
 			timeout = setTimeout(() => {
+				updateParserSyntaxDecorations();
 				updateNewlineDecorations();
 				updateErrorDecorations();
 				decoration.updateKeywordDecorations();
@@ -172,6 +173,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.onDidChangeActiveTextEditor(editor => {
 			activeEditor = editor;
 			if (editor) {
+				triggerUpdateDecorations();
+			} else {
+				clearParserSyntaxDecorations();
+			}
+		}, null, context.subscriptions);
+
+		vscode.workspace.onDidChangeConfiguration(event => {
+			if (event.affectsConfiguration('dltxt.core')) {
 				triggerUpdateDecorations();
 			}
 		}, null, context.subscriptions);

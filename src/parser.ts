@@ -172,6 +172,8 @@ export interface IDocumentParser {
 
   getPrevTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
 
+  collectNameRanges(document: vscode.TextDocument): vscode.Range[];
+
   errorCheck(document: string | string[] | vscode.TextDocument): [boolean, vscode.Diagnostic[]];
 
   getFormatDetector(): AutoDetector;
@@ -399,6 +401,26 @@ class StandardDocumentParser implements IDocumentParser {
       return [false, undefined, undefined]
     }
 
+    collectNameRanges(document: vscode.TextDocument): vscode.Range[] {
+      const nameRegex = getTalkingNameRegex();
+      if (!nameRegex) {
+        return [];
+      }
+
+      const ranges: vscode.Range[] = [];
+      for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
+        const lineText = document.lineAt(lineIndex).text;
+        const segment = findNamedCaptureSegmentInLine(lineText, nameRegex, 'name');
+        if (!segment) {
+          continue;
+        }
+
+        ranges.push(new vscode.Range(lineIndex, segment[0], lineIndex, segment[1]));
+      }
+
+      return ranges;
+    }
+
     errorCheck(document: string | string[] | vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
         const config = vscode.workspace.getConfiguration("dltxt");
         const checkPrefixTag = config.get<boolean>('appearance.showError.checkPrefixTag');
@@ -585,7 +607,7 @@ export class TextBlockDocumentParser implements IDocumentParser {
     return false; // TODO: implement
   }
 
-  processPairedLines(input: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => void): void {
+  processPairedLines(input: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void): void {
     const [reg] = getTextBlockRegex();
     const text = getText(input);
     const lineMap = generateLineMap(text);
@@ -600,9 +622,9 @@ export class TextBlockDocumentParser implements IDocumentParser {
           }
       }
     }
-    const callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
+    const callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => {
       for (const processor of processors) {
-        processor.processLine(jgrps, cgrps, j_index, c_index);
+        processor.processLine(jgrps, cgrps, j_index, c_index, talkingName);
       }
     };
 
@@ -618,8 +640,9 @@ export class TextBlockDocumentParser implements IDocumentParser {
           const jgrps = jm.groups as any as MatchedGroups;
           const cgrps = cm.groups as any as MatchedGroups;
           adjust(jgrps, cgrps);
-          cb(jgrps, cgrps, blockIndex + j_offset, blockIndex + c_offset);
-          callListener(jgrps, cgrps, blockIndex + j_offset, blockIndex + c_offset);
+          const talkingName = match.groups?.name;
+          cb(jgrps, cgrps, blockIndex + j_offset, blockIndex + c_offset, talkingName);
+          callListener(jgrps, cgrps, blockIndex + j_offset, blockIndex + c_offset, talkingName);
         }
       }
       return false;
@@ -708,6 +731,43 @@ export class TextBlockDocumentParser implements IDocumentParser {
       return false;
     })
     return res as [boolean, vscode.TextLine | undefined, MatchedGroups | undefined];
+  }
+
+  collectNameRanges(document: vscode.TextDocument): vscode.Range[] {
+    const config = vscode.workspace.getConfiguration('dltxt.core');
+    const pattern = config.get<string>('textBlock.pattern') ?? '';
+    if (!pattern || !pattern.includes('(?<name>')) {
+      return [];
+    }
+
+    const ranges: vscode.Range[] = [];
+    let reg: RegExp;
+    try {
+      reg = new RegExp(pattern, 'gmd');
+    } catch {
+      try {
+        reg = new RegExp(pattern, 'gm');
+      } catch {
+        return [];
+      }
+    }
+
+    const text = document.getText();
+    let match: RegExpExecArray | null;
+    while ((match = reg.exec(text)) !== null) {
+      const segment = findNamedCaptureSegmentInMatch(match, 'name');
+      if (segment) {
+        const startOffset = match.index + segment[0];
+        const endOffset = match.index + segment[1];
+        ranges.push(new vscode.Range(document.positionAt(startOffset), document.positionAt(endOffset)));
+      }
+
+      if (match[0].length === 0) {
+        reg.lastIndex++;
+      }
+    }
+
+    return ranges;
   }
 
   errorCheck(document: string | string[] |vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
@@ -805,6 +865,62 @@ function getLineOffset(catchReg: RegExp, block: string): number {
     throw new Error(`getLineOffset catchReg ${catchReg} cannot match block ${block}`);
   }
   return block.substring(0, m.index).split("\n").length - 1;
+}
+
+function findNamedCaptureSegmentInLine(lineText: string, regex: RegExp, groupName: string): [number, number] | undefined {
+  const withIndices = findNamedCaptureSegmentWithIndices(lineText, regex, groupName);
+  if (withIndices) {
+    return withIndices;
+  }
+
+  const match = execSingleRegex(regex, lineText);
+  if (!match) {
+    return undefined;
+  }
+
+  return findNamedCaptureSegmentInMatch(match, groupName);
+}
+
+function findNamedCaptureSegmentWithIndices(lineText: string, regex: RegExp, groupName: string): [number, number] | undefined {
+  try {
+    const flags = regex.flags.includes('d') ? regex.flags : `${regex.flags}d`;
+    const indexedRegex = new RegExp(regex.source, flags);
+    const match = indexedRegex.exec(lineText) as RegExpExecArray & {
+      indices?: {
+        groups?: {
+          [key: string]: [number, number] | undefined;
+        };
+      };
+    } | null;
+
+    const indices = match?.indices?.groups?.[groupName];
+    if (!indices) {
+      return undefined;
+    }
+
+    return [indices[0], indices[1]];
+  } catch {
+    return undefined;
+  }
+}
+
+function findNamedCaptureSegmentInMatch(match: RegExpExecArray, groupName: string): [number, number] | undefined {
+  const captured = match.groups?.[groupName];
+  if (!captured) {
+    return undefined;
+  }
+
+  const relativeIndex = match[0].indexOf(captured);
+  if (relativeIndex < 0) {
+    return undefined;
+  }
+
+  return [relativeIndex, relativeIndex + captured.length];
+}
+
+function execSingleRegex(regex: RegExp, text: string): RegExpExecArray | null {
+  const flags = regex.flags.replace(/g/g, '');
+  return new RegExp(regex.source, flags).exec(text);
 }
 
 export let DocumentParser: IDocumentParser = new StandardDocumentParser();

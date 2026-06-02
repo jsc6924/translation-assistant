@@ -127,7 +127,17 @@ export class StandardParserAutoDetector implements AutoDetector {
             newlineToken = '\\r\\n';
         }
 
-        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}"，是否应用？`, '是', '否');
+        let namePos = await vscode.window.showQuickPick(["行前","行中","行后"], {placeHolder: "相对对话行，人名在哪个位置？"});
+        if(!namePos) {
+            return;
+        }
+        let nameRegStr = '';
+        if (namePos == "行中") {
+        } else {
+            nameRegStr = `^${rRegStr}(?<name>[^<>\n\u3001\u3002\u3008-\u301B\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)$`
+        }
+
+        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}, 人名位置：${namePos}"，是否应用？`, '是', '否');
         if (u !== '是') {
             return;
         }
@@ -136,6 +146,8 @@ export class StandardParserAutoDetector implements AutoDetector {
         await config.update('core.translatedTextPrefixRegex', tRegStr, false);
         await config.update('core.otherPrefixRegex', oRegStr, false);
         await config.update('nestedLine.token', newlineToken, false);
+        await config.update('core.name.position', namePos, false);
+        await config.update('core.name.regex', nameRegStr, false);
         vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
         vscode.window.showInformationMessage(`已应用设置`);
     }
@@ -314,7 +326,7 @@ export class TextBlockAutoDetector implements AutoDetector {
             new vscode.Position(thisEditor.selection.end.line, Number.MAX_SAFE_INTEGER)
         ));
         const lines = text.split("\n").map((l) => `${l.trim()}`);
-        const template = `请把原文替换成【#JP#】，译文替换成【#CN#】\r\n其他所有会变化的部分替换成【#ANY#】\r\n如果变化的部分只包括字母或数字也可替换成【#ALPHA#】\r\n替换结束后在右键菜单中选择“自动识别文本格式：继续”\r\n\r\n<<<<<<<<<<不要动这行<<<<<<<<<<\r\n${lines.join('\r\n')}\r\n>>>>>>>>>>也不要动这行>>>>>>>>>>`;
+        const template = `请把原文替换成【#JP#】，译文替换成【#CN#】\r\n如果存在人名，请把人名替换成【#NAME#】（每个段落模板里最多出现一次）\r\n其他所有会变化的部分替换成【#ANY#】\r\n如果变化的部分只包括字母或数字也可替换成【#ALPHA#】\r\n替换结束后在右键菜单中选择“自动识别文本格式：继续”\r\n\r\n<<<<<<<<<<不要动这行<<<<<<<<<<\r\n${lines.join('\r\n')}\r\n>>>>>>>>>>也不要动这行>>>>>>>>>>`;
         const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
 		if (!filePath) return;
         const dirPath = path.dirname(filePath);
@@ -377,6 +389,7 @@ async function autoDetectFormatContinue() {
     const replaceMap = new Map<RegExp, string>([
         [/【#ANY#】/g, '(.*)'],
         [/【#ALPHA#】/g, '([0-9a-zA-Z]+)'],
+        [/【#NAME#】/g, '(?<name>.*?)'],
     ]);
     const jreg = /^(?<prefix>.*)【#JP#】(?<suffix>.*)$/;
     const creg = /^(?<prefix>.*)【#CN#】(?<suffix>.*)$/;
@@ -385,9 +398,10 @@ async function autoDetectFormatContinue() {
     let jSuffixStr = '[」]?';
     let cSuffixStr = '[」]?';
 
-    let jpCount = 0, cnCount = 0;
+    let jpCount = 0, cnCount = 0, nameCount = 0;
     for(let i = 0; i < templateLines.length; i++) {
         templateLines[i] = escapeRegExp(templateLines[i]);
+        nameCount += (templateLines[i].match(/【#NAME#】/g) || []).length;
         for (const [k,v] of replaceMap) {
             templateLines[i] = templateLines[i].replace(k, v);
         }
@@ -410,6 +424,9 @@ async function autoDetectFormatContinue() {
     try{
         if (jpCount !== 1 || cnCount !== 1) {
             throw new Error("每个段落必须有且只有一行原文和一行译文");
+        }
+        if (nameCount > 1) {
+            throw new Error("每个段落模板里【#NAME#】最多只能出现一次");
         }
         const reg = new RegExp(template);
         const text = dlDocument.getText();
