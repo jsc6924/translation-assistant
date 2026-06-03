@@ -4,22 +4,36 @@
              xmlns:vm="using:editor.ViewModels"
              x:Class="editor.Views.DocumentEditorView"
              x:DataType="vm:EditorDocumentViewModel">
-    <Border Background="{DynamicResource EditorBackgroundImageBrush}">
-        <avaloniaEdit:TextEditor x:Name="Editor"
-                                 ShowLineNumbers="True"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 VerticalScrollBarVisibility="Auto"
-                                 Background="Transparent"
-                                 Foreground="{DynamicResource EditorTextForegroundBrush}"
-                                 FontFamily="{Binding FontFamily}"
-                                 FontSize="{Binding FontSize}">
-            <avaloniaEdit:TextEditor.ContextMenu>
-                <ContextMenu>
-                    <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
-                    <MenuItem x:Name="EditTerminologyMenuItem" Header="编辑术语" Click="OnEditTerminologyClick" />
-                    <MenuItem x:Name="FormatTextMenuItem" Header="格式化文本" Click="OnFormatTextClick" />
-                </ContextMenu>
-            </avaloniaEdit:TextEditor.ContextMenu>
-        </avaloniaEdit:TextEditor>
-    </Border>
+    <Grid>
+        <Border Background="{DynamicResource EditorBackgroundImageBrush}">
+            <avaloniaEdit:TextEditor x:Name="Editor"
+                                     ShowLineNumbers="True"
+                                     WordWrap="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Background="Transparent"
+                                     Foreground="{DynamicResource EditorTextForegroundBrush}"
+                                     FontFamily="{Binding FontFamily}"
+                                     FontSize="{Binding FontSize}">
+                <avaloniaEdit:TextEditor.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
+                        <MenuItem x:Name="EditTerminologyMenuItem" Header="编辑术语" Click="OnEditTerminologyClick" />
+                        <MenuItem x:Name="FormatTextMenuItem" Header="格式化文本" Click="OnFormatTextClick" />
+                    </ContextMenu>
+                </avaloniaEdit:TextEditor.ContextMenu>
+            </avaloniaEdit:TextEditor>
+        </Border>
+        <Button x:Name="KeyboardToggleButton"
+                Content="⌨"
+                Width="52"
+                Height="52"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,16,16"
+                FontSize="22"
+                CornerRadius="26"
+                Opacity="0.85"
+                IsVisible="False"
+                Click="OnKeyboardToggleClick" />
+    </Grid>
 </UserControl>

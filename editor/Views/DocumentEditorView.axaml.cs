@@ -1489,5 +1489,19 @@ public partial class DocumentEditorView : UserControl
         {
             Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
         }
+
+        if (OperatingSystem.IsAndroid())
+        {
+            KeyboardToggleButton.IsVisible = true;
+        }
+    }
+
+
+
+    private void OnKeyboardToggleClick(object? sender, RoutedEventArgs e)
+    {
+        // Focus a non-text control first to ensure keyboard activation fires on re-focus
+        KeyboardToggleButton.Focus();
+        Dispatcher.UIThread.Post(() => Editor.TextArea.Focus(), DispatcherPriority.Input);
     }
 }

@@ -190,6 +190,11 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         RecentFolders.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasRecentFolders));
         _isInitializing = false;
+
+        if (OperatingSystem.IsAndroid())
+        {
+            EnableTranslationMode = false;
+        }
     }
 
     public ObservableCollection<FileNodeViewModel> RootNodes { get; }

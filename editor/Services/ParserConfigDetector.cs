@@ -25,6 +25,11 @@ public static class ParserConfigDetector
 
     public static bool TryDetect(string documentText, out ParserConfig parserConfig, out string? error)
     {
+        // \uFEFF : UTF-8 和 UTF-16 LE 的字符串特征
+        // \uFFFE : UTF-16 BE 的字符串特征
+        // \u200B : 零宽空格（防止某些文本编辑器在首行夹带私货）
+        documentText = documentText.TrimStart('\uFEFF', '\uFFFE', '\u200B');
+
         parserConfig = new ParserConfig();
         error = null;
 
@@ -61,9 +66,10 @@ public static class ParserConfigDetector
             originalPrefix = GenerateRegex(originalLines);
             translatedPrefix = GenerateRegex(translatedLines);
         }
-        catch
+        catch (Exception ex)
         {
-            error = "未能根据行内容生成稳定的前缀正则。请手动配置双行格式。";
+            Console.WriteLine(ex);
+            error = $"未能根据行内容生成稳定的前缀正则。请手动配置双行格式。错误信息: {ex.Message}";
             return false;
         }
 

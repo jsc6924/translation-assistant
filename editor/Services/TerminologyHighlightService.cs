@@ -15,6 +15,7 @@ public sealed class TerminologyHighlightService
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, NamingRuleValue>> namingRules,
         IReadOnlyDictionary<int, string>? lineNumberToTalker = null)
     {
+        text = text.TrimStart('\uFEFF', '\uFFFE', '\u200B');
         if (string.IsNullOrEmpty(text))
         {
             return TerminologySnapshot.Empty;

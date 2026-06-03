@@ -25,12 +25,21 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto">
         <Border Padding="16,14,16,12"
                 Background="{DynamicResource HeaderBackgroundBrush}"
                 BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                <StackPanel Spacing="4">
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+                <Button x:Name="MobileMenuButton"
+                        Content="☰"
+                        Padding="10"
+                        Width="40"
+                        Height="40"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Click="OnToggleMenuClick" />
+
+                <StackPanel Grid.Column="1" Spacing="4">
                     <TextBlock Text="{Binding WindowTitle}"
                                FontSize="20"
                                FontWeight="SemiBold"
@@ -40,16 +49,8 @@
                                TextWrapping="Wrap" />
                 </StackPanel>
 
-                <Button Grid.Column="1"
-                        Content="打开文件夹"
-                        Padding="14,8"
-                        MinWidth="110"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Click="OnOpenFolderClick" />
-
                 <TextBlock Grid.Row="1"
-                           Grid.ColumnSpan="2"
+                           Grid.ColumnSpan="3"
                            Margin="0,12,0,0"
                            Text="{Binding WorkspacePath}"
                            Opacity="0.64"
@@ -58,71 +59,8 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1"
-                Padding="12,10"
-                Background="{DynamicResource FooterBackgroundBrush}"
-                BorderThickness="0,0,0,1">
-            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Disabled">
-                <WrapPanel Orientation="Horizontal"
-                           ItemWidth="120"
-                           MinHeight="40">
-                    <Button Content="刷新工作区"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnRefreshWorkspaceClick"
-                            IsEnabled="{Binding IsWorkspaceLoaded}" />
-                    <Button Content="新建文件"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnCreateNewFileClick"
-                            IsEnabled="{Binding IsWorkspaceLoaded}" />
-                    <Button Content="保存当前"
-                            Margin="4"
-                            Padding="12,8"
-                            Command="{Binding SaveSelectedCommand}"
-                            IsEnabled="{Binding HasOpenDocuments}" />
-                    <Button Content="另存为"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnSaveAsClick"
-                            IsEnabled="{Binding HasOpenDocuments}" />
-                    <Button Content="双行格式"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnConfigureFormatClick" />
-                    <Button Content="自动识别格式"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnAutoDetectFormatClick"
-                            IsEnabled="{Binding HasOpenDocuments}" />
-                    <Button Content="背景设置"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnConfigureBackgroundClick" />
-                    <Button Content="术语库配置"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnConfigureSimpleTmClick" />
-                    <Button Content="重新加载编码"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnReloadWithEncodingClick"
-                            IsEnabled="{Binding HasOpenDocuments}" />
-                    <Button Content="快捷键"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnHelpShortcutClick" />
-                    <Button Content="关于"
-                            Margin="4"
-                            Padding="12,8"
-                            Click="OnAboutClick" />
-                </WrapPanel>
-            </ScrollViewer>
-        </Border>
-
         <TabControl x:Name="MobileWorkspaceTabs"
-                    Grid.Row="2"
+                    Grid.Row="1"
                     Background="{DynamicResource EditorBackgroundBrush}">
             <TabItem Header="文件">
                 <Border Padding="14,14,14,10"
@@ -229,9 +167,6 @@
                             <TextBlock Text="当前文档"
                                        FontSize="18"
                                        FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding StatusMessage}"
-                                       Opacity="0.72"
-                                       TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 
@@ -304,7 +239,7 @@
             </TabItem>
         </TabControl>
 
-        <Border Grid.Row="3"
+        <Border Grid.Row="2"
                 Padding="12,10"
                 Background="{DynamicResource FooterBackgroundBrush}"
                 BorderThickness="1,0,0,0">
@@ -336,16 +271,400 @@
                               Margin="4"
                               ItemsSource="{Binding AvailableThemes}"
                               SelectedItem="{Binding EditorTheme, Mode=TwoWay}" />
-                    <CheckBox Content="翻译模式"
-                              Margin="8,6,8,6"
-                              IsChecked="{Binding EnableTranslationMode, Mode=TwoWay}"
-                              VerticalAlignment="Center" />
                     <CheckBox Content="编辑限制"
                               Margin="8,6,8,6"
                               IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
                               VerticalAlignment="Center" />
                 </WrapPanel>
             </StackPanel>
+        </Border>
+
+        <Border x:Name="MobileMenuOverlay"
+                Background="#80000000"
+                IsVisible="False"
+                PointerPressed="OnMobileMenuOverlayPointerPressed" />
+
+        <Border x:Name="MobileActionMenu"
+                Background="{DynamicResource HeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,1,0"
+                Width="260"
+                HorizontalAlignment="Left"
+                IsVisible="False">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="16"
+                            Spacing="10">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <TextBlock Text="菜单"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <Button Content="×"
+                                Width="32"
+                                Height="32"
+                                HorizontalAlignment="Right"
+                                Click="OnCloseMenuClick"
+                                Background="Transparent"
+                                BorderBrush="Transparent" />
+                    </StackPanel>
+                    <Button Content="打开文件夹"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnOpenFolderClick" />
+                    <Button Content="刷新工作区"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnRefreshWorkspaceClick"
+                            IsEnabled="{Binding IsWorkspaceLoaded}" />
+                    <Button Content="新建文件"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnCreateNewFileClick"
+                            IsEnabled="{Binding IsWorkspaceLoaded}" />
+                    <Button Content="保存当前"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding SaveSelectedCommand}"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="另存为"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnSaveAsClick"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="双行格式"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnConfigureFormatClick" />
+                    <Button Content="自动识别格式"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnAutoDetectFormatClick"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="背景设置"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnConfigureBackgroundClick" />
+                    <Button Content="术语库配置"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnConfigureSimpleTmClick" />
+                    <Button Content="重新加载编码"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnReloadWithEncodingClick"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="快捷键"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnHelpShortcutClick" />
+                    <Button Content="关于"
+                            Margin="0,4"
+                            Padding="14,10"
+                            HorizontalAlignment="Stretch"
+                            Click="OnAboutClick" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border x:Name="MobileModalOverlay"
+                Grid.RowSpan="3"
+                Background="{DynamicResource EditorBackgroundBrush}"
+                IsVisible="False">
+            <Grid RowDefinitions="Auto,*">
+                <Border Padding="16,14,16,12"
+                        Background="{DynamicResource HeaderBackgroundBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button Content="←"
+                                Width="40"
+                                Height="40"
+                                Padding="0"
+                                HorizontalAlignment="Left"
+                                Click="OnCloseMobileModalClick" />
+                        <TextBlock x:Name="MobileModalTitleText"
+                                   Grid.Column="1"
+                                   Margin="12,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap" />
+                        <Button Grid.Column="2"
+                                Content="×"
+                                Width="40"
+                                Height="40"
+                                Padding="0"
+                                HorizontalAlignment="Right"
+                                Click="OnCloseMobileModalClick" />
+                    </Grid>
+                </Border>
+
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="16">
+                        <StackPanel x:Name="ParserSettingsModal"
+                                    x:CompileBindings="False"
+                                    IsVisible="False"
+                                    Spacing="14">
+                            <TextBlock Text="参考 dltxt 的标准双行解析：原文和译文前缀都留空即可关闭高亮和只读限制。"
+                                       Opacity="0.78"
+                                       TextWrapping="Wrap" />
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="原文前缀正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding OriginalPrefixRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="译文前缀正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding TranslatedPrefixRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="原文空白正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding OriginalWhiteRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="译文空白正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding TranslatedWhiteRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="原文后缀正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding OriginalSuffixRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="译文后缀正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding TranslatedSuffixRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="人名正则" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding NameRegex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding ValidationMessage}"
+                                       Foreground="IndianRed"
+                                       IsVisible="{Binding HasValidationMessage}"
+                                       TextWrapping="Wrap" />
+
+                            <Button Content="保存双行格式"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnSaveParserSettingsClick" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="SimpleTmSettingsModal"
+                                    x:CompileBindings="False"
+                                    IsVisible="False"
+                                    Spacing="14">
+                            <TextBlock Text="请输入 remote-url 形式的 SimpleTM 共享地址，例如：simpletm://protocol/host/username/apiToken/gameTitle"
+                                       Opacity="0.78"
+                                       TextWrapping="Wrap" />
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="simpleTmSharedUrl" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding SharedUrl, Mode=TwoWay}"
+                                         AcceptsReturn="False" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Opacity="0.82"
+                                       TextWrapping="Wrap" />
+
+                            <TextBlock Text="远程术语预览"
+                                       FontSize="16"
+                                       FontWeight="SemiBold" />
+
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Padding="10"
+                                    Background="{DynamicResource HeaderBackgroundBrush}">
+                                <TextBox Text="{Binding PreviewBody, Mode=OneWay}"
+                                         AcceptsReturn="True"
+                                         IsReadOnly="True"
+                                         MinHeight="260"
+                                         FontFamily="Consolas"
+                                         FontSize="12"
+                                         TextWrapping="Wrap"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                            </Border>
+
+                            <Button Content="刷新预览"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnRefreshSimpleTmPreviewClick" />
+                            <Button Content="保存术语库配置"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnSaveSimpleTmSettingsClick" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="BackgroundSettingsModal"
+                                    x:CompileBindings="False"
+                                    IsVisible="False"
+                                    Spacing="14">
+                            <TextBlock Text="选择一张背景图片，并设置透明度。留空路径后保存可以清除当前背景图。"
+                                       Opacity="0.78"
+                                       TextWrapping="Wrap" />
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="背景图片路径" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding SelectedImagePath, Mode=TwoWay}"
+                                         PlaceholderText="背景图片路径" />
+                            </StackPanel>
+
+                            <Button Content="选择图片"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnSelectBackgroundImageClick" />
+
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="透明度" FontWeight="SemiBold" />
+                                <Slider Minimum="0"
+                                        Maximum="1"
+                                        Value="{Binding BackgroundOpacity, Mode=TwoWay}"
+                                        TickFrequency="0.1"
+                                        IsSnapToTickEnabled="False" />
+                                <TextBlock Text="{Binding OpacityLabel}"
+                                           FontWeight="SemiBold" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="显示方式" FontWeight="SemiBold" />
+                                <RadioButton Content="全部显示"
+                                             GroupName="BackgroundFillMode"
+                                             IsChecked="{Binding BackgroundFillMode, Mode=TwoWay, Converter={StaticResource InverseBooleanConverter}}" />
+                                <RadioButton Content="铺满区域"
+                                             GroupName="BackgroundFillMode"
+                                             IsChecked="{Binding BackgroundFillMode, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Foreground="IndianRed"
+                                       IsVisible="{Binding HasStatusMessage}"
+                                       TextWrapping="Wrap" />
+
+                            <Button Content="清空背景图"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnClearBackgroundImageClick" />
+                            <Button Content="保存背景设置"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnSaveBackgroundSettingsClick" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="ReloadEncodingModal"
+                                    x:CompileBindings="False"
+                                    IsVisible="False"
+                                    Spacing="14">
+                            <TextBlock Text="请选择用于重新加载当前文件的编码。"
+                                       Opacity="0.78"
+                                       TextWrapping="Wrap" />
+                            <ComboBox ItemsSource="{Binding Encodings}"
+                                      SelectedItem="{Binding SelectedEncoding, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"
+                                      IsEditable="False" />
+                            <Button Content="按所选编码重新加载"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnConfirmReloadEncodingClick" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="ConfirmModal"
+                                    x:CompileBindings="False"
+                                    IsVisible="False"
+                                    Spacing="14"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Message}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap" />
+                            <Button Content="{Binding ConfirmButtonText}"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnConfirmMobileActionClick" />
+                            <Button Content="取消"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnCloseMobileModalClick" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="HelpShortcutModal"
+                                    IsVisible="False"
+                                    Spacing="14">
+                            <TextBlock Text="翻译模式是一种针对双行文本编辑的专用模式。打开后，软件会聚焦在译文行的可编辑区域，让你专注于翻译而不破坏文本结构的同时，使用键盘快速移动光标。"
+                                       TextWrapping="Wrap" />
+
+                            <TextBlock Text="快捷键"
+                                       FontSize="16"
+                                       FontWeight="SemiBold" />
+
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Alt+T：切换到翻译模式 / 退出翻译模式" TextWrapping="Wrap" />
+                                <TextBlock Text="Enter：移动到下一译文行" TextWrapping="Wrap" />
+                                <TextBlock Text="[ 或 ]：在译文行内左右移动光标" TextWrapping="Wrap" />
+                                <TextBlock Text="Alt+[ 或 Alt+]：在译文中以二分探索的方式左右移动" TextWrapping="Wrap" />
+                                <TextBlock Text="Ctrl+[ 或 Ctrl+]：移动到译文行首或行尾" TextWrapping="Wrap" />
+                                <TextBlock Text="Shift+[ 或 Shift+]：移动到上一/下一译文分句" TextWrapping="Wrap" />
+                                <TextBlock Text="Tab：向后删除到标点" TextWrapping="Wrap" />
+                                <TextBlock Text="Delete：向后删除到行尾" TextWrapping="Wrap" />
+                                <TextBlock Text="F1-F10：输入数字 1-0" TextWrapping="Wrap" />
+                                <TextBlock Text="Shift+`：输入 ～" TextWrapping="Wrap" />
+                                <TextBlock Text="1：输入 ！" TextWrapping="Wrap" />
+                                <TextBlock Text="2：输入 ♪" TextWrapping="Wrap" />
+                                <TextBlock Text="3：输入 ？" TextWrapping="Wrap" />
+                                <TextBlock Text="4：输入 、" TextWrapping="Wrap" />
+                                <TextBlock Text="5：输入 ♥" TextWrapping="Wrap" />
+                                <TextBlock Text="6：输入 ……" TextWrapping="Wrap" />
+                                <TextBlock Text="-：输入 ——" TextWrapping="Wrap" />
+                                <TextBlock Text="Space：输入全角空格" TextWrapping="Wrap" />
+                                <TextBlock Text="Ctrl+Alt+.：翻译特殊句子" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel x:Name="AboutModal"
+                                    x:CompileBindings="False"
+                                    IsVisible="False"
+                                    Spacing="14">
+                            <TextBlock Text="本软件是 galgame 汉化专用编辑器，是 vscode 插件 dltxt 的一个子项目。以相对轻量级的方式实现了 dltxt 插件的一部分基础功能。"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="如果你想使用完整功能，请下载安装 vscode + dltxt 插件。"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding VersionText}"
+                                       FontWeight="SemiBold" />
+                            <Button Content="下载 vscode"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnAboutDownloadVsCodeClick" />
+                            <Button Content="查看 dltxt"
+                                    Padding="14,10"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnAboutViewDltxtClick" />
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
