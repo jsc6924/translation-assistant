@@ -32,10 +32,10 @@ public partial class App : Application
     {
         Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
+        EditorThemeManager.ApplyTheme(this, EditorThemeManager.DefaultThemeName);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            EditorThemeManager.ApplyTheme(this, EditorThemeManager.DefaultThemeName);
-
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(),
@@ -43,8 +43,24 @@ public partial class App : Application
 
             _ = CheckForUpdatesAsync(desktop.MainWindow);
         }
+        else if (ApplicationLifetime is IActivityApplicationLifetime activity)
+        {
+            activity.MainViewFactory = CreateMainView;
+        }
+        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        {
+            singleView.MainView = CreateMainView();
+        }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static MainView CreateMainView()
+    {
+        return new MainView
+        {
+            DataContext = new MainWindowViewModel(),
+        };
     }
 
     private static async Task CheckForUpdatesAsync(Window owner)

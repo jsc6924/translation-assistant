@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ApplicationId>com.jsc6924.dltxteditor</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationTitle>dltxt editor</ApplicationTitle>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <AndroidUseFastDeployment>false</AndroidUseFastDeployment>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <AndroidSdkDirectory Condition="'$(AndroidSdkDirectory)' == '' and Exists('C:\\Android\\SDK')">C:\Android\SDK</AndroidSdkDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AndroidResource Include="..\assets\logo.png">
+      <Link>Resources\drawable\logo.png</Link>
+    </AndroidResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="12.0.4" />
+    <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\editor\editor.csproj">
+      <AdditionalProperties>OutputType=Library</AdditionalProperties>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

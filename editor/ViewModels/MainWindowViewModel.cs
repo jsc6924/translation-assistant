@@ -417,8 +417,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _workspacePath = folderPath;
         var settings = _settingsStore.LoadSettings(folderPath);
         var parserConfig = settings.ParserConfig.Clone();
-        var settingsPath = Path.Combine(folderPath, "dltxt-editor-setting.json");
-        var settingsExists = File.Exists(settingsPath);
+        var settingsExists = _settingsStore.HasSettings(folderPath);
 
         if (!settingsExists)
         {

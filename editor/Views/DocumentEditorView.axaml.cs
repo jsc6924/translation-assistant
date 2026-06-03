@@ -332,6 +332,17 @@ public partial class DocumentEditorView : UserControl
 
     private MainWindowViewModel? FindMainWindowViewModel()
     {
+        var viewModel = this
+            .GetSelfAndVisualAncestors()
+            .OfType<StyledElement>()
+            .Select(element => element.DataContext)
+            .OfType<MainWindowViewModel>()
+            .FirstOrDefault();
+        if (viewModel is not null)
+        {
+            return viewModel;
+        }
+
         var owner = this.VisualRoot as Window;
         if (owner is null)
         {

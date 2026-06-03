@@ -1,0 +1,351 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:editor.ViewModels"
+             xmlns:views="using:editor.Views"
+             xmlns:converters="using:editor.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="1280"
+             d:DesignHeight="800"
+             x:Class="editor.Views.MainView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <UserControl.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+    </UserControl.Resources>
+
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveSelectedCommand}" />
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoSelectedCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoSelectedCommand}" />
+    </UserControl.KeyBindings>
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <Border Padding="16,14,16,12"
+                Background="{DynamicResource HeaderBackgroundBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding WindowTitle}"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ParserSummary}"
+                               Opacity="0.78"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="打开文件夹"
+                        Padding="14,8"
+                        MinWidth="110"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Click="OnOpenFolderClick" />
+
+                <TextBlock Grid.Row="1"
+                           Grid.ColumnSpan="2"
+                           Margin="0,12,0,0"
+                           Text="{Binding WorkspacePath}"
+                           Opacity="0.64"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsWorkspaceLoaded}" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Padding="12,10"
+                Background="{DynamicResource FooterBackgroundBrush}"
+                BorderThickness="0,0,0,1">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Disabled">
+                <WrapPanel Orientation="Horizontal"
+                           ItemWidth="120"
+                           MinHeight="40">
+                    <Button Content="刷新工作区"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnRefreshWorkspaceClick"
+                            IsEnabled="{Binding IsWorkspaceLoaded}" />
+                    <Button Content="新建文件"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnCreateNewFileClick"
+                            IsEnabled="{Binding IsWorkspaceLoaded}" />
+                    <Button Content="保存当前"
+                            Margin="4"
+                            Padding="12,8"
+                            Command="{Binding SaveSelectedCommand}"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="另存为"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnSaveAsClick"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="双行格式"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnConfigureFormatClick" />
+                    <Button Content="自动识别格式"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnAutoDetectFormatClick"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="背景设置"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnConfigureBackgroundClick" />
+                    <Button Content="术语库配置"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnConfigureSimpleTmClick" />
+                    <Button Content="重新加载编码"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnReloadWithEncodingClick"
+                            IsEnabled="{Binding HasOpenDocuments}" />
+                    <Button Content="快捷键"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnHelpShortcutClick" />
+                    <Button Content="关于"
+                            Margin="4"
+                            Padding="12,8"
+                            Click="OnAboutClick" />
+                </WrapPanel>
+            </ScrollViewer>
+        </Border>
+
+        <TabControl x:Name="MobileWorkspaceTabs"
+                    Grid.Row="2"
+                    Background="{DynamicResource EditorBackgroundBrush}">
+            <TabItem Header="文件">
+                <Border Padding="14,14,14,10"
+                        Background="{DynamicResource TreeviewBackgroundBrush}">
+                    <Grid RowDefinitions="Auto,*">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding SidebarTitle}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold" />
+                            <TextBlock Text="轻点文件即可打开，长按或右键可看到更多操作。"
+                                       Opacity="0.68"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding IsWorkspaceLoaded}" />
+                        </StackPanel>
+
+                        <ScrollViewer Grid.Row="1"
+                                      Margin="0,14,0,0"
+                                      VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="12">
+                                <StackPanel Spacing="10"
+                                            IsVisible="{Binding IsWorkspaceLoaded, Converter={StaticResource InverseBooleanConverter}}">
+                                    <Border Padding="16"
+                                            Background="{DynamicResource HeaderBackgroundBrush}"
+                                            CornerRadius="12">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="还没有打开工作区"
+                                                       FontSize="18"
+                                                       FontWeight="SemiBold" />
+                                            <TextBlock Text="请选择一个项目文件夹。打开后，文件列表会在这里显示。"
+                                                       TextWrapping="Wrap"
+                                                       Opacity="0.76" />
+                                            <Button Content="打开新的文件夹"
+                                                    HorizontalAlignment="Stretch"
+                                                    Padding="14,10"
+                                                    Click="OnOpenFolderClick" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="最近打开的文件夹"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold" />
+                                        <ItemsControl ItemsSource="{Binding RecentFolders}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="{Binding}"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            Padding="14,12"
+                                                            Margin="0,0,0,8"
+                                                            Click="OnOpenRecentFolderClick"
+                                                            ToolTip.Tip="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TreeView x:Name="FileTree"
+                                          ItemsSource="{Binding RootNodes}"
+                                          SelectionChanged="OnFileTreeSelectionChanged"
+                                          IsVisible="{Binding IsWorkspaceLoaded}">
+                                    <TreeView.ItemTemplate>
+                                        <TreeDataTemplate x:DataType="vm:FileNodeViewModel" ItemsSource="{Binding Children}">
+                                            <Grid Background="Transparent"
+                                                  PointerPressed="OnTreeViewItemPointerPressed">
+                                                <Grid.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="新建文件"
+                                                                  IsVisible="{Binding IsDirectory}"
+                                                                  Click="OnCreateFileClick" />
+                                                        <MenuItem Header="删除"
+                                                                  Click="OnDeleteNodeClick" />
+                                                        <MenuItem Header="重命名"
+                                                                  IsVisible="{Binding IsDirectory, Converter={StaticResource InverseBooleanConverter}}"
+                                                                  Click="OnRenameNodeClick" />
+                                                    </ContextMenu>
+                                                </Grid.ContextMenu>
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           IsVisible="{Binding IsRenaming, Converter={StaticResource InverseBooleanConverter}}" />
+                                                <TextBox Text="{Binding RenameText, Mode=TwoWay}"
+                                                         IsVisible="{Binding IsRenaming}"
+                                                         Width="220"
+                                                         KeyDown="OnRenameTextBoxKeyDown"
+                                                         LostFocus="OnRenameTextBoxLostFocus" />
+                                            </Grid>
+                                        </TreeDataTemplate>
+                                    </TreeView.ItemTemplate>
+                                </TreeView>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </TabItem>
+
+            <TabItem Header="编辑">
+                <Grid RowDefinitions="Auto,*"
+                      Background="{DynamicResource EditorBackgroundBrush}">
+                    <Border Padding="14,12"
+                            BorderThickness="0,0,0,1"
+                            Background="{DynamicResource HeaderBackgroundBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="当前文档"
+                                       FontSize="18"
+                                       FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Opacity="0.72"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <TabControl Margin="0"
+                                    Background="{DynamicResource EditorBackgroundBrush}"
+                                    ItemsSource="{Binding OpenDocuments}"
+                                    SelectedItem="{Binding SelectedDocument, Mode=TwoWay}"
+                                    IsVisible="{Binding HasOpenDocuments}">
+                            <TabControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EditorDocumentViewModel">
+                                    <DockPanel LastChildFill="False">
+                                        <TextBlock Text="{Binding Header}"
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"
+                                                   MaxWidth="180"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   FontSize="14" />
+                                        <Button Content="×"
+                                                Width="24"
+                                                MinWidth="24"
+                                                Height="24"
+                                                Padding="0"
+                                                FontSize="14"
+                                                Background="Transparent"
+                                                BorderBrush="Transparent"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                Command="{Binding CloseCommand}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </TabControl.ItemTemplate>
+
+                            <TabControl.ContentTemplate>
+                                <DataTemplate x:DataType="vm:EditorDocumentViewModel">
+                                    <views:DocumentEditorView DataContext="{Binding}" />
+                                </DataTemplate>
+                            </TabControl.ContentTemplate>
+                        </TabControl>
+
+                        <Border Padding="24"
+                                IsVisible="{Binding IsEditorEmpty}">
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="12"
+                                        MaxWidth="420">
+                                <TextBlock Text="请先打开一个文件夹。每个文件夹里只能有一种格式的双行文本。建议将不同项目的文本放到不同文件夹后再打开。"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding IsWorkspaceLoaded, Converter={StaticResource InverseBooleanConverter}}" />
+                                <TextBlock Text="从“文件”页选择一个文本文件开始编辑。"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding IsWorkspaceLoaded}" />
+                                <TextBlock Text="切换标签会自动保存；配置双行格式后，原文将高亮且不可编辑。"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           IsVisible="{Binding IsWorkspaceLoaded}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="3"
+                Padding="12,10"
+                Background="{DynamicResource FooterBackgroundBrush}"
+                BorderThickness="1,0,0,0">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding StatusMessage}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="540" />
+                    <TextBlock VerticalAlignment="Center"
+                               Foreground="{DynamicResource EditorTextForegroundBrush}">
+                        <Run Text="{Binding SelectedDocument.EncodingName}" />
+                    </TextBlock>
+                </StackPanel>
+
+                <WrapPanel Orientation="Horizontal">
+                    <ComboBox Classes="OpenUp"
+                              Width="110"
+                              Margin="4"
+                              ItemsSource="{Binding AvailableEditorFontFamilies}"
+                              SelectedItem="{Binding EditorFontFamilyName, Mode=TwoWay}" />
+                    <ComboBox Classes="OpenUp"
+                              Width="72"
+                              Margin="4"
+                              ItemsSource="{Binding AvailableEditorFontSizes}"
+                              SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
+                    <ComboBox Classes="OpenUp"
+                              Width="120"
+                              Margin="4"
+                              ItemsSource="{Binding AvailableThemes}"
+                              SelectedItem="{Binding EditorTheme, Mode=TwoWay}" />
+                    <CheckBox Content="翻译模式"
+                              Margin="8,6,8,6"
+                              IsChecked="{Binding EnableTranslationMode, Mode=TwoWay}"
+                              VerticalAlignment="Center" />
+                    <CheckBox Content="编辑限制"
+                              Margin="8,6,8,6"
+                              IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
+                              VerticalAlignment="Center" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
