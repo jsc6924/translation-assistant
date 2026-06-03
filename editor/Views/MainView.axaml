@@ -48,14 +48,6 @@
                                Opacity="0.78"
                                TextWrapping="Wrap" />
                 </StackPanel>
-
-                <TextBlock Grid.Row="1"
-                           Grid.ColumnSpan="3"
-                           Margin="0,12,0,0"
-                           Text="{Binding WorkspacePath}"
-                           Opacity="0.64"
-                           TextWrapping="Wrap"
-                           IsVisible="{Binding IsWorkspaceLoaded}" />
             </Grid>
         </Border>
 
@@ -160,15 +152,6 @@
             <TabItem Header="编辑">
                 <Grid RowDefinitions="Auto,*"
                       Background="{DynamicResource EditorBackgroundBrush}">
-                    <Border Padding="14,12"
-                            BorderThickness="0,0,0,1"
-                            Background="{DynamicResource HeaderBackgroundBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="当前文档"
-                                       FontSize="18"
-                                       FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
 
                     <Grid Grid.Row="1">
                         <TabControl Margin="0"
@@ -237,6 +220,41 @@
                     </Grid>
                 </Grid>
             </TabItem>
+            <TabItem Header="设置">
+                <StackPanel Margin="16" Spacing="14">
+                    <TextBlock Text="编辑器设置" FontSize="18" FontWeight="SemiBold" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="编辑器字体" VerticalAlignment="Center" />
+                        <ComboBox Classes="OpenUp"
+                                  Width="200"
+                                  ItemsSource="{Binding AvailableEditorFontFamilies}"
+                                  SelectedItem="{Binding EditorFontFamilyName, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="字体大小" VerticalAlignment="Center" />
+                        <ComboBox Classes="OpenUp"
+                                  Width="100"
+                                  ItemsSource="{Binding AvailableEditorFontSizes}"
+                                  SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="编辑器主题" VerticalAlignment="Center" />
+                        <ComboBox Classes="OpenUp"
+                                  Width="150"
+                                  ItemsSource="{Binding AvailableThemes}"
+                                  SelectedItem="{Binding EditorTheme, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <CheckBox Content="启用编辑限制"
+                              Margin="0,8,0,0"
+                              IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
+                              VerticalAlignment="Center" />
+
+                </StackPanel>
+            </TabItem>
         </TabControl>
 
         <Border Grid.Row="2"
@@ -254,28 +272,6 @@
                         <Run Text="{Binding SelectedDocument.EncodingName}" />
                     </TextBlock>
                 </StackPanel>
-
-                <WrapPanel Orientation="Horizontal">
-                    <ComboBox Classes="OpenUp"
-                              Width="110"
-                              Margin="4"
-                              ItemsSource="{Binding AvailableEditorFontFamilies}"
-                              SelectedItem="{Binding EditorFontFamilyName, Mode=TwoWay}" />
-                    <ComboBox Classes="OpenUp"
-                              Width="72"
-                              Margin="4"
-                              ItemsSource="{Binding AvailableEditorFontSizes}"
-                              SelectedItem="{Binding EditorFontSize, Mode=TwoWay}" />
-                    <ComboBox Classes="OpenUp"
-                              Width="120"
-                              Margin="4"
-                              ItemsSource="{Binding AvailableThemes}"
-                              SelectedItem="{Binding EditorTheme, Mode=TwoWay}" />
-                    <CheckBox Content="编辑限制"
-                              Margin="8,6,8,6"
-                              IsChecked="{Binding EnableEditRestriction, Mode=TwoWay}"
-                              VerticalAlignment="Center" />
-                </WrapPanel>
             </StackPanel>
         </Border>
 
