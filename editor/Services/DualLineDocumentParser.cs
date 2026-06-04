@@ -12,7 +12,6 @@ public sealed class DualLineDocumentParser
 
     public ParsedDocument Parse(string text, ParserConfig config, bool enableEditRestriction)
     {
-        text = text.TrimStart('\uFEFF', '\uFFFE', '\u200B');
         if (!enableEditRestriction)
         {
             return new ParsedDocument(false);

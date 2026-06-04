@@ -58,7 +58,12 @@ public partial class DocumentEditorView : UserControl
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         Editor.PointerMoved += OnEditorPointerMoved;
         Editor.PointerExited += OnEditorPointerExited;
-        Editor.PointerPressed += OnEditorPointerPressed;
+        Editor.AddHandler(
+            PointerPressedEvent,
+            new EventHandler<PointerPressedEventArgs>(OnEditorPointerPressed),
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            true
+        );
         Editor.TextArea.KeyDown += OnEditorTextAreaKeyDown;
         Editor.TextArea.TextEntering += OnEditorTextEntering;
         Editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
@@ -353,6 +358,107 @@ public partial class DocumentEditorView : UserControl
 
         return owner?.DataContext as MainWindowViewModel;
     }
+
+    private void OnCopyClick(object? sender, RoutedEventArgs e)
+    {
+        Editor?.Copy();
+    }
+
+    private void OnPasteClick(object? sender, RoutedEventArgs e)
+    {
+        Editor?.Paste();
+    }
+
+    // 1. 在你的类顶部定义两个变量用来记录状态
+    private int? _anchorOffset = null; // 记录“开始选中”点击时的那个绝对光标位置
+    private int? _lastClickedOffset = null; // 记录用户最后一次点击的位置（无论是否在选中模式下）
+
+    // 3. 逻辑【1】：点击“开始选中”
+    private void OnStartSelectClick(object? sender, RoutedEventArgs e)
+    {
+        if (Editor == null) return;
+
+        // 记录当前光标落点作为起点
+        _anchorOffset = Editor.CaretOffset;
+
+        // 切换菜单项的显示状态（让“取消选中”显示出来，“开始选中”隐藏）
+        StartSelectMenuItem.IsVisible = false;
+        CancelSelectMenuItem.IsVisible = true;
+
+        // 可以加一个状态栏提示，用户体验拉满
+        // StatusMessage = "选区起点已标记，请点击文本中任意位置作为终点...";
+    }
+
+    // 4. 逻辑【2】：点击“取消选中”
+    private void OnCancelSelectClick(object? sender, RoutedEventArgs e)
+    {
+        ResetSelectionMode();
+    }
+
+    // 辅助方法：重置选择状态
+    private void ResetSelectionMode()
+    {
+        _anchorOffset = null;
+
+        // 恢复菜单显示
+        StartSelectMenuItem.IsVisible = true;
+        CancelSelectMenuItem.IsVisible = false;
+
+        // 清除编辑器当前的选中状态
+        if (Editor != null)
+        {
+            Editor.Select(0, 0); // 取消选中（将光标移动到当前位置但不选中任何文本）
+        }
+    }
+
+    private void OnEditorPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        ResetAltBracketState();
+        // 如果没有开启两点选中模式，一律放行
+        if (_anchorOffset == null || Editor == null) return;
+
+        // 排除右键和长按
+        var point = e.GetCurrentPoint(Editor);
+        if (point.Properties.IsRightButtonPressed) return;
+
+        // 同步计算当前戳的绝对 Offset
+        var textPosition = Editor.GetPositionFromPoint(point.Position);
+        if (textPosition == null) return;
+
+        int currentVisualOffset = Editor.Document.GetOffset(textPosition.Value.Line, textPosition.Value.Column);
+
+        // 🚀 【核心修复 2】：不管点哪里，只要在两点选中模式下，一律通过 e.Handled = true 
+        // 强制把这个点击事件从系统抹去，不让底层的原生取消逻辑有任何抬头执行的机会！
+        e.Handled = true;
+
+        if (_lastClickedOffset == currentVisualOffset)
+        {
+            // 连续点同一个地方，直接无视
+            return;
+        }
+
+        // 记录本次点击位置
+        _lastClickedOffset = currentVisualOffset;
+
+        // 异步刷新高亮蓝条
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_anchorOffset == null) return;
+
+            int start = _anchorOffset.Value;
+            int end = currentVisualOffset;
+
+            int actualStart = Math.Min(start, end);
+            int length = Math.Abs(end - start);
+
+            if (length > 0)
+            {
+                Editor.Select(actualStart, length);
+            }
+
+        }, DispatcherPriority.Background);
+    }
+
 
     private async void OnEditTerminologyClick(object? sender, RoutedEventArgs e)
     {
@@ -687,11 +793,6 @@ public partial class DocumentEditorView : UserControl
             return;
         }
 
-        ResetAltBracketState();
-    }
-
-    private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
         ResetAltBracketState();
     }
 

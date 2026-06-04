@@ -16,6 +16,11 @@
                                      FontSize="{Binding FontSize}">
                 <avaloniaEdit:TextEditor.ContextMenu>
                     <ContextMenu>
+                        <MenuItem x:Name="StartSelectMenuItem" Header="📍 开始选中" Click="OnStartSelectClick" />
+                        <MenuItem x:Name="CancelSelectMenuItem" Header="❌ 取消选中" Click="OnCancelSelectClick" IsVisible="False" />
+                        <Separator />
+                        <MenuItem x:Name="CopyMenuItem" Header="复制" Click="OnCopyClick" InputGesture="Ctrl+C" />
+                        <MenuItem x:Name="PasteMenuItem" Header="粘贴" Click="OnPasteClick" InputGesture="Ctrl+V" />
                         <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
                         <MenuItem x:Name="EditTerminologyMenuItem" Header="编辑术语" Click="OnEditTerminologyClick" />
                         <MenuItem x:Name="FormatTextMenuItem" Header="格式化文本" Click="OnFormatTextClick" />

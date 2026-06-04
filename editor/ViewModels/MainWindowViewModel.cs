@@ -1084,6 +1084,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var fileBytes = File.ReadAllBytes(filePath);
             var (encoding, encodingName) = EditorDocumentViewModel.DetectEncoding(fileBytes);
             var content = encoding.GetString(fileBytes);
+            content = content.TrimStart('\uFEFF', '\uFFFE', '\u200B');
             var document = new EditorDocumentViewModel(filePath, content, ParserConfig, CloseDocumentInternal)
             {
                 EditRestrictionEnabled = EnableEditRestriction,
@@ -1154,6 +1155,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var fileBytes = File.ReadAllBytes(SelectedDocument.FilePath);
             var encoding = CreateEncodingByName(encodingName);
             var content = encoding.GetString(fileBytes);
+            content = content.TrimStart('\uFEFF', '\uFFFE', '\u200B');
             SelectedDocument.ReloadContent(content, encoding, encodingName);
             StatusMessage = $"已按 {encodingName} 重新加载：{SelectedDocument.FilePath}";
             return true;
