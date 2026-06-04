@@ -9,9 +9,11 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using AvaloniaEdit.Document;
+using Avalonia.Styling;
 using editor.Controls;
 using editor.Models;
 using editor.Services;
@@ -373,36 +375,11 @@ public partial class DocumentEditorView : UserControl
     private int? _anchorOffset = null; // 记录“开始选中”点击时的那个绝对光标位置
     private int? _lastClickedOffset = null; // 记录用户最后一次点击的位置（无论是否在选中模式下）
 
-    // 3. 逻辑【1】：点击“开始选中”
-    private void OnStartSelectClick(object? sender, RoutedEventArgs e)
-    {
-        if (Editor == null) return;
-
-        // 记录当前光标落点作为起点
-        _anchorOffset = Editor.CaretOffset;
-
-        // 切换菜单项的显示状态（让“取消选中”显示出来，“开始选中”隐藏）
-        StartSelectMenuItem.IsVisible = false;
-        CancelSelectMenuItem.IsVisible = true;
-
-        // 可以加一个状态栏提示，用户体验拉满
-        // StatusMessage = "选区起点已标记，请点击文本中任意位置作为终点...";
-    }
-
-    // 4. 逻辑【2】：点击“取消选中”
-    private void OnCancelSelectClick(object? sender, RoutedEventArgs e)
-    {
-        ResetSelectionMode();
-    }
 
     // 辅助方法：重置选择状态
     private void ResetSelectionMode()
     {
         _anchorOffset = null;
-
-        // 恢复菜单显示
-        StartSelectMenuItem.IsVisible = true;
-        CancelSelectMenuItem.IsVisible = false;
 
         // 清除编辑器当前的选中状态
         if (Editor != null)
@@ -413,6 +390,13 @@ public partial class DocumentEditorView : UserControl
 
     private void OnEditorPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
+        if (OperatingSystem.IsAndroid() && IsFromVerticalScrollBar(e.Source))
+        {
+            // Keep scrollbar visible on Android, but ignore tap-to-scroll interactions.
+            e.Handled = true;
+            return;
+        }
+
         ResetAltBracketState();
         // 如果没有开启两点选中模式，一律放行
         if (_anchorOffset == null || Editor == null) return;
@@ -457,6 +441,21 @@ public partial class DocumentEditorView : UserControl
             }
 
         }, DispatcherPriority.Background);
+    }
+
+    private static bool IsFromVerticalScrollBar(object? source)
+    {
+        if (source is not Visual visual)
+        {
+            return false;
+        }
+
+        var scrollBar = visual
+            .GetSelfAndVisualAncestors()
+            .OfType<ScrollBar>()
+            .FirstOrDefault();
+
+        return scrollBar?.Orientation == Orientation.Vertical;
     }
 
 
@@ -1597,7 +1596,41 @@ public partial class DocumentEditorView : UserControl
         }
     }
 
+    private bool _isSelecting = false;
 
+    // Handle the Selection Action Button Click
+    private void OnSelectionActionClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_isSelecting)
+        {
+            // Cancel Select mode
+            ResetSelectionMode(); // Assuming this is your existing function
+            _isSelecting = false;
+            SelectionActionButton.Content = "📍"; // Pin icon for "Start"
+        }
+        else
+        {
+            // Start Select mode
+            if (Editor == null) return;
+
+            // 记录当前光标落点作为起点
+            _anchorOffset = Editor.CaretOffset;
+            _isSelecting = true;
+            SelectionActionButton.Content = "❌"; // Cross icon for "Cancel"
+        }
+    }
+
+    private void OnUndoClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        // 如果编辑器能执行撤销，则直接回滚上一步
+        if (Editor != null && Editor.CanUndo)
+        {
+            Editor.Undo();
+
+            // 体验优化：撤销后把光标强制聚焦回编辑器，方便用户继续打字
+            Editor.Focus();
+        }
+    }
 
     private void OnKeyboardToggleClick(object? sender, RoutedEventArgs e)
     {

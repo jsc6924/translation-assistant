@@ -151,7 +151,8 @@
 
             <TabItem Header="编辑">
                 <Grid RowDefinitions="Auto,*"
-                      Background="{DynamicResource EditorBackgroundBrush}">
+                      Background="{DynamicResource EditorBackgroundBrush}"
+                      Margin="-12,0,-12,0">
 
                     <Grid Grid.Row="1">
                         <TabControl Margin="0"
@@ -159,6 +160,14 @@
                                     ItemsSource="{Binding OpenDocuments}"
                                     SelectedItem="{Binding SelectedDocument, Mode=TwoWay}"
                                     IsVisible="{Binding HasOpenDocuments}">
+
+                            <TabControl.Styles>
+                                <Style Selector="TabItem">
+                                    <Setter Property="Padding" Value="6,4" /> <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                </Style>
+                            </TabControl.Styles>
+
                             <TabControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:EditorDocumentViewModel">
                                     <DockPanel LastChildFill="False">
@@ -185,7 +194,9 @@
 
                             <TabControl.ContentTemplate>
                                 <DataTemplate x:DataType="vm:EditorDocumentViewModel">
-                                    <views:DocumentEditorView DataContext="{Binding}" />
+                                    <Grid Margin="-12,0,-12,0">
+                                        <views:DocumentEditorView DataContext="{Binding}" />
+                                    </Grid>
                                 </DataTemplate>
                             </TabControl.ContentTemplate>
                         </TabControl>
@@ -386,12 +397,15 @@
                         Background="{DynamicResource HeaderBackgroundBrush}"
                         BorderThickness="0,0,0,1">
                     <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Button Content="←"
-                                Width="40"
+                        <Button Width="40"
                                 Height="40"
                                 Padding="0"
                                 HorizontalAlignment="Left"
-                                Click="OnCloseMobileModalClick" />
+                                Click="OnCloseMobileModalClick" >
+                            <Grid Margin="2,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="←" />
+                            </Grid>
+                        </Button>
                         <TextBlock x:Name="MobileModalTitleText"
                                    Grid.Column="1"
                                    Margin="12,0"
@@ -400,12 +414,15 @@
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap" />
                         <Button Grid.Column="2"
-                                Content="×"
                                 Width="40"
                                 Height="40"
                                 Padding="0"
                                 HorizontalAlignment="Right"
-                                Click="OnCloseMobileModalClick" />
+                                Click="OnCloseMobileModalClick" >
+                            <Grid Margin="2,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="x" />
+                            </Grid>
+                        </Button>
                     </Grid>
                 </Border>
 
