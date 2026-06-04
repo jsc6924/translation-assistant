@@ -234,25 +234,39 @@ public sealed class DualLineDocumentParser
 
         for (var index = 0; index < text.Length; index++)
         {
+            // 1. 如果不是换行符，继续前进
             if (text[index] != '\r' && text[index] != '\n')
             {
                 continue;
             }
 
+            // 2. 截取当前行的文本并记录
             var lineText = text.Substring(start, index - start);
             lines.Add(new LineSnapshot(lineNumber, lineText, lineText.TrimEnd(), start));
             lineNumber++;
 
+            // 🚀 核心修复：安全处理跨平台换行符步进
             if (text[index] == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
             {
-                index++;
+                // Windows 端 (\r\n)：我们需要消耗掉这两个字符
+                start = index + 2;
+                index++; // 让 for 循环下一次刚好走到新的一行开头
             }
-
-            start = index + 1;
+            else
+            {
+                // Android/Unix 端 (\n) 或老 Mac 端 (\r)：只消耗这一个字符
+                start = index + 1;
+                // 此时不需要动 index，靠 for 循环自带的 index++ 就能精准走到新的一行开头
+            }
         }
 
-        var tail = start <= text.Length ? text.Substring(start) : string.Empty;
-        lines.Add(new LineSnapshot(lineNumber, tail, tail.TrimEnd(), start));
+        // 处理文件末尾没有换行符的最后残留文本
+        if (start <= text.Length)
+        {
+            var tail = text.Substring(start);
+            lines.Add(new LineSnapshot(lineNumber, tail, tail.TrimEnd(), start));
+        }
+
         return lines;
     }
 
