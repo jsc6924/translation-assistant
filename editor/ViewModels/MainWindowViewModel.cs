@@ -211,9 +211,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string SimpleTmSharedUrl => _simpleTmSharedUrl;
 
-    public string WindowTitle => string.IsNullOrWhiteSpace(_workspacePath)
-        ? $"dltxt editor {AppVersion}"
-        : $"dltxt editor {AppVersion} - {WorkspaceName}";
+    public string WindowTitle
+    {
+        get
+        {
+            if (OperatingSystem.IsAndroid())
+            {
+                return string.IsNullOrWhiteSpace(_workspacePath)
+                    ? $"dltxt 编辑器 {AppVersion}"
+                    : $"{WorkspaceName}";
+            }
+            return string.IsNullOrWhiteSpace(_workspacePath)
+                ? $"dltxt editor {AppVersion}"
+                : $"dltxt editor {AppVersion} - {WorkspaceName}";
+        }
+    }
 
     public string ParserSummary
     {

@@ -14,6 +14,7 @@ public class Application : AvaloniaAndroidApplication<global::editor.App>
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
         return base.CustomizeAppBuilder(builder)
             .WithInterFont()
             .LogToTrace();

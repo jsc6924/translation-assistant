@@ -44,6 +44,7 @@ public partial class DocumentEditorView : UserControl
     private bool _altBracketStateValid;
     private int _altBracketLastDistance;
     private bool _suppressAltBracketReset;
+    private System.Threading.Tasks.TaskCompletionSource<bool?>? _overlayDialogCompletionSource;
 
     public DocumentEditorView()
     {
@@ -787,6 +788,8 @@ public partial class DocumentEditorView : UserControl
 
     private void OnCaretPositionChanged(object? sender, EventArgs e)
     {
+        UpdateCaretTooltip();
+
         if (_suppressAltBracketReset)
         {
             return;
@@ -1273,6 +1276,8 @@ public partial class DocumentEditorView : UserControl
         _colorizer.Update(parsedDocument, _terminologySnapshot);
         ApplyReadOnlySections(parsedDocument);
         Editor.TextArea.TextView.Redraw();
+
+        UpdateCaretTooltip();
     }
 
     private static IReadOnlyDictionary<int, IReadOnlyList<TerminologyHighlight>> BuildTerminologyHighlightsByLine(
@@ -1429,6 +1434,11 @@ public partial class DocumentEditorView : UserControl
 
     private void OnEditorPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (OperatingSystem.IsAndroid())
+        {
+            return;
+        }
+
         if (_terminologySnapshot.Highlights.Count == 0 || Editor.Document is null)
         {
             if (_lastHoverText is not null)
@@ -1465,6 +1475,11 @@ public partial class DocumentEditorView : UserControl
 
     private void OnEditorPointerExited(object? sender, PointerEventArgs e)
     {
+        if (OperatingSystem.IsAndroid())
+        {
+            return;
+        }
+
         _lastHoverText = null;
         ToolTip.SetTip(Editor, null);
     }
@@ -1491,14 +1506,24 @@ public partial class DocumentEditorView : UserControl
         }
 
         var existingTranslation = _terms.FirstOrDefault(term => string.Equals(term.Raw, rawText, StringComparison.Ordinal))?.Translation ?? string.Empty;
-        var dialog = new TerminologyEditorWindow(rawText, existingTranslation)
-        {
-            Title = title,
-        };
 
-        var owner = this.VisualRoot as Window;
+        string translationResult = "";
+        bool confirmed = false;
+
+        // Try multiple ways to get a parent window – Android may not have a VisualRoot yet or it won't be a Window.
+        Window? owner = this.VisualRoot as Window;
         if (owner is null)
         {
+            // Fallback to TopLevel lookup (works for both desktop and mobile).
+            var topLevel = Avalonia.Controls.TopLevel.GetTopLevel(this) as Window;
+            if (topLevel is not null)
+            {
+                owner = topLevel;
+            }
+        }
+        if (owner is null)
+        {
+            // Final fallback to the application's main window (desktop case).
             owner = Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
                 ? desktop.MainWindow
                 : null;
@@ -1506,11 +1531,41 @@ public partial class DocumentEditorView : UserControl
 
         if (owner is null)
         {
-            ToolTip.SetTip(Editor, "无法找到窗口父级，无法打开术语编辑窗口。");
-            return;
+            // On platforms without desktop Windows support (like Android/mobile), use the in-page overlay dialog.
+            OverlayRawTextBox.Text = rawText;
+            OverlayTranslationTextBox.Text = existingTranslation;
+            TerminologyEditorOverlay.IsVisible = true;
+
+            _overlayDialogCompletionSource = new System.Threading.Tasks.TaskCompletionSource<bool?>();
+            var overlayResult = await _overlayDialogCompletionSource.Task ?? false;
+            TerminologyEditorOverlay.IsVisible = false;
+
+            if (!overlayResult)
+            {
+                return;
+            }
+
+            translationResult = OverlayTranslationTextBox.Text ?? string.Empty;
+            confirmed = true;
+        }
+        else
+        {
+            var dialog = new TerminologyEditorWindow(rawText, existingTranslation)
+            {
+                Title = title,
+            };
+
+            // Ensure the dialog is opened on the UI thread.
+            var desktopResult = await Dispatcher.UIThread.InvokeAsync(() => dialog.ShowDialog<bool?>(owner)) ?? false;
+            if (!desktopResult)
+            {
+                return;
+            }
+
+            translationResult = dialog.Translation ?? string.Empty;
+            confirmed = true;
         }
 
-        var confirmed = await dialog.ShowDialog<bool?>(owner) ?? false;
         if (!confirmed)
         {
             return;
@@ -1518,14 +1573,14 @@ public partial class DocumentEditorView : UserControl
 
         try
         {
-            if (string.IsNullOrWhiteSpace(dialog.Translation))
+            if (string.IsNullOrWhiteSpace(translationResult))
             {
                 await _simpleTmRemoteClient.DeleteTermAsync(sharedUrl, rawText);
                 ToolTip.SetTip(Editor, $"已删除术语：{rawText}");
             }
             else
             {
-                await _simpleTmRemoteClient.UpdateTermAsync(sharedUrl, rawText, dialog.Translation.Trim());
+                await _simpleTmRemoteClient.UpdateTermAsync(sharedUrl, rawText, translationResult.Trim());
                 ToolTip.SetTip(Editor, $"已保存术语：{rawText}");
             }
 
@@ -1535,6 +1590,16 @@ public partial class DocumentEditorView : UserControl
         {
             ToolTip.SetTip(Editor, $"术语操作失败：{exception.Message}");
         }
+    }
+
+    private void OnOverlayCancelClick(object? sender, RoutedEventArgs e)
+    {
+        _overlayDialogCompletionSource?.TrySetResult(false);
+    }
+
+    private void OnOverlaySaveClick(object? sender, RoutedEventArgs e)
+    {
+        _overlayDialogCompletionSource?.TrySetResult(true);
     }
 
     private string? GetSelectedText()
@@ -1593,6 +1658,8 @@ public partial class DocumentEditorView : UserControl
         if (OperatingSystem.IsAndroid())
         {
             KeyboardToggleButton.IsVisible = true;
+            DeleteToSegmentEndButton.IsVisible = true;
+            MoveCaretToNextTranslatedLineButton.IsVisible = true;
         }
     }
 
@@ -1606,7 +1673,7 @@ public partial class DocumentEditorView : UserControl
             // Cancel Select mode
             ResetSelectionMode(); // Assuming this is your existing function
             _isSelecting = false;
-            SelectionActionButton.Content = "📍"; // Pin icon for "Start"
+            SelectionActionButton.Content = "I"; // Pin icon for "Start"
         }
         else
         {
@@ -1616,7 +1683,7 @@ public partial class DocumentEditorView : UserControl
             // 记录当前光标落点作为起点
             _anchorOffset = Editor.CaretOffset;
             _isSelecting = true;
-            SelectionActionButton.Content = "❌"; // Cross icon for "Cancel"
+            SelectionActionButton.Content = "X"; // Cross icon for "Cancel"
         }
     }
 
@@ -1637,5 +1704,70 @@ public partial class DocumentEditorView : UserControl
         // Focus a non-text control first to ensure keyboard activation fires on re-focus
         KeyboardToggleButton.Focus();
         Dispatcher.UIThread.Post(() => Editor.TextArea.Focus(), DispatcherPriority.Input);
+    }
+
+    private void OnDeleteToSegmentEndClick(object? sender, RoutedEventArgs e)
+    {
+        DeleteToCurrentSegmentEndInTranslatedLine();
+        Editor.TextArea.Caret.BringCaretToView();
+        Editor.TextArea.Focus();
+    }
+
+    private void OnMoveCaretToPrevTranslatedLineClick(object? sender, RoutedEventArgs e)
+    {
+        MoveCaretToPreviousTranslatedLine();
+        Editor.TextArea.Caret.BringCaretToView();
+        Editor.TextArea.Focus();
+    }
+
+    private void OnMoveCaretToNextTranslatedLineClick(object? sender, RoutedEventArgs e)
+    {
+        MoveCaretToNextTranslatedLine();
+        Editor.TextArea.Caret.BringCaretToView();
+        Editor.TextArea.Focus();
+    }
+
+    private void UpdateCaretTooltip()
+    {
+        if (!OperatingSystem.IsAndroid() || Editor.Document is null)
+        {
+            return;
+        }
+
+        var caretOffset = Editor.TextArea.Caret.Offset;
+        var highlight = FindHighlightAtCaret(caretOffset);
+        var hoverText = highlight?.HoverText;
+
+        if (hoverText is not null)
+        {
+            if (!string.Equals(_lastHoverText, hoverText, StringComparison.Ordinal))
+            {
+                _lastHoverText = hoverText;
+                ToolTip.SetTip(Editor, hoverText);
+                ToolTip.SetIsOpen(Editor, true);
+            }
+        }
+        else
+        {
+            if (_lastHoverText is not null)
+            {
+                _lastHoverText = null;
+                ToolTip.SetIsOpen(Editor, false);
+                ToolTip.SetTip(Editor, null);
+            }
+        }
+    }
+
+    private TerminologyHighlight? FindHighlightAtCaret(int caretOffset)
+    {
+        foreach (var highlight in _terminologySnapshot.Highlights)
+        {
+            var endOffset = highlight.StartOffset + highlight.Length;
+            if (caretOffset >= highlight.StartOffset && caretOffset <= endOffset)
+            {
+                return highlight;
+            }
+        }
+        return null;
     }
 }

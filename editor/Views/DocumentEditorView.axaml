@@ -17,7 +17,6 @@
                                      FontSize="{Binding FontSize}">
                 <avaloniaEdit:TextEditor.ContextMenu>
                     <ContextMenu>
-                        <Separator />
                         <MenuItem x:Name="CopyMenuItem" Header="复制" Click="OnCopyClick" InputGesture="Ctrl+C" />
                         <MenuItem x:Name="PasteMenuItem" Header="粘贴" Click="OnPasteClick" InputGesture="Ctrl+V" />
                         <MenuItem x:Name="CopyTranslationMenuItem" Header="复制翻译" Click="OnCopyTranslationClick" IsVisible="False" />
@@ -39,26 +38,28 @@
             </StackPanel.IsVisible>
 
             <Button x:Name="SelectionActionButton"
+                    Focusable="False"
                     Width="52"
                     Height="52"
                     FontSize="22"
                     CornerRadius="26"
-                    Opacity="0.85"
+                    Opacity="0.5"
                     Padding="0"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Click="OnSelectionActionClick">
                 <Grid Margin="2,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="📍" />
+                    <TextBlock Text="I" />
                 </Grid>
             </Button>
 
             <Button x:Name="UndoButton"
+                    Focusable="False"
                     Width="52"
                     Height="52"
                     FontSize="22"
                     CornerRadius="26"
-                    Opacity="0.85"
+                    Opacity="0.5"
                     Padding="0"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
@@ -77,7 +78,7 @@
                 Margin="0,0,16,16"
                 FontSize="22"
                 CornerRadius="26"
-                Opacity="0.85"
+                Opacity="0.5"
                 Padding="0"
                 HorizontalContentAlignment="Stretch"
                 VerticalContentAlignment="Stretch"
@@ -89,5 +90,116 @@
                 <TextBlock Text="⌨" />
             </Grid>
         </Button>
+
+        <Grid RowDefinitions="4*, 1*, 5*">
+
+            <Button x:Name="MoveCaretToPrevTranslatedLineButton"
+                    Grid.Row="1" Focusable="False"
+                    Width="52"
+                    Height="52"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Margin="16,-26,0,0" FontSize="22"
+                    CornerRadius="26"
+                    Opacity="0.5"
+                    Padding="0"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Click="OnMoveCaretToPrevTranslatedLineClick">
+                <Button.IsVisible>
+                    <OnPlatform Default="False" Android="True" />
+                </Button.IsVisible>
+                <Grid Margin="2,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="←" />
+                </Grid>
+            </Button>
+
+            <Button x:Name="MoveCaretToNextTranslatedLineButton"
+                    Grid.Row="1" Focusable="False"
+                    Width="52"
+                    Height="52"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,-26,16,0" FontSize="22"
+                    CornerRadius="26"
+                    Opacity="0.5"
+                    Padding="0"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Click="OnMoveCaretToNextTranslatedLineClick">
+                <Button.IsVisible>
+                    <OnPlatform Default="False" Android="True" />
+                </Button.IsVisible>
+                <Grid Margin="2,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="→" />
+                </Grid>
+            </Button>
+
+            <Button x:Name="DeleteToSegmentEndButton"
+                    Grid.Row="2" Focusable="False"
+                    Width="52"
+                    Height="52"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Margin="16,-26,0,0" FontSize="22"
+                    CornerRadius="26"
+                    Opacity="0.5"
+                    Padding="0"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Click="OnDeleteToSegmentEndClick">
+                <Button.IsVisible>
+                    <OnPlatform Default="False" Android="True" />
+                </Button.IsVisible>
+                <Grid Margin="2,2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="✂" />
+                </Grid>
+            </Button>
+
+        </Grid>
+        <Grid x:Name="TerminologyEditorOverlay"
+              IsVisible="False"
+              Background="#90000000">
+            <Border Background="{DynamicResource EditorBackgroundBrush}"
+                    BorderBrush="{DynamicResource TabItemBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Width="320"
+                    Padding="16"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    BoxShadow="0 4 12 0 #40000000">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="编辑术语"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource EditorTextForegroundBrush}"
+                               HorizontalAlignment="Center"/>
+
+                    <TextBlock Text="选中术语"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Foreground="{DynamicResource EditorTextForegroundBrush}"/>
+                    <TextBox x:Name="OverlayRawTextBox"
+                             IsReadOnly="True"
+                             Foreground="{DynamicResource EditorTextForegroundBrush}"/>
+
+                    <TextBlock Text="术语翻译"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Foreground="{DynamicResource EditorTextForegroundBrush}"/>
+                    <TextBox x:Name="OverlayTranslationTextBox"
+                             PlaceholderText="请输入术语翻译"
+                             Foreground="{DynamicResource EditorTextForegroundBrush}"/>
+
+                    <TextBlock Text="留空则会删除该术语。点击 保存 进行保存或删除。"
+                               Foreground="Gray"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">
+                        <Button Content="取消" Width="80" Click="OnOverlayCancelClick" />
+                        <Button Content="保存" Width="80" Click="OnOverlaySaveClick" HotKey="Enter" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

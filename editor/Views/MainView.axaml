@@ -41,12 +41,12 @@
 
                 <StackPanel Grid.Column="1" Spacing="4">
                     <TextBlock Text="{Binding WindowTitle}"
-                               FontSize="20"
+                               FontSize="18"
                                FontWeight="SemiBold"
-                               TextWrapping="Wrap" />
+                               TextWrapping="NoWrap" />
                     <TextBlock Text="{Binding ParserSummary}"
                                Opacity="0.78"
-                               TextWrapping="Wrap" />
+                               TextWrapping="NoWrap" />
                 </StackPanel>
             </Grid>
         </Border>

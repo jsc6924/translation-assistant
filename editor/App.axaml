@@ -3,18 +3,33 @@
              x:Class="editor.App"
              xmlns:local="using:editor"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Resources>
-        <ResourceDictionary />
+        <FontFamily x:Key="MyCustomFont">avares://editor/Assets/SourceHanSans-Regular.otf#Source Han Sans JP, avares://editor/Assets/SourceHanSans-Regular.otf#Source Han Sans SC, sans-serif</FontFamily>
     </Application.Resources>
 
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
-  
+
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MyCustomFont}" />
+        </Style>
+
+        <Style Selector="TemplatedControl">
+            <Setter Property="FontFamily" Value="{StaticResource MyCustomFont}" />
+        </Style>
+
+        <Style Selector="TabItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="FontFamily" Value="{StaticResource MyCustomFont}" />
+        </Style>
+        <Style Selector="TabItem TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MyCustomFont}" />
+        </Style>
+
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
 
         <Style Selector="TabItem">

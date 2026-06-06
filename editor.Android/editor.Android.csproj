@@ -27,6 +27,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <IllinkKeepXml Include="Linker.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\editor\editor.csproj">
       <AdditionalProperties>OutputType=Library</AdditionalProperties>
     </ProjectReference>

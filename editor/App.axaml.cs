@@ -20,12 +20,14 @@ public partial class App : Application
 {
     private const string CurrentVersion = "1.0.0";
     public static string Version => CurrentVersion;
-    private const string LatestVersionUrl = "https://raw.githubusercontent.com/jsc6924/dltxt-editor-release/refs/heads/main/latest";
+    private const string LatestDesktopVersionUrl = "https://raw.githubusercontent.com/jsc6924/dltxt-editor-release/refs/heads/main/latest";
+    private const string LatestAndroidVersionUrl = "https://raw.githubusercontent.com/jsc6924/dltxt-editor-release/refs/heads/main/latest-android";
     private const string ReleasesUrl = "https://github.com/jsc6924/dltxt-editor-release/releases";
 
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -41,7 +43,7 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(),
             };
 
-            _ = CheckForUpdatesAsync(desktop.MainWindow);
+            _ = CheckForUpdatesAsync(desktop.MainWindow, LatestDesktopVersionUrl);
         }
         else if (ApplicationLifetime is IActivityApplicationLifetime activity)
         {
@@ -57,19 +59,26 @@ public partial class App : Application
 
     private static MainView CreateMainView()
     {
-        return new MainView
+        var mainView = new MainView
         {
             DataContext = new MainWindowViewModel(),
         };
+
+        if (OperatingSystem.IsAndroid())
+        {
+            mainView.StartMobileUpdateCheck(CurrentVersion, LatestAndroidVersionUrl, ReleasesUrl);
+        }
+
+        return mainView;
     }
 
-    private static async Task CheckForUpdatesAsync(Window owner)
+    private static async Task CheckForUpdatesAsync(Window owner, string latestVersionUrl)
     {
         try
         {
             using var httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromSeconds(10);
-            var remoteText = await httpClient.GetStringAsync(LatestVersionUrl);
+            var remoteText = await httpClient.GetStringAsync(latestVersionUrl);
             if (string.IsNullOrWhiteSpace(remoteText))
             {
                 return;

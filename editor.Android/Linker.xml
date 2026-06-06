@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<linker>
+  <assembly fullname="System.Text.Encoding.CodePages" preserve="all" />
+  
+  <assembly fullname="editor.Android" preserve="all" />
+  <assembly fullname="Avalonia.Android" preserve="all" />
+
+  <assembly fullname="Avalonia.Skia" preserve="all" />
+  <assembly fullname="Avalonia.Base" preserve="all" />
+  <assembly fullname="Avalonia.Controls" preserve="all" />
+</linker>

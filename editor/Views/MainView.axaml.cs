@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -65,6 +66,93 @@ public partial class MainView : UserControl
                 viewModel.SaveWorkspaceTabState();
             }
         };
+    }
+
+    public void StartMobileUpdateCheck(string currentVersionText, string latestVersionUrl, string releasesUrl)
+    {
+        _ = CheckForUpdatesOnMobileAsync(currentVersionText, latestVersionUrl, releasesUrl);
+    }
+
+    private async Task CheckForUpdatesOnMobileAsync(string currentVersionText, string latestVersionUrl, string releasesUrl)
+    {
+        try
+        {
+            using var httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(10),
+            };
+
+            var remoteText = await httpClient.GetStringAsync(latestVersionUrl).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(remoteText))
+            {
+                return;
+            }
+
+            var latestVersionText = remoteText.Trim();
+            var currentVersion = ParseVersionSegments(currentVersionText);
+            var latestVersion = ParseVersionSegments(latestVersionText);
+            if (currentVersion is null || latestVersion is null)
+            {
+                return;
+            }
+
+            if (!IsLatestVersionNewer(currentVersion, latestVersion))
+            {
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _mobileConfirmState.Message = $"检测到新版本 {latestVersionText}，是否前往 Releases 下载？";
+                _mobileConfirmState.ConfirmButtonText = "前往下载";
+                _mobileConfirmAction = () => OpenUrl(releasesUrl);
+                OpenMobileModal(MobileModalKind.Confirm, "版本更新");
+            });
+        }
+        catch
+        {
+            // Ignore update check failures.
+        }
+    }
+
+    private static int[]? ParseVersionSegments(string versionText)
+    {
+        var parts = versionText.Split('.');
+        if (parts.Length != 3)
+        {
+            return null;
+        }
+
+        var segments = new int[3];
+        for (var i = 0; i < 3; i++)
+        {
+            if (!int.TryParse(parts[i], out var value) || value < 0)
+            {
+                return null;
+            }
+
+            segments[i] = value;
+        }
+
+        return segments;
+    }
+
+    private static bool IsLatestVersionNewer(int[] currentVersion, int[] latestVersion)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            if (currentVersion[i] < latestVersion[i])
+            {
+                return true;
+            }
+
+            if (currentVersion[i] > latestVersion[i])
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private void OnConfigureFormatClick(object? sender, RoutedEventArgs eventArgs)
@@ -994,10 +1082,19 @@ public partial class MainView : UserControl
         }
     }
 
-    private static void OpenUrl(string url)
+    private void OpenUrl(string url)
     {
         try
         {
+            var uri = new Uri(url);
+            var topLevel = TopLevel.GetTopLevel(this);
+
+            if (topLevel?.Launcher is not null)
+            {
+                _ = topLevel.Launcher.LaunchUriAsync(uri);
+                return;
+            }
+
             Process.Start(new ProcessStartInfo(url)
             {
                 UseShellExecute = true,
