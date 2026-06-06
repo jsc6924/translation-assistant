@@ -1,31 +1,51 @@
 # dltxt editor
-这是一个轻量级跨平台双行文本编辑器。使用c# (.net 9.0) Avalonia + AvalonEdit 实现。用于给不愿意安装笨重的vscode+dltxt插件的翻译使用。你需要参考dltxt的实现，在这个编辑器中实现一些dltxt的基础功能：
-## 基础的编辑器功能
-- 用户启动时，先让用户选择一个文件夹打开，然后切换到主界面
-- 主界面类似vsocde，左边有一个文件浏览器，右边是文本编辑区域，用户能打开文件，可以开多个tab，有基本的保存、撤销功能
-- 在切换tab时自动保存
-## 双行文本高亮、编辑控制
-- 让用户可以设置双行文本格式
-- 在设置完格式后，使用DocumentParser解析文本，对原文和译文行的颜色进行区分，并只允许用户编辑译文部分。
-- 双行文本格式、DocumentrParser的实现，请参考parser.ts
 
-## 术语和人称高亮
-现在我要实现术语高亮功能，也就是从服务器获取术语和人称信息，在文本编辑器中将那些术语高亮，当鼠标hover的时候，显示对应翻译和备注。
-dltxt插件支持三种术语库：remote，remote-url，local，但是editor只需要支持remote-url即可。
-dltxt支持连接多个术语库，但editor只需要支持连接一个。
-dltxt有treeview显示和编辑术语和人称，editor暂时不需要这个界面，目前只需要从服务器获取术语并显示即可。
-dltxt支持用websocket实时获取服务器推送的术语更新，editor暂时不需要支持，每30秒轮询一次即可。
+`dltxt editor` 是一款专为游戏汉化、文本翻译人员打造的**轻量级、跨平台双行文本编辑器**。
 
-当前 editor 使用工作区根目录下 `dltxt-editor-setting.json` 的 `simpleTmSharedUrl` 字段连接远程术语库（`simpletm://protocol/host/username/apiToken/gameTitle`）。
+它基于高性能文本引擎开发，专门用来解决 VSCode 过于臃肿、插件安装繁琐的问题。如果你不想为了翻译几个文本就去折腾笨重的 VSCode 及其专属插件，那么 `dltxt editor` 就是为你量身定制的无缝替代品！
 
-如果用户打开的目录里面有dltxt editor settings json则直接应用。如果没有dltxt editor settings json，则把"parserConfig": {
-    "OriginalPrefixRegex": "\u2605[A-Za-z0-9]\u002B\u2605",
-    "TranslatedPrefixRegex": "\u2606[A-Za-z0-9]\u002B\u2606",
-    "OriginalWhiteRegex": "\\s*[\u300C]?",
-    "TranslatedWhiteRegex": "\\s*[\u300C]?",
-    "OriginalSuffixRegex": "[\u300D]?",
-    "TranslatedSuffixRegex": "[\u300D]?"
-  } 这个作为默认配置，并且尝试读目录里的.vscode/settings.json文件（如果该文件存在），尝试从里面读取"dltxt.core.originalTextPrefixRegex"，"dltxt.core.translatedTextPrefixRegex"，"dltxt.core.x.originalTextWhite"，"dltxt.core.x.translatedTextWhite"，"dltxt.core.y.originalTextSuffix"，"dltxt.core.y.translatedTextSuffix", "dltxt.core.name.regex"，读到就覆盖当前默认配置。将这个结果应用并保存到当前文件夹。
+---
+
+## ✨ 核心特性
+
+### 📁 类似 VSCode 的工作区管理
+* **文件夹秒开**：软件启动时会提示您选择一个游戏文本所在的文件夹，随后便会切入主界面。
+* **经典布局**：左侧为直观的「文件浏览器」，右边为「文本编辑区域」。
+* **多标签页 (Tabs)**：支持同时打开多个文本文件切换编辑。
+* **无感自动保存**：在您**切换标签页 (Tab) 时，软件会自动保存**当前文件，再也不用担心断电或误关闭导致翻译丢失。同时支持常规的保存（Ctrl + S）与撤销（Ctrl + Z）。
+
+### 🔒 智能双行锁定与高亮
+* **格式自定义**：支持根据不同的游戏文本自定义原文和译文的匹配规则。
+* **防误触锁定**：解析文本后，软件会自动对「原文行」和「译文行」进行颜色区分，并且**严格只允许您编辑译文部分**，彻底杜绝不小心改动原文导致文本错乱、游戏报错的惨剧。
+
+### 🌐 远程术语、人称动态高亮
+* **免去对词表烦恼**：支持连接汉化组的远程术语库。文本中出现的角色人称、特定术语会自动高亮显示。
+* **悬浮提示 (Hover)**：当您将鼠标悬停在高亮的术语上时，会直接弹出浮窗，展示该词的**标准翻译和备注说明**。
+* **自动同步**：软件每隔 **30 秒** 会自动在后台轮询更新，无需手动刷新即可实时获取汉化组最新的术语修正。
+
+---
+
+## 🛠️ 智能配置文件加载规则
+
+为了实现“开箱即用”，软件设计了一套极为便利的配置导入逻辑。当您用软件打开一个文件夹时，它会按以下顺序检测：
+
+1. **专属配置优先**：如果根目录下存在 `dltxt-editor-setting.json`，将直接应用。
+2. **VSCode 插件无缝迁移**：如果找不到专属配置，软件会尝试读取 `.vscode/settings.json`（原 VSCode dltxt 插件的配置文件）。如果读到以下字段，将自动继承并覆盖默认规则：
+   * `dltxt.core.originalTextPrefixRegex` $\rightarrow$ 原文正则
+   * `dltxt.core.translatedTextPrefixRegex` $\rightarrow$ 译文正则
+   * `dltxt.core.x.originalTextWhite` / `translatedTextWhite`
+   * `dltxt.core.y.originalTextSuffix` / `translatedTextSuffix`
+   * `dltxt.core.name.regex` $\rightarrow$ 人称术语正则
+3. **保底默认配置**：如果以上两个文件都不存在，软件将自动应用一套内置的标准星号/方块文本正则配置，并自动在根目录下创建 `dltxt-editor-setting.json` 供您后续微调。
+
+---
+
+## 🔗 如何连接远程术语库？
+
+本编辑器目前支持连接单个远程术语库（Remote-URL 模式）。
+
+想要开启术语高亮，只需要在术语库设置中填写simpletm共享链接即可（"simpletm://协议/服务器地址/用户名/API令牌/游戏项目名"）
+
 
 # build
 dotnet build
