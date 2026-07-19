@@ -2,6 +2,7 @@ out
 node_modules
 .vscode-test/
 .vscode
+.zed
 *.vsix
 mytoken
 src/notes.txt
