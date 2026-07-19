@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BasicTreeItem, TreeItem, BasicTreeView, CommandItem, ConfigRootItem, ConfigEntryItem } from './treeview';
 import { configureFormat } from './formatter';
-import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace, batchReportCommand, batchSpecialTranslate, batchWordCountCommand } from './batch';
+import { batchCheckCommand, batchInsertNewline, batchRemoveNewline, batchReplace, batchReportCommand, batchSpecialTranslate, batchWordCountCommand, excludedPathsManager } from './batch';
 import { clearAllWarnings } from './error-check';
 import { ContextHolder } from './utils';
 import { checkSimilarText } from './crossref';
@@ -46,6 +46,36 @@ export namespace cc_view {
             }, 'settings-gear'));
             configCommands.children.push(new CommandItem("切换编辑限制模式", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.switchStrictEditing');
+            }, 'settings-gear'));
+            const batchConfigConfigs = new CCDirectory(this, "批处理设置", vscode.TreeItemCollapsibleState.Collapsed, 'settings-gear');
+            configCommands.children.push(batchConfigConfigs);
+            batchConfigConfigs.children.push(new CommandItem("添加批处理排除路径", async () => {
+                const defaultUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+
+                const uris = await vscode.window.showOpenDialog({
+                    canSelectFolders: true,
+                    canSelectMany: false,
+                    openLabel: '选择排除路径',
+                    defaultUri: defaultUri
+                });
+
+                if (!uris || uris.length === 0) {
+                    return;
+                }
+
+                const relativePaths = uris.map(uri => vscode.workspace.asRelativePath(uri));
+                excludedPathsManager.append(...relativePaths);
+                excludedPathsManager.save();
+                vscode.window.showInformationMessage(`已添加批处理排除路径: ${relativePaths.join(', ')}, 并保存到 .gitignore 文件中。请重新加载vscode窗口以使更改生效。`);
+            }, 'settings-gear'));
+            batchConfigConfigs.children.push(new CommandItem("删除批处理排除路径", async () => {
+                const input = await vscode.window.showQuickPick(excludedPathsManager.ExcludedPaths, { placeHolder: '选择要删除的排除路径' });
+                if (!input) {
+                    return;
+                }
+                excludedPathsManager.ExcludedPaths = excludedPathsManager.ExcludedPaths.filter(p => p !== input);
+                excludedPathsManager.save();
+                vscode.window.showInformationMessage(`已删除批处理排除路径: ${input}, 并保存到 .gitignore 文件中。请重新加载vscode窗口以使更改生效。`);
             }, 'settings-gear'));
 
 
@@ -126,7 +156,7 @@ export namespace cc_view {
             batchNode.children.push(new CommandItem("将文本合并", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.dltransform.merge');
             }));
-            
+
             batchNode.children.push(new CommandItem("执行自定义批量文本操作", async () => {
                 await vscode.commands.executeCommand('Extension.dltxt.dltransform.transform');
             }));
@@ -182,8 +212,6 @@ export namespace cc_view {
                     vscode.window.showErrorMessage(`RequestGetParsedDocument 请求失败: ${err}`);
                 }
             }));
-                
-
 
 
             const baiduAPINode = new ConfigRootItem(this, "百度智能云API", vscode.TreeItemCollapsibleState.Collapsed);

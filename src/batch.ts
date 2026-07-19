@@ -15,7 +15,7 @@ import { TextAnalysis } from './text-analysis';
 export async function batchProcess(documentUris: vscode.Uri[], cb: (doc: vscode.TextDocument, index: number) => void, show: boolean = false, batchSize: number = 64) {
     // filter documentUris to exclude files in ExcludedPaths
     const filteredUris = vscode.workspace.workspaceFolders ? documentUris.filter(uri => {
-        return !ExcludedPaths.some(excludedPath => uri.fsPath.startsWith(excludedPath));
+        return !excludedPathsManager.ExcludedPaths.some(excludedPath => uri.fsPath.startsWith(excludedPath));
     }) : documentUris;
     const total_file = filteredUris.length;
     if (show) {
@@ -187,7 +187,7 @@ async function batch_report(documentUris: vscode.Uri[]) {
     );
     edit.replace(reportDoc.uri, fullRange, reportText);
     await vscode.workspace.applyEdit(edit);
-    await vscode.window.showTextDocument(reportDoc,  );
+    await vscode.window.showTextDocument(reportDoc,);
 
     vscode.window.showInformationMessage(`已检查 ${file_checked}/${total_file} 个文件，报告已生成`);
 
@@ -337,21 +337,39 @@ async function batch_word_count(documentUris: vscode.Uri[]) {
     vscode.window.showInformationMessage(`字数统计：共${total}个文件, 原文${jcount}字，译文${ccount}字`);
 }
 
-let ExcludedPaths: string[] = [];
+class ExcludedPathsManager {
+    public ExcludedPaths: string[] = [];
+    load() {
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            const gitignorePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gitignore');
+            if (fs.existsSync(gitignorePath)) {
+                const gitignoreContent = fs.readFileSync(gitignorePath, 'utf8');
+                // split by newlines and filter out empty lines
+                const gitignoreLines = gitignoreContent.split(/\r?\n/).filter(line => line.trim() !== '');
+                this.append(...gitignoreLines);
+            }
+        }
+    }
+    append(...relativePaths: string[]) {
+        relativePaths.forEach(p => {
+            const relativePath = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, p);
+            this.ExcludedPaths.push(relativePath);
+        });
+    }
+    save() {
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            const gitignorePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gitignore');
+            const gitignoreContent = this.ExcludedPaths.map(p => vscode.workspace.asRelativePath(p)).join('\r\n');
+            fs.writeFileSync(gitignorePath, gitignoreContent, 'utf8');
+        }
+    }
+}
+export const excludedPathsManager = new ExcludedPathsManager();
 
 export function activate(context: vscode.ExtensionContext) {
     // open .gitignore file if exists
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-        const gitignorePath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.gitignore');
-        if (fs.existsSync(gitignorePath)) {
-            const gitignoreContent = fs.readFileSync(gitignorePath, 'utf8');
-            // split by newlines and filter out empty lines
-            const gitignoreLines = gitignoreContent.split(/\r?\n/).filter(line => line.trim() !== '');
-            gitignoreLines.forEach(line => {
-                const relativePath = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, line);
-                ExcludedPaths.push(relativePath);
-            });
-        }
+        excludedPathsManager.load();
     }
     registerCommand(context, 'Extension.dltxt.batch_replace_with_select', async () => {
         const document = vscode.window.activeTextEditor?.document;
