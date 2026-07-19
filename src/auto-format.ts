@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { contains, findEditorByUri, registerCommand } from './utils'
 import { DocumentParser } from './parser';
-import * as fs from "fs"; 
+import * as fs from "fs";
 import * as path from "path";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -10,9 +10,9 @@ export function activate(context: vscode.ExtensionContext) {
         await detector.autoDetectFormat(context);
     })
 
-    registerCommand(context, 'Extension.dltxt.core.context.autoDetectFormatContinue', async function(){
-		autoDetectFormatContinue();
-	});
+    registerCommand(context, 'Extension.dltxt.core.context.autoDetectFormatContinue', async function () {
+        autoDetectFormatContinue();
+    });
 }
 export interface AutoDetector {
     autoDetectFormat(context: vscode.ExtensionContext): void | Promise<void>;
@@ -53,13 +53,70 @@ export class StandardParserAutoDetector implements AutoDetector {
         let oRegStr = '';
         let oReg = null;
         if (otherLines.length > 0) {
-            oRegStr = generateRegex(otherLines);
+            oRegStr = generateRegex(otherLines, false);
             if (!oRegStr) {
                 oRegStr = forceGeneratePrefix(otherLines);
             }
             oReg = new RegExp(`^(${oRegStr})(.*)`);
         }
 
+        const { rlines, tlines, ok } = await this.alignLines(activeEditor, startLine, oReg);
+        if (!ok) {
+            return;
+        }
+
+        let rRegStr = "";
+        let tRegStr = "";
+        let namePos = await vscode.window.showQuickPick(["行前", "行中", "行后"], { placeHolder: "相对对话行，人名在哪个位置？" });
+        if (!namePos) {
+            return;
+        }
+        if (namePos == "行中") {
+            rRegStr = generateRegex(rlines, true);
+            tRegStr = generateRegex(tlines, true);
+        } else {
+            rRegStr = generateRegex(rlines, false);
+            tRegStr = generateRegex(tlines, false);
+        }
+
+        //TODO: 最近已经没有需要这个东西的格式了，可以考虑删了
+        rRegStr = regexSubstract(rRegStr, [{ otherReg: tRegStr, otherLines: tlines }, { otherReg: oRegStr, otherLines: otherLines }]);
+        tRegStr = regexSubstract(tRegStr, [{ otherReg: rRegStr, otherLines: rlines }, { otherReg: oRegStr, otherLines: otherLines }]);
+        if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
+            vscode.window.showInformationMessage(`识别失败`);
+            return;
+        }
+
+        let newlineToken = await vscode.window.showInputBox({
+            "placeHolder": "例：\\r\\n",
+            "prompt": `输入换行符（默认值是\\r\\n）`,
+            "ignoreFocusOut": true
+        });
+        if (!newlineToken) {
+            newlineToken = '\\r\\n';
+        }
+
+        let nameRegStr = namePos == "行中" ? rRegStr : `^${rRegStr}(?<name>[^<>\n\u3001\u3002\u3008-\u301B\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)$`;
+
+        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}, 人名位置：${namePos}"，是否应用？`, '是', '否');
+        if (u !== '是') {
+            return;
+        }
+        const config = vscode.workspace.getConfiguration("dltxt");
+        await config.update('core.originalTextPrefixRegex', rRegStr, false);
+        await config.update('core.translatedTextPrefixRegex', tRegStr, false);
+        await config.update('core.otherPrefixRegex', oRegStr, false);
+        await config.update('nestedLine.token', newlineToken, false);
+        await config.update('core.name.position', namePos, false);
+        await config.update('core.name.regex', nameRegStr, false);
+        vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
+        vscode.window.showInformationMessage(`已应用设置`);
+    }
+
+    async autoDetectFormatForInLineName(context: vscode.ExtensionContext) {
+    }
+
+    async alignLines(activeEditor: vscode.TextEditor, startLine: number, oReg: RegExp | null): Promise<{ rlines: string[], tlines: string[], ok: boolean }> {
         //find the next empty line as the startLine
         let foundEmptyLine = false;
         for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount; lineNumber++) {
@@ -70,7 +127,7 @@ export class StandardParserAutoDetector implements AutoDetector {
             foundEmptyLine = true;
             break;
         }
-        
+
         const maxCount = 30;
         let rlines = [], tlines = [];
         for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount - 1
@@ -92,64 +149,30 @@ export class StandardParserAutoDetector implements AutoDetector {
         if (rlines.length > tlines.length) {
             rlines.pop();
         }
-        if (rlines.length < 2 || tlines.length < 2 || rlines.length !== tlines.length) {
-            vscode.window.showInformationMessage(`识别失败`);
-            return;
+        if (rlines.length < 2) {
+            vscode.window.showInformationMessage(`识别失败 rlines.length < 2`);
+            return { rlines, tlines, ok: false };
+        }
+        if (tlines.length < 2) {
+            vscode.window.showInformationMessage(`识别失败 tlines.length < 2`);
+            return { rlines, tlines, ok: false };
+        }
+
+        if (rlines.length !== tlines.length) {
+            vscode.window.showInformationMessage(`识别失败 rlines.length !== tlines.length`);
+            return { rlines, tlines, ok: false };
         }
         if (!foundEmptyLine) {
-            const options = ['原文','译文'];
-            const r = await vscode.window.showQuickPick(options, {placeHolder: `这是原文还是译文：${rlines[0]}`});
-            if(!r) {
-                return;
-            }
+            const options = ['原文', '译文'];
+            const r = await vscode.window.showQuickPick(options, { placeHolder: `这是原文还是译文：${rlines[0]}` });
+
             if (r == '译文') {
                 const temp = rlines;
                 rlines = tlines;
                 tlines = temp;
             }
         }
-        let rRegStr = generateRegex(rlines);
-        let tRegStr = generateRegex(tlines);
-
-        rRegStr = regexSubstract(rRegStr, [{ otherReg: tRegStr, otherLines: tlines }, { otherReg: oRegStr, otherLines: otherLines }]);
-        tRegStr = regexSubstract(tRegStr, [{ otherReg: rRegStr, otherLines: rlines }, { otherReg: oRegStr, otherLines: otherLines }]);
-        if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
-            vscode.window.showInformationMessage(`识别失败`);
-            return;
-        }
-
-        let newlineToken = await vscode.window.showInputBox({
-                "placeHolder": "例：\\r\\n",
-                "prompt": `输入换行符（默认值是\\r\\n）`,
-                "ignoreFocusOut": true
-        });
-        if (!newlineToken) {
-            newlineToken = '\\r\\n';
-        }
-
-        let namePos = await vscode.window.showQuickPick(["行前","行中","行后"], {placeHolder: "相对对话行，人名在哪个位置？"});
-        if(!namePos) {
-            return;
-        }
-        let nameRegStr = '';
-        if (namePos == "行中") {
-        } else {
-            nameRegStr = `^${rRegStr}(?<name>[^<>\n\u3001\u3002\u3008-\u301B\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)$`
-        }
-
-        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}, 人名位置：${namePos}"，是否应用？`, '是', '否');
-        if (u !== '是') {
-            return;
-        }
-        const config = vscode.workspace.getConfiguration("dltxt");
-        await config.update('core.originalTextPrefixRegex', rRegStr, false);
-        await config.update('core.translatedTextPrefixRegex', tRegStr, false);
-        await config.update('core.otherPrefixRegex', oRegStr, false);
-        await config.update('nestedLine.token', newlineToken, false);
-        await config.update('core.name.position', namePos, false);
-        await config.update('core.name.regex', nameRegStr, false);
-        vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
-        vscode.window.showInformationMessage(`已应用设置`);
+        return { rlines, tlines, ok: true };
     }
 }
 
@@ -181,8 +204,8 @@ function containsJapaneseCharacters(str: string): boolean {
 
 function commonPrefix(lines: string[]): string {
     if (!lines) return '';
-    let maxLen = Math.min(...lines.map(line => line.length));
-    if (maxLen == 0) {
+    let minLen = Math.min(...lines.map(line => line.length));
+    if (minLen == 0) {
         return '';
     }
     for (let i = 0; i < lines.length - 1; i++) {
@@ -216,22 +239,16 @@ function escapeRegExp(text: string) {
 }
 
 const paraMap = new Map<string, string>([
-    ["{", "}"],
-    ["[", "]"],
-    ["(", ")"],
-    ["<", ">"],
     ["《", "》"],
     ["【", "】"],
-    ["（", "）"],
 ]);
 const paraReverseMap = new Map<string, string>();
 for (const [k, v] of paraMap) {
     paraReverseMap.set(v, k);
 }
 
-function generateRegex(lines: string[]): string {
+function generateRegex(lines: string[], matchNames: boolean): string {
     let regStr = '';
-    const openingPar = [];
     while (true) {
         const reg = new RegExp(`^(${regStr})(.*)`);
         const reminders = [];
@@ -249,27 +266,38 @@ function generateRegex(lines: string[]): string {
         }
         let candidate = commonPrefix(reminders);
         if (candidate) {
-            if (paraMap.has(candidate)) {
-                openingPar.push(candidate);
-            } else if (paraReverseMap.has(candidate)) {
-                const left = paraReverseMap.get(candidate) as string;
-                const i = openingPar.lastIndexOf(left);
-                if (i !== -1) {
-                    openingPar.splice(i, 1);
-                }
+            if (matchNames && paraMap.has(candidate)) {
+                break;
             }
             regStr += escapeRegExp(candidate);
             continue;
         }
-        if (openingPar.length) {
-            const left = openingPar.pop();
-            const right = paraMap.get(left as string) as string;
-            if (matchAllPrefix(`${regStr}.*?${right}`, lines)) {
-                regStr += '.*?' + escapeRegExp(right);
-                continue;
+        break;
+    }
+    if (matchNames) {
+        for (const [left, right] of paraMap) {
+            const candidate = `${regStr}${escapeRegExp(left)}(?<name>.*?)${escapeRegExp(right)}`;
+            if (matchAllPrefix(candidate, lines)) {
+                return candidate;
+            }
+            const optionalCandidate = `${regStr}(${escapeRegExp(left)}(?<name>.*?)${escapeRegExp(right)})?`;
+            if (matchAnyPrefix(candidate, lines) && matchAllPrefix(optionalCandidate, lines)) {
+                return optionalCandidate;
             }
         }
-        break;
+        if (regStr.length > 0) {
+            const suffix = regStr[regStr.length - 1];
+            if (suffix) {
+                const candidate = `${regStr}(?<name>.*?)${escapeRegExp(suffix)}`;
+                if (matchAllPrefix(candidate, lines)) {
+                    return candidate;
+                }
+                const optionalCandidate = `${regStr}((?<name>.*?)${escapeRegExp(suffix)})?`;
+                if (matchAnyPrefix(candidate, lines) && matchAllPrefix(optionalCandidate, lines)) {
+                    return optionalCandidate;
+                }
+            }
+        }
     }
     return regStr;
 }
@@ -328,19 +356,19 @@ export class TextBlockAutoDetector implements AutoDetector {
         const lines = text.split("\n").map((l) => `${l.trim()}`);
         const template = `请把原文替换成【#JP#】，译文替换成【#CN#】\r\n如果存在人名，请把人名替换成【#NAME#】（每个段落模板里最多出现一次）\r\n其他所有会变化的部分替换成【#ANY#】\r\n如果变化的部分只包括字母或数字也可替换成【#ALPHA#】\r\n替换结束后在右键菜单中选择“自动识别文本格式：继续”\r\n\r\n<<<<<<<<<<不要动这行<<<<<<<<<<\r\n${lines.join('\r\n')}\r\n>>>>>>>>>>也不要动这行>>>>>>>>>>`;
         const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
-		if (!filePath) return;
+        if (!filePath) return;
         const dirPath = path.dirname(filePath);
-		const fileName = path.basename(filePath);
+        const fileName = path.basename(filePath);
         const tempDirPath = dirPath + '\\.dltxt'
-		if (!fs.existsSync(tempDirPath)) {
-			fs.mkdirSync(tempDirPath);
-		}
+        if (!fs.existsSync(tempDirPath)) {
+            fs.mkdirSync(tempDirPath);
+        }
         const tempFilePath = tempDirPath + '\\' + fileName + '.format';
         fs.writeFileSync(tempFilePath, template);
         let setting: vscode.Uri = vscode.Uri.file(tempFilePath);
-		
-		const document = await vscode.workspace.openTextDocument(setting)
-		await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside, false);
+
+        const document = await vscode.workspace.openTextDocument(setting)
+        await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside, false);
     }
 }
 
@@ -360,19 +388,18 @@ async function autoDetectFormatContinue() {
     dlFilePath = path.join(m[1], m[2]);
     tempFilePath = curFilePath;
     const dlEditor = findEditorByUri(vscode.Uri.file(dlFilePath));
-    if (!dlEditor || !dlEditor?.document)
-    {
+    if (!dlEditor || !dlEditor?.document) {
         vscode.window.showErrorMessage('请先打开需要更改的双行文本');
         return;
     }
     await vscode.window.activeTextEditor.document.save();
-    
+
     const lines = fs.readFileSync(tempFilePath, 'utf8').split(/\r?\n/);
     let dlDocument = dlEditor.document;
     const templateLines: string[] = [];
     const startReg = /^<<<<<+.*<<<<<+$/, endReg = /^>>>>>+.*>>>>>+$/;
     let inTemplate = false;
-    for(let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if (!inTemplate && startReg.test(line.trim())) {
             inTemplate = true;
@@ -399,10 +426,10 @@ async function autoDetectFormatContinue() {
     let cSuffixStr = '[」]?';
 
     let jpCount = 0, cnCount = 0, nameCount = 0;
-    for(let i = 0; i < templateLines.length; i++) {
+    for (let i = 0; i < templateLines.length; i++) {
         templateLines[i] = escapeRegExp(templateLines[i]);
         nameCount += (templateLines[i].match(/【#NAME#】/g) || []).length;
-        for (const [k,v] of replaceMap) {
+        for (const [k, v] of replaceMap) {
             templateLines[i] = templateLines[i].replace(k, v);
         }
         let m = null;
@@ -418,10 +445,10 @@ async function autoDetectFormatContinue() {
             templateLines[i] = '(?<cn>.*)';
             cnCount++;
         }
-        
+
     }
     const template = templateLines.join("(\\r)?\\n") + "((\\r)?\\n)*";
-    try{
+    try {
         if (jpCount !== 1 || cnCount !== 1) {
             throw new Error("每个段落必须有且只有一行原文和一行译文");
         }
@@ -433,15 +460,15 @@ async function autoDetectFormatContinue() {
         if (!reg.test(text)) {
             throw new Error("无法匹配到文本");
         }
-    } catch(e) {
+    } catch (e) {
         vscode.window.showErrorMessage(`识别失败：${e}`);
         return;
     }
 
     let newlineToken = await vscode.window.showInputBox({
-            "placeHolder": "例：\\r\\n",
-            "prompt": `输入换行符（默认值是\\r\\n）`,
-            "ignoreFocusOut": true
+        "placeHolder": "例：\\r\\n",
+        "prompt": `输入换行符（默认值是\\r\\n）`,
+        "ignoreFocusOut": true
     });
     if (!newlineToken) {
         newlineToken = '\\r\\n';
@@ -451,7 +478,7 @@ async function autoDetectFormatContinue() {
     if (u !== '是') {
         return;
     }
-    
+
     await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     fs.unlinkSync(tempFilePath);
     const config = vscode.workspace.getConfiguration("dltxt");
