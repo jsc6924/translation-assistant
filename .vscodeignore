@@ -1,6 +1,7 @@
 .vscode/**
 .vscode-test/**
 editor/
+editor.Android/
 imgs/
 data/
 resource/dict/**
