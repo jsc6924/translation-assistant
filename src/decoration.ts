@@ -10,9 +10,6 @@ interface LineSegment {
 }
 
 const parserSyntaxDecorationTypes = {
-    baseText: vscode.window.createTextEditorDecorationType({
-        color: new vscode.ThemeColor('editor.foreground')
-    }),
     originalPrefix: vscode.window.createTextEditorDecorationType({
         light: {
             color: '#78a57e'
@@ -66,20 +63,16 @@ export function updateParserSyntaxDecorations() {
         return;
     }
 
-    const baseRanges: vscode.Range[] = [];
+    // const config = vscode.workspace.getConfiguration("dltxt");
+    // const displayNewline = config.get<boolean>('nestedLine.displayTokenAsSymbol');
+    // const nestedLineToken = config.get("nestedLine.token") as string;
+
     const originalPrefixRanges: vscode.Range[] = [];
     const originalTextRanges: vscode.Range[] = [];
     const translatedPrefixRanges: vscode.Range[] = [];
     const translatedTextRanges: vscode.Range[] = [];
     const nameRanges = DocumentParser.collectNameRanges(activeEditor.document);
     const nameLineSegments = buildLineSegmentsByLine(activeEditor.document, nameRanges);
-
-    for (let line = 0; line < activeEditor.document.lineCount; line++) {
-        const textLine = activeEditor.document.lineAt(line);
-        if (textLine.text.length > 0) {
-            baseRanges.push(new vscode.Range(line, 0, line, textLine.text.length));
-        }
-    }
 
     try {
         DocumentParser.processPairedLines(activeEditor.document, (jgrps, cgrps, j_index, c_index) => {
@@ -90,7 +83,6 @@ export function updateParserSyntaxDecorations() {
         // pass
     }
 
-    activeEditor.setDecorations(parserSyntaxDecorationTypes.baseText, baseRanges);
     activeEditor.setDecorations(parserSyntaxDecorationTypes.originalPrefix, originalPrefixRanges);
     activeEditor.setDecorations(parserSyntaxDecorationTypes.originalText, originalTextRanges);
     activeEditor.setDecorations(parserSyntaxDecorationTypes.translatedPrefix, translatedPrefixRanges);
@@ -103,7 +95,6 @@ export function clearParserSyntaxDecorations(editor?: vscode.TextEditor) {
         return;
     }
 
-    editor.setDecorations(parserSyntaxDecorationTypes.baseText, []);
     editor.setDecorations(parserSyntaxDecorationTypes.originalPrefix, []);
     editor.setDecorations(parserSyntaxDecorationTypes.originalText, []);
     editor.setDecorations(parserSyntaxDecorationTypes.translatedPrefix, []);

@@ -71,7 +71,7 @@ export function findLastMatchIndex(pattern: RegExp, text: string): number {
   }
 }
 
-export function findAllAndProcess(pattern: RegExp, text: string, 
+export function findAllAndProcess(pattern: RegExp, text: string,
   cb: (match: RegExpExecArray) => boolean) {
   if (pattern.flags.indexOf('g') == -1) {
     vscode.window.showErrorMessage('pattern must have a "g" flag');
@@ -102,7 +102,7 @@ export function setCursorAndScroll(editor: vscode.TextEditor, dn: number, m: num
 
 export function repeatN(s: string, k: number): string {
   let res = '';
-  while(k > 0) {
+  while (k > 0) {
     res += s;
     k--;
   }
@@ -112,8 +112,8 @@ export function repeatN(s: string, k: number): string {
 export function repeatStr(s: string, k: number, addSuffix: boolean): string {
   if (addSuffix && k >= 3) {
     let res = '';
-    res = repeatN(s, k*2/3);
-    res += repeatN('～', k/3);
+    res = repeatN(s, k * 2 / 3);
+    res += repeatN('～', k / 3);
     return res;
   } else {
     return repeatN(s, k);
@@ -147,8 +147,8 @@ export function toAscii(txtstring: string) {
 }
 
 export function katakanaToHiragana(input: string): string {
-  return input.replace(/[\u30a1-\u30f6]/g, function(match) {
-      return String.fromCharCode(match.charCodeAt(0) - 0x60);
+  return input.replace(/[\u30a1-\u30f6]/g, function (match) {
+    return String.fromCharCode(match.charCodeAt(0) - 0x60);
   });
 }
 
@@ -211,7 +211,7 @@ export function getCurrentWorkspaceFolder(): string | undefined {
     // Assuming you want to get the first workspace folder
     return workspaceFolders[0].uri.fsPath;
   }
-  
+
   return undefined;
 }
 
@@ -227,26 +227,26 @@ export function findEditorByUri(uri: vscode.Uri): vscode.TextEditor | undefined 
 
 
 export function registerCommand(
-	context: vscode.ExtensionContext,
-	command: string,
-	callback: (...args: any[]) => any,
-	requiresActiveEditor: boolean = false
+  context: vscode.ExtensionContext,
+  command: string,
+  callback: (...args: any[]) => any,
+  requiresActiveEditor: boolean = false
 ) {
-	const disposable = vscode.commands.registerCommand(command, async (...args: any[]) => {
-		if (requiresActiveEditor && !vscode.window.activeTextEditor) {
-			return;
-		}
+  const disposable = vscode.commands.registerCommand(command, async (...args: any[]) => {
+    if (requiresActiveEditor && !vscode.window.activeTextEditor) {
+      return;
+    }
     try {
       await callback(...args);
-    } catch(e) {
+    } catch (e) {
       vscode.window.showErrorMessage(`${e}`);
     }
-	});
-	context.subscriptions.push(disposable);
+  });
+  context.subscriptions.push(disposable);
 }
 
 
-export function mapToObject<K, V>(map: Map<K, V>) : any {
+export function mapToObject<K, V>(map: Map<K, V>): any {
   const plainObject: any = {};
   map.forEach((value, key) => {
     plainObject[key] = value;
@@ -271,8 +271,8 @@ export function escapeHtml(text: string): string {
     ['>', '&gt;'],
     ['"', '&quot;'],
     ["'", '&#039;']
-]);
-  return text.replace(/[&<>"']/g, function(m: string) { return map.get(m) as string; });
+  ]);
+  return text.replace(/[&<>"']/g, function (m: string) { return map.get(m) as string; });
 }
 
 export function isFunctionalCharsOnly(text: string): boolean {
@@ -281,12 +281,12 @@ export function isFunctionalCharsOnly(text: string): boolean {
 
 export function shouldSkipChecking(text: string, delims: RegExp) {
   if (isAsciiOnly(text) || isFunctionalCharsOnly(text)) {
-      return true;
+    return true;
   }
 
   const hasQuestionMark = /？？？/.test(text);
   if (hasQuestionMark) { // is name
-      return true;
+    return true;
   }
   delims.lastIndex = 0;
   const hasDelims = delims.test(text);
@@ -294,7 +294,7 @@ export function shouldSkipChecking(text: string, delims: RegExp) {
 }
 
 
-export function showOutputText(title:string, output: string) {
+export function showOutputText(title: string, output: string) {
   // Create a new webview panel
   const panel = vscode.window.createWebviewPanel(
     'outputPanel',
@@ -356,19 +356,19 @@ export async function downloadFile(url: string, filePath: string): Promise<strin
   const client = new HttpClient("clientTest");
   const response = await client.get(url);
   const file: NodeJS.WritableStream = fs.createWriteStream(filePath);
-  
+
   if (response.message.statusCode !== 200) {
-      const err: Error = new Error(`Unexpected HTTP response: ${response.message.statusCode}`);
-      throw err;
+    const err: Error = new Error(`Unexpected HTTP response: ${response.message.statusCode}`);
+    throw err;
   }
   return new Promise((resolve, reject) => {
-      file.on("error", (err) => reject(err));
-      const stream = response.message.pipe(file);
-      stream.on("close", () => {
-          try { resolve(filePath); } catch (err) {
-              reject(err);
-          }
-      });
+    file.on("error", (err) => reject(err));
+    const stream = response.message.pipe(file);
+    stream.on("close", () => {
+      try { resolve(filePath); } catch (err) {
+        reject(err);
+      }
+    });
   });
 }
 export function unzipFile(zipFilePath: string, destinationPath: string) {
@@ -405,7 +405,7 @@ export function regEscape(s: string) {
 
 export function writeAtomic(filePath: string, data: string): void {
   const tempFilePath = `${filePath}.tmp`;
-  
+
   try {
     fs.writeFileSync(tempFilePath, data);
     // Replace existing file with the temporary file
@@ -426,10 +426,10 @@ export function compareVersions(version1: string, version2: string) {
   const [major2, minor2, patch2] = version2.split('.').map(Number);
 
   if (major1 !== major2) {
-      return major1 - major2;
+    return major1 - major2;
   }
   if (minor1 !== minor2) {
-      return minor1 - minor2;
+    return minor1 - minor2;
   }
   return patch1 - patch2;
 }
@@ -448,20 +448,20 @@ export class ContextHolder {
   }
   static set(context: vscode.ExtensionContext) {
     ContextHolder.context = context;
-    for(const k of context.workspaceState.keys()) {
+    for (const k of context.workspaceState.keys()) {
       ContextHolder.workspaceCache.set(k, context.workspaceState.get(k));
     }
   }
   static getGlobalState(key: string, defaultValue?: any): any {
     const v = ContextHolder.context?.globalState.get(key);
-    if(defaultValue !== undefined && v === undefined) {
+    if (defaultValue !== undefined && v === undefined) {
       return defaultValue;
     }
     return v;
   }
   static getWorkspaceState(key: string, defaultValue?: any): any {
     const v = ContextHolder.workspaceCache.get(key);
-    if(defaultValue !== undefined && v === undefined) {
+    if (defaultValue !== undefined && v === undefined) {
       return defaultValue;
     }
     return v;
@@ -479,7 +479,7 @@ export class ContextHolder {
   }
   static setGlobalTempState(key: string, value: any, durationSecond: number) {
     const currentTimestampInSeconds = Math.floor(Date.now() / 1000);
-    const obj = {expire: currentTimestampInSeconds + durationSecond, value};
+    const obj = { expire: currentTimestampInSeconds + durationSecond, value };
     console.log("now = ", currentTimestampInSeconds);
     console.log("set", obj);
     ContextHolder.setGlobalState(`_tmp.${key}`, obj);
@@ -524,7 +524,7 @@ export class DictSettings {
   static setAllDictNames(names: string[]) {
     return ContextHolder.setGlobalState(`dltxt.dict.list`, names);
   }
-  static getDictType(name: string) : string | undefined {
+  static getDictType(name: string): string | undefined {
     return ContextHolder.getGlobalState(`dltxt.dict.${name}.type`) as string;
   }
   static setDictType(name: string, value: string | undefined) {
@@ -536,7 +536,7 @@ export class DictSettings {
     return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.show`) as string === 'true';
   }
   static setStyleShow(name: string, value: 'true' | 'false') {
-    return  ContextHolder.setGlobalState(`dltxt.dict.${name}.style.show`, value);
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.show`, value);
   }
 
   static getStyleOverviewColor(name: string) {
@@ -589,38 +589,38 @@ export class DictSettings {
 
   static getStyleLightBorderColor(name: string) {
     return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.light.borderColor`);
-  }  
+  }
   static setStyleLightBorderColor(name: string, value: string) {
     return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.light.borderColor`, value);
   }
   static getStyleDarkBorderColor(name: string) {
     return ContextHolder.getGlobalState(`dltxt.dict.${name}.style.dark.borderColor`);
-  }  
+  }
   static setStyleDarkBorderColor(name: string, value: string) {
     return ContextHolder.setGlobalState(`dltxt.dict.${name}.style.dark.borderColor`, value);
   }
 
-  static decoRepo = new Map<string, {version: string, deco: vscode.TextEditorDecorationType}>();
-  static namingDecoRepo = new Map<string,  vscode.TextEditorDecorationType>();
+  static decoRepo = new Map<string, { version: string, deco: vscode.TextEditorDecorationType }>();
+  static namingDecoRepo = new Map<string, vscode.TextEditorDecorationType>();
 
-  
+
   static makeNamingDecoration(): vscode.TextEditorDecorationType {
     let obj = {
       borderWidth: '0 0 1px 0',
       borderStyle: 'dashed',
       borderRadius: '0',
       light: {
-          // this color will be used in light color themes
-          borderColor: "#222",
-          //backgroundColor: "#222"
+        // this color will be used in light color themes
+        borderColor: "#222",
+        //backgroundColor: "#222"
       },
       dark: {
-          // this color will be used in dark color themes
-          borderColor: '#eee',
-          //backgroundColor: '#eee'
+        // this color will be used in dark color themes
+        borderColor: '#eee',
+        //backgroundColor: '#eee'
       }
     };
-    
+
     return vscode.window.createTextEditorDecorationType(obj);
   }
   static getNamingDecoration(dictName: string): vscode.TextEditorDecorationType | undefined {
@@ -632,7 +632,7 @@ export class DictSettings {
     return deco;
   }
 
-  static getDictDecoration(dictName: string): {deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined, changed: boolean} {
+  static getDictDecoration(dictName: string): { deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined, changed: boolean } {
     const overviewPosition = DictSettings.getStyleOverviewPosition(dictName);
     const overviewColor = DictSettings.getStyleOverviewColor(dictName);
     const borderWidth = DictSettings.getStyleBorderWidth(dictName);
@@ -647,14 +647,14 @@ export class DictSettings {
 
     let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
     if (DictSettings.decoRepo.has(dictName)) {
-      const {version, deco} = DictSettings.decoRepo.get(dictName) as any;
+      const { version, deco } = DictSettings.decoRepo.get(dictName) as any;
       if (decoVersion === version) {
-        return {deco, oldDeco, changed: false};
+        return { deco, oldDeco, changed: false };
       }
       oldDeco = deco;
     }
-  
-    const overviewPositionMapping : any = {
+
+    const overviewPositionMapping: any = {
       'none': 0,
       'left': vscode.OverviewRulerLane.Left,
       'center': vscode.OverviewRulerLane.Center,
@@ -665,7 +665,7 @@ export class DictSettings {
     if (overviewPositionEnum === undefined) {
       overviewPositionEnum = 0;
     }
-  
+
     let obj = {
       borderWidth: borderWidth,
       borderStyle: borderStyle,
@@ -673,81 +673,97 @@ export class DictSettings {
       overviewRulerColor: overviewColor,
       overviewRulerLane: overviewPositionEnum,
       light: {
-          // this color will be used in light color themes
-          borderColor: lightBorderColor,
-          backgroundColor: lightBackgroundColor
+        // this color will be used in light color themes
+        borderColor: lightBorderColor,
+        backgroundColor: lightBackgroundColor
       },
       dark: {
-          // this color will be used in dark color themes
-          borderColor: darkBorderColor,
-          backgroundColor: darkBackgroundColor
+        // this color will be used in dark color themes
+        borderColor: darkBorderColor,
+        backgroundColor: darkBackgroundColor
       }
     };
-    
+
     const newDeco = vscode.window.createTextEditorDecorationType(obj);
-    DictSettings.decoRepo.set(dictName, {version: decoVersion, deco: newDeco});
-    return {deco: newDeco, oldDeco, changed: true}
+    DictSettings.decoRepo.set(dictName, { version: decoVersion, deco: newDeco });
+    return { deco: newDeco, oldDeco, changed: true }
   }
 
-  static getNewlineDecorationType(token: string): {deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined} {
+  static getNewlineDecorationType(token: string): { deco: vscode.TextEditorDecorationType, oldDeco: vscode.TextEditorDecorationType | undefined } {
     const key = `__dltxt_newline_decoration_${token}`;
     let oldDeco: vscode.TextEditorDecorationType | undefined = undefined;
     if (DictSettings.decoRepo.has(key)) {
-      const {_, deco} = DictSettings.decoRepo.get(key) as any;
+      const { _, deco } = DictSettings.decoRepo.get(key) as any;
       oldDeco = deco;
-      return {deco, oldDeco};
+      return { deco, oldDeco };
     }
     const x = token.length;
     const spacing = x <= 3 ? 0 : -Math.fround(1.0 - 3 / x);
     const deco = vscode.window.createTextEditorDecorationType({
-      letterSpacing: `${spacing}ch`,
-      borderWidth: "1px",
-      borderStyle: "solid",
-      borderRadius: "5px",
-      color: 'transparent',
+      // Hide underlying document text characters entirely
+      color: "transparent",
+
+      rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+
       after: {
-        contentText: "⏎", 
-        color: "gray", 
+        contentText: "⏎",
+        color: "gray",
         fontWeight: "bold",
-        margin: "0 1.5ch 0 -2.3ch"
+
+        // 1. Move desired background color directly onto the 'after' block
+        backgroundColor: new vscode.ThemeColor('editor.background'),
+
+        // 2. Add border directly to 'after' so it sits above everything
+        textDecoration: [
+          "none",
+          "position: relative",
+          "z-index: 0",
+          "display: inline-block",
+          "text-align: center",
+          "border: 1px solid gray",    // Adjust border color/style here
+          "border-radius: 5px",
+          "box-sizing: border-box",     // Keeps border inside the target width
+          `margin-left: -${token.length}ch`,
+          `width: ${token.length}ch`
+        ].join("; ")
       }
     });
-    DictSettings.decoRepo.set(key, {version: '', deco: deco});
-    return {deco, oldDeco};
+    DictSettings.decoRepo.set(key, { version: '', deco: deco });
+    return { deco, oldDeco };
   }
 
 
 
   //--------------connection settings------------------//
-  static getGameTitle(name: string)  : string | undefined {
-      return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.gameTitle`) as string;
+  static getGameTitle(name: string): string | undefined {
+    return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.gameTitle`) as string;
   }
   static setGameTitle(name: string, value: string | undefined) {
-      return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.gameTitle`, value);
+    return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.gameTitle`, value);
   }
-  static getSimpleTMApiToken(name: string) : string | undefined {
-      return ContextHolder.getGlobalState(`dltxt.dict.${name}.api`) as string;
+  static getSimpleTMApiToken(name: string): string | undefined {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.api`) as string;
   }
   static setSimpleTMApiToken(name: string, value: string | undefined) {
-      return ContextHolder.setGlobalState(`dltxt.dict.${name}.api`, value);
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.api`, value);
   }
-  static getSimpleTMUrl(name: string) : string | undefined{
-      return ContextHolder.getGlobalState(`dltxt.dict.${name}.url`) as string;
+  static getSimpleTMUrl(name: string): string | undefined {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.url`) as string;
   }
   static setSimpleTMUrl(name: string, value: string | undefined) {
-      return ContextHolder.setGlobalState(`dltxt.dict.${name}.url`, value);
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.url`, value);
   }
-  static getSimpleTMUsername(name: string)  : string | undefined {
-      return ContextHolder.getGlobalState(`dltxt.dict.${name}.username`) as string;
+  static getSimpleTMUsername(name: string): string | undefined {
+    return ContextHolder.getGlobalState(`dltxt.dict.${name}.username`) as string;
   }
   static setSimpleTMUsername(name: string, value: string | undefined) {
-      return ContextHolder.setGlobalState(`dltxt.dict.${name}.username`, value);
+    return ContextHolder.setGlobalState(`dltxt.dict.${name}.username`, value);
   }
-  static getSimpleTMSharedURL(name: string) : string | undefined {
-      return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.shared_url`) as string;
+  static getSimpleTMSharedURL(name: string): string | undefined {
+    return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.shared_url`) as string;
   }
   static setSimpleTMSharedURL(name: string, value: string | undefined) {
-      ContextHolder.setWorkspaceState(`dltxt.dict.${name}.shared_url`, value);
+    ContextHolder.setWorkspaceState(`dltxt.dict.${name}.shared_url`, value);
   }
   static getSimpleTMDictKeys(name: string, game: string): DictKeyInfo[] {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`) as Array<any>;
@@ -756,9 +772,9 @@ export class DictSettings {
     }
     return v;
   }
-  
+
   static setSimpleTMDictKeys(name: string, game: string, value: DictKeyInfo[] | undefined) {
-      return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`, value);
+    return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey.${game}`, value);
   }
   static getSimpleTMNamingRules(name: string, game: string): DictNamingRule {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`) as DictNamingRule;
@@ -768,7 +784,7 @@ export class DictSettings {
     return v;
   }
   static setSimpleTMNamingRules(name: string, game: string, value: DictNamingRule | undefined) {
-      return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`, value);
+    return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.namingrules.${game}`, value);
   }
   static getLocalDictKeys(name: string) {
     const v = ContextHolder.getWorkspaceState(`dltxt.dict.${name}.dictkey`) as Array<any>;
@@ -778,7 +794,7 @@ export class DictSettings {
     return v;
   }
   static setLocalDictKeys(name: string, value: any) {
-      return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey`, value);
+    return ContextHolder.setWorkspaceState(`dltxt.dict.${name}.dictkey`, value);
   }
   static getLocalDictPath(name: string) {
     return ContextHolder.getWorkspaceState(`dltxt.dict.${name}.localPath`) as string;
@@ -808,7 +824,7 @@ export class DictSettings {
       .filter(k => k.startsWith(`dltxt.dict.${name}`))
       .map(k => ContextHolder.setWorkspaceState(k, undefined));
   }
-  
+
 }
 
 export class SizedCache<K, V> {
