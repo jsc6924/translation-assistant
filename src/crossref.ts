@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { DocumentParser, MatchedGroups } from './parser';
-import { Pair, Tuple3, removeSpace } from './utils';
+import { Pair, Tuple3, escapeBackSlash, removeSpace } from './utils';
 import { batchProcess } from './batch';
 import { LineInfo, LineSearchResult, MemoryCrossrefIndex, SearchIndex, Tokenizer } from './translation-db';
 import { path } from './user-script-api';
@@ -36,21 +36,21 @@ class ProjectIdx {
         }
         const tokenizer = await Tokenizer.getAsync(context);
         await batchProcess(uris, async (doc, i) => {
-            await this.searchIndex.update(doc.uri.fsPath,() => {
+            await this.searchIndex.update(doc.uri.fsPath, () => {
                 const jlines: string[] = [];
                 const jLineNumbers: number[] = [];
                 const clines: string[] = [];
                 DocumentParser.processPairedLines(doc, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
                     jlines.push(tokenizer.tokenize(jgrps.text));
                     jLineNumbers.push(j_index);
-                    clines.push(cgrps.text);      
+                    clines.push(cgrps.text);
                 });
                 return [jlines, jLineNumbers, clines];
             })
         }, false, 16);
     }
 
-    public async search(context: vscode.ExtensionContext, query: string, threshold: number, limit: number, curFilePath: string, curLineNumber  : number): Promise<[LineSearchResult[], number]> {
+    public async search(context: vscode.ExtensionContext, query: string, threshold: number, limit: number, curFilePath: string, curLineNumber: number): Promise<[LineSearchResult[], number]> {
         const tokenizer = await Tokenizer.getAsync(context);
         const queryTokens = tokenizer.tokenize(query);
         return this.searchIndex.search(queryTokens, threshold, limit, curFilePath, curLineNumber);
@@ -81,9 +81,9 @@ type SimilarTextMatchLike = {
 };
 
 function getSimilarTextBackend(): SimilarTextBackend {
-	if (!isBridgeSupportedPlatform()) {
-		return 'legacy';
-	}
+    if (!isBridgeSupportedPlatform()) {
+        return 'legacy';
+    }
 
     const config = vscode.workspace.getConfiguration("dltxt");
     const backend = config.get<string>('appearance.z.similarTextImplementation', 'legacy');
@@ -114,14 +114,14 @@ function renderAndCacheDecorations(
     for (const { lineNumber: line, refs, exactCount } of matches) {
         const lineRange = new vscode.Range(line, 0, line, 1000);
         const tableRows = refs.map(r => {
-            const shortFileName = `${path.basename(r.lineInfo.fileName)}:${r.lineInfo.lineNumber+1}`;
+            const shortFileName = `${path.basename(r.lineInfo.fileName)}:${r.lineInfo.lineNumber + 1}`;
             const escapedFullPathForTooltip = r.lineInfo.fileName.replace(/"/g, '&quot;');
             const fileUriWithLine = vscode.Uri.file(r.lineInfo.fileName).with({
                 fragment: `L${r.lineInfo.lineNumber + 1}`
             });
 
             const fileNameCellContent = `[${shortFileName}](${fileUriWithLine.toString()} "${escapedFullPathForTooltip}")`;
-            const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(r.lineInfo.trLine)}"})`;
+            const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(escapeBackSlash(r.lineInfo.trLine))}"})`;
             return `| ${fileNameCellContent} | ${r.score.toFixed(3)} | ${removeSpace(r.lineInfo.jpLine)} | ${r.lineInfo.trLine} ${copyCommand} |`;
         }).join('\n');
         const fullMarkdown = `${tableHeaders}\n${tableSeparator}\n${tableRows}`;
@@ -280,7 +280,7 @@ async function runSimilarTextCheck(context: vscode.ExtensionContext) {
         lastCheckTime = Date.now();
         renderAndCacheDecorations(stillActiveEditor, currentDoc, backendUsed, matches);
     };
-    
+
     if (configuredBackend === 'bridge') {
         await executeCheck();
         return;
@@ -342,8 +342,8 @@ function createExactMatchTextDecorationType() {
             backgroundColor: 'rgb(72, 71, 104)'
         }
     };
-      
-  return vscode.window.createTextEditorDecorationType(obj);
+
+    return vscode.window.createTextEditorDecorationType(obj);
 }
 
 function createSimilarTextDecorationType() {
@@ -359,10 +359,10 @@ function createSimilarTextDecorationType() {
             // this color will be used in dark color themes
             overviewRulerColor: 'rgba(72, 71, 104, 0.3)',
             backgroundColor: 'rgba(72, 71, 104, 0.3)'
-      }
-  };
-      
-  return vscode.window.createTextEditorDecorationType(obj);
+        }
+    };
+
+    return vscode.window.createTextEditorDecorationType(obj);
 }
 
 
@@ -393,13 +393,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        if (!isSupportedSimilarTextDocument(activeEditor.document)) {
-            activeEditor.setDecorations(DecoManager.getExactMatchDecorationType(), []);
-            activeEditor.setDecorations(DecoManager.getSimilarTextDecorationType(), []);
-            return;
-        }
-
-        if (!enable) {
+        if (!isSupportedSimilarTextDocument(activeEditor.document) || !enable) {
             activeEditor.setDecorations(DecoManager.getExactMatchDecorationType(), []);
             activeEditor.setDecorations(DecoManager.getSimilarTextDecorationType(), []);
             return;

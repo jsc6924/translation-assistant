@@ -18,6 +18,10 @@ export function pathConcat(base: string, pathpart: string) {
   return base + pathpart;
 }
 
+export function escapeBackSlash(text: string): string {
+  return text.replace(/\\/g, '\\\\');
+}
+
 export interface DictKeyInfo {
   raw: string;
   translate: string;

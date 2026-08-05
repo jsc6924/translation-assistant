@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DictSettings, DictKeyInfo, DictType, DictNamingRule, DictNamingValue, getDictNamingComment, getDictNamingTranslation } from './utils';
+import { DictSettings, DictKeyInfo, DictType, DictNamingRule, DictNamingValue, getDictNamingComment, getDictNamingTranslation, escapeBackSlash } from './utils';
 const AhoCorasick = require('ahocorasick');
 import { DecorationMemoryStorage } from './simpletm';
 import { DocumentParser, MatchedGroups } from './parser';
@@ -261,7 +261,7 @@ export function updateKeywordDecorations() {
                     const endPos = activeEditor.document.positionAt(index + keyword.length);
                     const word = dict.get(keyword)?.replace(/"/g, '') as string;
                     const originalWord = keyword.replace(/"/g, '') as string;
-                    const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(word)}"})`;
+                    const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${escapeBackSlash(encodeURIComponent(word))}"})`;
                     const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(originalWord)}","new_text":"${encodeURIComponent(word)}","line":${startPos.line}})`;
                     const comment = comments.has(originalWord) ? ` 备注：${comments.get(originalWord)}` : '';
                     const hoverMarkdown = new vscode.MarkdownString(`${word} ${copyCommand} ${replaceCommand}${comment}`);
@@ -321,7 +321,7 @@ export function updateKeywordDecorations() {
                         continue;
                     }
                     const called = keyword.replace(/"/g, '') as string;
-                    const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${encodeURIComponent(resolution.trans)}"})`;
+                    const copyCommand = `[copy](command:Extension.dltxt.copyToClipboard?{"text":"${escapeBackSlash(encodeURIComponent(resolution.trans))}"})`;
                     const replaceCommand = `[replace](command:Extension.dltxt.replaceAllInLine?{"old_text":"${encodeURIComponent(called)}","new_text":"${encodeURIComponent(resolution.trans)}","line":${startPos.line}})`;
                     const fallbackComment = resolution.fallbackComment ? ` (${resolution.fallbackComment})` : '';
                     const ruleComment = resolution.ruleComment ? ` 备注：${resolution.ruleComment}` : '';

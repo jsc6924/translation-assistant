@@ -11,7 +11,7 @@ const AhoCorasick = require('ahocorasick');
 
 // not used yet, can be used to diagnostic 
 export enum ErrorCode {
-    Untranslated =  1,
+    Untranslated = 1,
     UnusualCharacter = 2,
     EndWithPeriod = 3,
     WrongEcllipsis = 4,
@@ -81,7 +81,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.EndWithPeriod: {
                     const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
@@ -94,7 +94,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.WrongEcllipsis: {
                     const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
@@ -107,7 +107,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.WrongWave: {
                     const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
@@ -120,7 +120,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.WrongHorizontalLine: {
                     const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
@@ -133,7 +133,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.FoundH2fPunc: {
                     const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
@@ -146,7 +146,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.WrongPuncComb: {
                     const fix = new vscode.CodeAction('不再显示这个警告', vscode.CodeActionKind.QuickFix);
@@ -171,7 +171,7 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
                     fix.isPreferred = true;
                     codeActions.push(fix);
                 }
-                break;
+                    break;
 
                 case ErrorCode.LineTooLong: {
                     const fix = new vscode.CodeAction('更改最大长度', vscode.CodeActionKind.QuickFix);
@@ -194,15 +194,15 @@ export class MyCodeActionProvider implements vscode.CodeActionProvider {
 var remindAutoDetectFormat = true;
 
 export function updateErrorDecorations() {
-    
+
     const config = vscode.workspace.getConfiguration("dltxt");
     let activeEditor = vscode.window.activeTextEditor;
-    
+
     if (!activeEditor) {
         return;
     }
     const fileName = activeEditor.document.fileName;
-    if(!fileName.toLocaleLowerCase().endsWith('.txt')) {
+    if (!fileName.toLocaleLowerCase().endsWith('.txt')) {
         return;
     }
     DltxtDiagCollection.set(activeEditor.document.uri, undefined);
@@ -227,7 +227,7 @@ export function updateErrorDecorations() {
             createDiagnostic(vscode.DiagnosticSeverity.Information, `发现太多错误，没有全部显示。可能没有配置正确，或者这个文本不是双行文本。第一个错误：${diagnostics[0]?.message} Line: ${diagnostics[0]?.range?.start?.line}`, 0, 0, 1)
         ]);
         if (remindAutoDetectFormat && likelyDltxt(activeEditor.document)) {
-            
+
             vscode.window.showInformationMessage('您似乎打开了一个双行文本文件，但没有正确识别格式。是否启动自动格式识别向导？', '是', '否', '本次不再提示').then(answer => {
                 if (answer === '是') {
                     vscode.commands.executeCommand('Extension.dltxt.core.context.autoDetectFormat');
@@ -323,8 +323,8 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
     const curLine = vscode.window.activeTextEditor?.selection.active.line ?? -1;
 
     const escapedList = (ContextHolder.getWorkspaceState("escapedCharacters", []) as string[]).concat([
-        '啰', 
-    ]) ;
+        '啰',
+    ]);
     const escapedSet = new Set(escapedList);
 
     const checkUnusualCharacter = config.get<boolean>('appearance.warning.checkUnusualCharacters') as boolean;
@@ -363,7 +363,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         const pre = cgrps.prefix.length + cgrps.white.length;
         const j_pre = jgrps.prefix.length + jgrps.white.length;
 
-        checkEllipsis && findAllAndProcess( /(\.{2,})|(。{2,})/g, cgrps.text, (m) => {
+        checkEllipsis && findAllAndProcess(/(\.{2,})|(。{2,})/g, cgrps.text, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的省略号', c_index, pre + m.index, m[0].length, ErrorCode.WrongEcllipsis));
             return false;
         });
@@ -374,7 +374,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                 return false;
             });
         }
-        
+
         checkHorizontalLine && findAllAndProcess(/[―ー－]+/g, cgrps.text, (m) => {
             res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '不规范的破折号', c_index, pre + m.index, m[0].length, ErrorCode.WrongHorizontalLine));
             return false;
@@ -424,7 +424,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         }
 
         if (spaceAfterNewline === "添加空格" || spaceAfterNewline === "删除空格") {
-            const shouldRemoveSpaces = spaceAfterNewline === "删除空格" || !/([「『])/.test(jgrps.white);
+            const shouldRemoveSpaces = spaceAfterNewline === "删除空格" || !/([「『（])/.test(jgrps.white);
             if (shouldRemoveSpaces) {
                 const regStr = `(?<=${escapedLineSplitter})([　 ]+)`;
                 findAllAndProcess(new RegExp(regStr, 'g'), cgrps.text, (m) => {
@@ -443,7 +443,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
         if (checkUnusualCharacter) {
             try {
                 const content = cgrps.text;
-                
+
                 for (let i = 0; i < content.length; i++) {
                     const buf = iconv.encode(content[i], 'gb2312');
                     if (buf.length < 2) {
@@ -458,7 +458,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                         res.push(d);
                     }
                 }
-                
+
 
             } catch (e) {
                 res.push(createDiagnostic(vscode.DiagnosticSeverity.Warning, '可能包含不常用的汉字', c_index, pre, cgrps.text.length));
@@ -482,7 +482,7 @@ export function warningCheck(document: vscode.TextDocument): [vscode.Diagnostic[
                         }
                         if (!found) {
                             const d = createDiagnostic(vscode.DiagnosticSeverity.Warning, `术语可能没有按照规范翻译：${original} => ${expected}`, j_index, deco.range.start.character, deco.range.end.character - deco.range.start.character, ErrorCode.UntranslatedKeyword);
-                                res.push(d);
+                            res.push(d);
                         }
                     }
                 }
