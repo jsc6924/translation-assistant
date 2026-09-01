@@ -5,7 +5,7 @@
 	"icon": "assets/logo.png",
 	"description": "",
 	"license": "Custom-NonCommercial-Software",
-	"version": "4.9.1",
+	"version": "4.10.0",
 	"engines": {
 		"vscode": "^1.90.0"
 	},
@@ -273,6 +273,11 @@
 			{
 				"command": "Extension.dltxt.spellCheckClear",
 				"title": "清除错别字检查结果",
+				"category": "DLTXT"
+			},
+			{
+				"command": "Extension.dltxt.clearTranslation",
+				"title": "清除光标之后的译文行",
 				"category": "DLTXT"
 			},
 			{
@@ -1180,6 +1185,11 @@
 				{
 					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.spellCheckClear",
+					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.clearTranslation",
 					"group": "dltxt.edit"
 				},
 				{

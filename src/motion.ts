@@ -714,3 +714,21 @@ export function editorWriteString(s: string) {
     }
   });
 }
+
+// clear translation lines after cursor
+export function clearTranslation() {
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    return;
+  }
+  const position = activeEditor.selection.active;
+  activeEditor.edit(builder => {
+    DocumentParser.processTranslatedLines(activeEditor.document, (cgrps, c_index) => {
+      if (c_index >= position.line) {
+        const lineRange = activeEditor.document.lineAt(c_index).range;
+        console.log(`Clearing translation line at ${c_index}: ${cgrps.prefix + cgrps.white + cgrps.suffix}`);
+        builder.replace(lineRange, cgrps.prefix + cgrps.white + cgrps.suffix)
+      }
+    });
+  });
+}

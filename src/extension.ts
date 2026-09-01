@@ -231,6 +231,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			clearSpellCheck();
 		});
 
+		registerCommand(context, 'Extension.dltxt.clearTranslation', () => {
+			motion.clearTranslation();
+		});
+
 		registerCommand(context, 'Extension.dltxt.customWriteKey', (args) => {
 			const k = args.arg1;
 			const s = clipboard.ClipBoardManager.get(context, k);

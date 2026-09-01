@@ -7,26 +7,26 @@ import { integer } from 'vscode-languageclient';
 import { WordCountListener } from './word-count';
 
 export function getRegex() {
-    const config = vscode.workspace.getConfiguration("dltxt.core");
-    const jPreStr = config.get('originalTextPrefixRegex') as string;
-    const cPreStr = config.get('translatedTextPrefixRegex') as string;
-    const oPreStr = config.get('otherPrefixRegex') as string;
-    const jWhiteStr = config.get('x.originalTextWhite') as string;
-    const cWhiteStr = config.get('x.translatedTextWhite') as string;
-    const jSuffixStr = config.get('y.originalTextSuffix') as string;
-    const cSuffixStr = config.get('y.translatedTextSuffix') as string;
-    if (!jPreStr || !cPreStr) {
-      return [undefined, undefined, undefined];
-    }
-    try {
-      const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
-      const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
-      const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<text>.*?)$`) : undefined;
-      return [jreg, creg, oreg];
-    } catch (e) {
-      vscode.window.showErrorMessage(`${e}`);
-      return [undefined, undefined, undefined];
-    }
+  const config = vscode.workspace.getConfiguration("dltxt.core");
+  const jPreStr = config.get('originalTextPrefixRegex') as string;
+  const cPreStr = config.get('translatedTextPrefixRegex') as string;
+  const oPreStr = config.get('otherPrefixRegex') as string;
+  const jWhiteStr = config.get('x.originalTextWhite') as string;
+  const cWhiteStr = config.get('x.translatedTextWhite') as string;
+  const jSuffixStr = config.get('y.originalTextSuffix') as string;
+  const cSuffixStr = config.get('y.translatedTextSuffix') as string;
+  if (!jPreStr || !cPreStr) {
+    return [undefined, undefined, undefined];
+  }
+  try {
+    const jreg = new RegExp(`^(?<prefix>${jPreStr})(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
+    const creg = new RegExp(`^(?<prefix>${cPreStr})(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
+    const oreg = oPreStr ? new RegExp(`^(?<prefix>${oPreStr})(?<text>.*?)$`) : undefined;
+    return [jreg, creg, oreg];
+  } catch (e) {
+    vscode.window.showErrorMessage(`${e}`);
+    return [undefined, undefined, undefined];
+  }
 }
 
 
@@ -132,7 +132,7 @@ function getTextBlockRegex() {
   const cWhiteStr = config.get('x.translatedTextWhite') as string;
   const jSuffixStr = config.get('y.originalTextSuffix') as string;
   const cSuffixStr = config.get('y.translatedTextSuffix') as string;
-  
+
   const reg = new RegExp(regStr, 'gm');
   const jreg = new RegExp(`^(?<prefix>${jPrefixStr})(?<white>${jWhiteStr})(?<text>.*?)(?<suffix>${jSuffixStr})$`);
   const creg = new RegExp(`^(?<prefix>${cPrefixStr})(?<white>${cWhiteStr})(?<text>.*?)(?<suffix>${cSuffixStr})$`);
@@ -140,10 +140,11 @@ function getTextBlockRegex() {
 }
 
 export interface MatchedGroups {
-    prefix: string;
-    white: string;
-    text: string;
-    suffix: string;
+  newline: string;
+  prefix: string;
+  white: string;
+  text: string;
+  suffix: string;
 }
 
 ////////////////////////Start standard parser///////////////////////////////
@@ -192,285 +193,285 @@ function isTextDocument(value: unknown): value is vscode.TextDocument {
 
 
 class StandardDocumentParser implements IDocumentParser {
-    private processedListeners: Map<integer, DocumentProcessedListener> = new Map();
-    private listenerIdCounter: integer = 0;
-    constructor() {
+  private processedListeners: Map<integer, DocumentProcessedListener> = new Map();
+  private listenerIdCounter: integer = 0;
+  constructor() {
 
-    }
-
-    isUneditable(lineText: string): boolean {
-      const [jreg, _] = getRegex();
-      if (!jreg) {
-          return false;
-      }
-      return jreg.test(lineText);
-    }
-
-    listenCurrentDocumentProcessed(cb: DocumentProcessedListener): integer {
-        const id = this.listenerIdCounter++;
-        this.processedListeners.set(id, cb);
-        return id;
-    }
-
-    clearCurrentDocumentProcessedListener(id: integer): void {
-        this.processedListeners.delete(id);
-    }
-
-    
-
-    processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void) {
-        const [jreg, creg] = getRegex();
-        if (!jreg || !creg) {
-            throw new Error('jreg or creg undefined');
-        }
-        const namePosition = getTalkingNamePosition();
-        const nameRegex = getTalkingNameRegex();
-        let beforeName: string | undefined = undefined;
-
-        let processors: DocumentProcessor[] = [];
-        if (isTextDocument(text)) {
-          for (const listener of this.processedListeners.values()) {
-              const processor = listener.getProcessor(text as vscode.TextDocument);
-              if (processor) {
-                  processor.startProcess();
-                  processors.push(processor);
-              }
-          }
-        }
-        let callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => {
-          for (const processor of processors) {
-            processor.processLine(jgrps, cgrps, j_index, c_index, talkingName);
-          }
-        };
-
-        let lines = getLines(text);
-        let jgrps: MatchedGroups | undefined;
-        let j_index = -1;
-        if (namePosition === NamePosition.Before || namePosition === NamePosition.Inline || !nameRegex) {
-          for (let i = 0; i < lines.length; i++) {
-              let line = lines[i];
-              line = line.trimRight();
-              const m = jreg.exec(line);
-
-              if (namePosition === NamePosition.Before && nameRegex) {
-                  const nameMatch = nameRegex.exec(line);
-                  if (nameMatch && nameMatch.groups) {
-                      beforeName = nameMatch.groups.name;
-                  }
-              }
-
-              if (m && m.groups) {
-                  if (!!jgrps) {
-                      throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
-                  }
-                  jgrps = m.groups as any as MatchedGroups;
-                  j_index = i;
-              } else {
-                  const m = creg.exec(line);
-                  if (m && m.groups && jgrps) {
-                      const cgrps = m.groups as any as MatchedGroups;
-                      adjust(jgrps, cgrps);
-                      let talkingName: string | undefined = undefined;
-                      if (namePosition === NamePosition.Before) {
-                          talkingName = beforeName;
-                      } else if (namePosition === NamePosition.Inline) {
-                          const inlineMatch = nameRegex?.exec(line);
-                          if (inlineMatch && inlineMatch.groups) {
-                              talkingName = inlineMatch.groups.name;
-                          }
-                      }
-                      cb(jgrps, cgrps, j_index, i, talkingName);
-                      callListener(jgrps, cgrps, j_index, i, talkingName);
-
-                      if (namePosition === NamePosition.Before && jgrps?.suffix?.includes('」')) {
-                          beforeName = undefined;
-                      }
-
-                      jgrps = undefined;
-                      j_index = -1;
-                  }
-              }
-          }
-        } else { // NamePosition.After
-          let callQueue: { jgrps: MatchedGroups, j_index: number, cgrps: MatchedGroups, c_index: number}[] = [];
-          for (let i = 0; i < lines.length; i++) {
-              let line = lines[i];
-              line = line.trimRight();
-              const m = jreg.exec(line);
-              if (m && m.groups) {
-                  if (!!jgrps) {
-                      throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
-                  }
-                  jgrps = m.groups as any as MatchedGroups;
-                  j_index = i;
-              } else {
-                  const m = creg.exec(line);
-                  if (m && m.groups && jgrps) {
-                      const cgrps = m.groups as any as MatchedGroups;
-                      adjust(jgrps, cgrps);
-                      const nameMatch = nameRegex.exec(line);
-                      let talkingName: string | undefined = undefined;
-                      if (nameMatch && nameMatch.groups && nameMatch.groups.name) {
-                          talkingName = nameMatch.groups.name;
-                          for (let item of callQueue) {
-                            cb(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
-                            callListener(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
-                          }
-                          callQueue = [];
-                          cb(jgrps, cgrps, j_index, i, talkingName);
-                          callListener(jgrps, cgrps, j_index, i, talkingName);
-                      } else {
-                        callQueue.push({ jgrps, j_index, cgrps, c_index: i });
-                      }
-                      jgrps = undefined;
-                      j_index = -1;
-                  }
-              }
-          }
-          for (const item of callQueue) {
-              cb(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
-              callListener(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
-          }
-        }
-
-        for (const processor of processors) {
-          processor.endProcess();
-        }
-    }
-
-    processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void) {
-      const [, creg] = getRegex();
-      if (!creg) {
-          throw new Error('jreg or creg undefined');
-      }
-      let lines = getLines(text);
-      for (let i = 0; i < lines.length; i++) {
-          let line = lines[i];
-          line = line.trim();
-          const m = creg.exec(line);
-          if (m && m.groups) {
-            cb(m.groups as any as MatchedGroups, i);
-          }
-      }
   }
 
-    getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
-        if (!editor || !lineNum && !editor?.selection)
-            return [false, undefined, undefined];
-        lineNum = lineNum ?? editor.selection.active.line;
-        const curLine = editor.document.lineAt(lineNum);
-        const [, creg] = getRegex();
-        if (!creg) {
-            return [false, undefined, undefined];
-        }
-        const m = creg.exec(curLine.text)
-        return !!m ? [true, curLine, m.groups as any as MatchedGroups] : [false, undefined, undefined];
+  isUneditable(lineText: string): boolean {
+    const [jreg, _] = getRegex();
+    if (!jreg) {
+      return false;
     }
+    return jreg.test(lineText);
+  }
 
-    getNextTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
-      if (!editor?.selection)
-            return [false, undefined, undefined];
-      const [, creg] = getRegex();
-      if (!creg) {
-        return [false, undefined, undefined];
+  listenCurrentDocumentProcessed(cb: DocumentProcessedListener): integer {
+    const id = this.listenerIdCounter++;
+    this.processedListeners.set(id, cb);
+    return id;
+  }
+
+  clearCurrentDocumentProcessedListener(id: integer): void {
+    this.processedListeners.delete(id);
+  }
+
+
+
+  processPairedLines(text: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void) {
+    const [jreg, creg] = getRegex();
+    if (!jreg || !creg) {
+      throw new Error('jreg or creg undefined');
+    }
+    const namePosition = getTalkingNamePosition();
+    const nameRegex = getTalkingNameRegex();
+    let beforeName: string | undefined = undefined;
+
+    let processors: DocumentProcessor[] = [];
+    if (isTextDocument(text)) {
+      for (const listener of this.processedListeners.values()) {
+        const processor = listener.getProcessor(text as vscode.TextDocument);
+        if (processor) {
+          processor.startProcess();
+          processors.push(processor);
+        }
       }
-      const position = editor.selection.active;
-      for (let i = 1; i <= 32 && position.line + i < editor.document.lineCount; i++) {
-        const m = creg.exec(editor.document.lineAt(position.line + i).text)
+    }
+    let callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => {
+      for (const processor of processors) {
+        processor.processLine(jgrps, cgrps, j_index, c_index, talkingName);
+      }
+    };
+
+    let lines = getLines(text);
+    let jgrps: MatchedGroups | undefined;
+    let j_index = -1;
+    if (namePosition === NamePosition.Before || namePosition === NamePosition.Inline || !nameRegex) {
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        line = line.trimRight();
+        const m = jreg.exec(line);
+
+        if (namePosition === NamePosition.Before && nameRegex) {
+          const nameMatch = nameRegex.exec(line);
+          if (nameMatch && nameMatch.groups) {
+            beforeName = nameMatch.groups.name;
+          }
+        }
+
         if (m && m.groups) {
-          return [true, editor.document.lineAt(position.line + i), m.groups as any as MatchedGroups]
+          if (!!jgrps) {
+            throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
+          }
+          jgrps = m.groups as any as MatchedGroups;
+          j_index = i;
+        } else {
+          const m = creg.exec(line);
+          if (m && m.groups && jgrps) {
+            const cgrps = m.groups as any as MatchedGroups;
+            adjust(jgrps, cgrps);
+            let talkingName: string | undefined = undefined;
+            if (namePosition === NamePosition.Before) {
+              talkingName = beforeName;
+            } else if (namePosition === NamePosition.Inline) {
+              const inlineMatch = nameRegex?.exec(line);
+              if (inlineMatch && inlineMatch.groups) {
+                talkingName = inlineMatch.groups.name;
+              }
+            }
+            cb(jgrps, cgrps, j_index, i, talkingName);
+            callListener(jgrps, cgrps, j_index, i, talkingName);
+
+            if (namePosition === NamePosition.Before && jgrps?.suffix?.includes('」')) {
+              beforeName = undefined;
+            }
+
+            jgrps = undefined;
+            j_index = -1;
+          }
         }
       }
-      return [false, undefined, undefined]
-    }
-
-    getPrevTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
-      if (!editor?.selection)
-            return [false, undefined, undefined];
-      const [, creg] = getRegex();
-      if (!creg) {
-        return [false, undefined, undefined];
-      }
-      const position = editor.selection.active;
-      for (let i = 1; i <= 32 && position.line - i >= 0; i++) {
-        const m = creg.exec(editor.document.lineAt(position.line - i).text)
+    } else { // NamePosition.After
+      let callQueue: { jgrps: MatchedGroups, j_index: number, cgrps: MatchedGroups, c_index: number }[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        line = line.trimRight();
+        const m = jreg.exec(line);
         if (m && m.groups) {
-          return [true, editor.document.lineAt(position.line - i), m.groups as any as MatchedGroups]
-        }
-      }
-      return [false, undefined, undefined]
-    }
-
-    collectNameRanges(document: vscode.TextDocument): vscode.Range[] {
-      const nameRegex = getTalkingNameRegex();
-      if (!nameRegex) {
-        return [];
-      }
-
-      const ranges: vscode.Range[] = [];
-      for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
-        const lineText = document.lineAt(lineIndex).text;
-        const segment = findNamedCaptureSegmentInLine(lineText, nameRegex, 'name');
-        if (!segment) {
-          continue;
-        }
-
-        ranges.push(new vscode.Range(lineIndex, segment[0], lineIndex, segment[1]));
-      }
-
-      return ranges;
-    }
-
-    errorCheck(document: string | string[] | vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
-        const config = vscode.workspace.getConfiguration("dltxt");
-        const checkPrefixTag = config.get<boolean>('appearance.showError.checkPrefixTag');
-        const checkDeletedLines = config.get<boolean>('appearance.showError.checkDeletedLines');
-        const diagnostics: vscode.Diagnostic[] = [];
-        const valid_regs = getRegex();
-
-        const lines = getLines(document);
-
-        let matched_count = 0;
-        let prev_matched_i = -1;
-
-        for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
-            const lineText = lines[lineNumber].trim();
-            if (!lineText) {
-                continue;
-            }
-            let matched = false;
-            for(let i = 0; !matched && i < valid_regs.length; i++) {
-                const reg = valid_regs[i];
-                if (reg && reg.test(lineText)) {
-                    if (checkDeletedLines) {
-                        if (prev_matched_i == 0 && (i == 0 || i == 2)) {
-                            diagnostics.push(createErrorDiagnostic('译文行被删除', lineNumber, lineText.length));
-                        } else if (prev_matched_i == 1 && i == 1) {
-                            diagnostics.push(createErrorDiagnostic('原文行被删除', lineNumber, lineText.length));
-                        } else if (prev_matched_i == 2 && i == 1) {
-                            diagnostics.push(createErrorDiagnostic('译文行被删除', lineNumber, lineText.length));
-                        }
-                    }
-                    prev_matched_i = i;
-                    matched = true;
-                }
-            }
-            if (!matched) {
-                if (checkPrefixTag) {
-                    diagnostics.push(createErrorDiagnostic('标签格式错误', lineNumber, lineText.length));
-                }
+          if (!!jgrps) {
+            throw new Error(`Unmatched jgrps at line ${j_index}: ${jgrps.prefix}${jgrps.white}${jgrps.text}${jgrps.suffix}`);
+          }
+          jgrps = m.groups as any as MatchedGroups;
+          j_index = i;
+        } else {
+          const m = creg.exec(line);
+          if (m && m.groups && jgrps) {
+            const cgrps = m.groups as any as MatchedGroups;
+            adjust(jgrps, cgrps);
+            const nameMatch = nameRegex.exec(line);
+            let talkingName: string | undefined = undefined;
+            if (nameMatch && nameMatch.groups && nameMatch.groups.name) {
+              talkingName = nameMatch.groups.name;
+              for (let item of callQueue) {
+                cb(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
+                callListener(item.jgrps, item.cgrps, item.j_index, item.c_index, talkingName);
+              }
+              callQueue = [];
+              cb(jgrps, cgrps, j_index, i, talkingName);
+              callListener(jgrps, cgrps, j_index, i, talkingName);
             } else {
-                matched_count++;
+              callQueue.push({ jgrps, j_index, cgrps, c_index: i });
             }
+            jgrps = undefined;
+            j_index = -1;
+          }
         }
-
-        //在错误数小于正确数时才报告错误
-        return [diagnostics.length < matched_count, diagnostics];
+      }
+      for (const item of callQueue) {
+        cb(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
+        callListener(item.jgrps, item.cgrps, item.j_index, item.c_index, undefined);
+      }
     }
 
-    getFormatDetector() {
-      return new StandardParserAutoDetector();
+    for (const processor of processors) {
+      processor.endProcess();
     }
+  }
+
+  processTranslatedLines(text: string | string[] | vscode.TextDocument, cb: (cgrps: MatchedGroups, c_index: number) => void) {
+    const [, creg] = getRegex();
+    if (!creg) {
+      throw new Error('jreg or creg undefined');
+    }
+    let lines = getLines(text);
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      line = line.trim();
+      const m = creg.exec(line);
+      if (m && m.groups) {
+        cb(m.groups as any as MatchedGroups, i);
+      }
+    }
+  }
+
+  getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+    if (!editor || !lineNum && !editor?.selection)
+      return [false, undefined, undefined];
+    lineNum = lineNum ?? editor.selection.active.line;
+    const curLine = editor.document.lineAt(lineNum);
+    const [, creg] = getRegex();
+    if (!creg) {
+      return [false, undefined, undefined];
+    }
+    const m = creg.exec(curLine.text)
+    return !!m ? [true, curLine, m.groups as any as MatchedGroups] : [false, undefined, undefined];
+  }
+
+  getNextTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+    if (!editor?.selection)
+      return [false, undefined, undefined];
+    const [, creg] = getRegex();
+    if (!creg) {
+      return [false, undefined, undefined];
+    }
+    const position = editor.selection.active;
+    for (let i = 1; i <= 32 && position.line + i < editor.document.lineCount; i++) {
+      const m = creg.exec(editor.document.lineAt(position.line + i).text)
+      if (m && m.groups) {
+        return [true, editor.document.lineAt(position.line + i), m.groups as any as MatchedGroups]
+      }
+    }
+    return [false, undefined, undefined]
+  }
+
+  getPrevTranslationLine(editor: vscode.TextEditor | undefined): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
+    if (!editor?.selection)
+      return [false, undefined, undefined];
+    const [, creg] = getRegex();
+    if (!creg) {
+      return [false, undefined, undefined];
+    }
+    const position = editor.selection.active;
+    for (let i = 1; i <= 32 && position.line - i >= 0; i++) {
+      const m = creg.exec(editor.document.lineAt(position.line - i).text)
+      if (m && m.groups) {
+        return [true, editor.document.lineAt(position.line - i), m.groups as any as MatchedGroups]
+      }
+    }
+    return [false, undefined, undefined]
+  }
+
+  collectNameRanges(document: vscode.TextDocument): vscode.Range[] {
+    const nameRegex = getTalkingNameRegex();
+    if (!nameRegex) {
+      return [];
+    }
+
+    const ranges: vscode.Range[] = [];
+    for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
+      const lineText = document.lineAt(lineIndex).text;
+      const segment = findNamedCaptureSegmentInLine(lineText, nameRegex, 'name');
+      if (!segment) {
+        continue;
+      }
+
+      ranges.push(new vscode.Range(lineIndex, segment[0], lineIndex, segment[1]));
+    }
+
+    return ranges;
+  }
+
+  errorCheck(document: string | string[] | vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
+    const config = vscode.workspace.getConfiguration("dltxt");
+    const checkPrefixTag = config.get<boolean>('appearance.showError.checkPrefixTag');
+    const checkDeletedLines = config.get<boolean>('appearance.showError.checkDeletedLines');
+    const diagnostics: vscode.Diagnostic[] = [];
+    const valid_regs = getRegex();
+
+    const lines = getLines(document);
+
+    let matched_count = 0;
+    let prev_matched_i = -1;
+
+    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+      const lineText = lines[lineNumber].trim();
+      if (!lineText) {
+        continue;
+      }
+      let matched = false;
+      for (let i = 0; !matched && i < valid_regs.length; i++) {
+        const reg = valid_regs[i];
+        if (reg && reg.test(lineText)) {
+          if (checkDeletedLines) {
+            if (prev_matched_i == 0 && (i == 0 || i == 2)) {
+              diagnostics.push(createErrorDiagnostic('译文行被删除', lineNumber, lineText.length));
+            } else if (prev_matched_i == 1 && i == 1) {
+              diagnostics.push(createErrorDiagnostic('原文行被删除', lineNumber, lineText.length));
+            } else if (prev_matched_i == 2 && i == 1) {
+              diagnostics.push(createErrorDiagnostic('译文行被删除', lineNumber, lineText.length));
+            }
+          }
+          prev_matched_i = i;
+          matched = true;
+        }
+      }
+      if (!matched) {
+        if (checkPrefixTag) {
+          diagnostics.push(createErrorDiagnostic('标签格式错误', lineNumber, lineText.length));
+        }
+      } else {
+        matched_count++;
+      }
+    }
+
+    //在错误数小于正确数时才报告错误
+    return [diagnostics.length < matched_count, diagnostics];
+  }
+
+  getFormatDetector() {
+    return new StandardParserAutoDetector();
+  }
 }
 
 ////////////////////////End standard parser///////////////////////////////
@@ -615,11 +616,11 @@ export class TextBlockDocumentParser implements IDocumentParser {
     const processors: DocumentProcessor[] = [];
     if (isTextDocument(input)) {
       for (const listener of this.processedListeners.values()) {
-          const processor = listener.getProcessor(input as vscode.TextDocument);
-          if (processor) {
-              processor.startProcess();
-              processors.push(processor);
-          }
+        const processor = listener.getProcessor(input as vscode.TextDocument);
+        if (processor) {
+          processor.startProcess();
+          processors.push(processor);
+        }
       }
     }
     const callListener = (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => {
@@ -661,7 +662,7 @@ export class TextBlockDocumentParser implements IDocumentParser {
 
   getCurrentTranslationLine(editor: vscode.TextEditor | undefined, lineNum?: number): [boolean, vscode.TextLine | undefined, MatchedGroups | undefined] {
     if (!editor || !lineNum && !editor?.selection)
-        return [false, undefined, undefined];
+      return [false, undefined, undefined];
     lineNum = lineNum ?? editor.selection.active.line;
     const curLine = editor.document.lineAt(lineNum);
     const m = this.creg.exec(curLine.text)
@@ -675,9 +676,9 @@ export class TextBlockDocumentParser implements IDocumentParser {
     const position = editor.selection.active;
     const istart = Math.max(0, position.line - 20);
     const searchText = editor.document.getText(new vscode.Range(
-        position.with(istart, 0),
-        position.with(position.line + 30, Number.MAX_SAFE_INTEGER)
-      )
+      position.with(istart, 0),
+      position.with(position.line + 30, Number.MAX_SAFE_INTEGER)
+    )
     )
     const lineMap = generateLineMap(searchText);
     let res: any[] = [false, undefined, undefined];
@@ -705,9 +706,9 @@ export class TextBlockDocumentParser implements IDocumentParser {
     const position = editor.selection.active;
     const istart = Math.max(0, position.line - 30);
     const searchText = editor.document.getText(new vscode.Range(
-        position.with(istart, 0),
-        position.with(position.line + 20, Number.MAX_SAFE_INTEGER)
-      )
+      position.with(istart, 0),
+      position.with(position.line + 20, Number.MAX_SAFE_INTEGER)
+    )
     )
     const lineMap = generateLineMap(searchText);
     let prevLineNum = -1;
@@ -770,7 +771,7 @@ export class TextBlockDocumentParser implements IDocumentParser {
     return ranges;
   }
 
-  errorCheck(document: string | string[] |vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
+  errorCheck(document: string | string[] | vscode.TextDocument): [boolean, vscode.Diagnostic[]] {
     const diagnostics: vscode.Diagnostic[] = [];
     const lines = getLines(document);
     const ok = Array.from({ length: lines.length }).fill(false);
@@ -779,12 +780,12 @@ export class TextBlockDocumentParser implements IDocumentParser {
     const lineMap = generateLineMap(text);
 
     let matchedCount = 0;
-    
+
     findAllAndProcess(reg, text, (match) => {
       matchedCount++;
       const blockLineNum = queryLineNumber(lineMap, match.index);
       const blockLen = match[0].split("\n").length;
-      for(let i = 0; i < blockLen; i++) {
+      for (let i = 0; i < blockLen; i++) {
         ok[blockLineNum + i] = true;
       }
       if (!match.groups) {
@@ -805,12 +806,12 @@ export class TextBlockDocumentParser implements IDocumentParser {
     });
 
     let startError = -1;
-    for(let i = 0; i < ok.length; i++) {
+    for (let i = 0; i < ok.length; i++) {
       if (!ok[i] && startError === -1) {
         startError = i;
       }
       if (ok[i] && startError !== -1) {
-        diagnostics.push(createErrorDiagnosticMultiLine('段落格式错误', startError, i-1));
+        diagnostics.push(createErrorDiagnosticMultiLine('段落格式错误', startError, i - 1));
         startError = -1;
       }
     }
@@ -827,8 +828,8 @@ export class TextBlockDocumentParser implements IDocumentParser {
 
 function generateLineMap(text: string): number[] {
   const lineStartIdx: number[] = [0]; //lineStartIdx[i] => start index (of text) of the i-th line
-  for(let i = 1; i < text.length; i++) {
-    if (text[i-1] === '\n') {
+  for (let i = 1; i < text.length; i++) {
+    if (text[i - 1] === '\n') {
       lineStartIdx.push(i);
     }
   }
@@ -837,10 +838,10 @@ function generateLineMap(text: string): number[] {
 
 function queryLineNumber(lineStartIdx: number[], idx: number) {
   let x = 0;
-  for (let step = Math.floor(lineStartIdx.length/2); step > 0; step = Math.floor(step/2)) {
-      while(x + step < lineStartIdx.length && lineStartIdx[x + step] <= idx) {
-          x += step;
-      }
+  for (let step = Math.floor(lineStartIdx.length / 2); step > 0; step = Math.floor(step / 2)) {
+    while (x + step < lineStartIdx.length && lineStartIdx[x + step] <= idx) {
+      x += step;
+    }
   }
   return x;
 }
@@ -965,7 +966,7 @@ export function getTalkingNamePosition(): NamePosition {
   }
 }
 
-export function getTalkingNameRegex(): RegExp| undefined {
+export function getTalkingNameRegex(): RegExp | undefined {
   const config = vscode.workspace.getConfiguration("dltxt.core.name");
   const namePattern = config.get<string>('regex');
   if (namePattern) {
