@@ -62,6 +62,20 @@ function isInStrictEditingMode(): boolean {
     return VSCodeContext.get('dltxt.strictEditing') === true;
 }
 
+export async function withStrictEditingBypass<T>(action: () => PromiseLike<T>): Promise<T> {
+    const strictEditing = isInStrictEditingMode();
+    if (strictEditing) {
+        setRestrictEditMode(false);
+    }
+    try {
+        return await action();
+    } finally {
+        if (strictEditing) {
+            setRestrictEditMode(true);
+        }
+    }
+}
+
 export function processOnDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): boolean {
     const noStrict = (event.reason === vscode.TextDocumentChangeReason.Undo ||
         event.reason === vscode.TextDocumentChangeReason.Redo);

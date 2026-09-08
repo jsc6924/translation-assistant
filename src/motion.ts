@@ -4,7 +4,7 @@ import { DocumentParser } from './parser';
 import { DictSettings, registerCommand, repeatStr } from './utils';
 import { DecorationMemoryStorage } from './simpletm';
 import { updateNewlineDecorations } from './decoration';
-import { ShowRestrictEditingWarning } from './mode';
+import { ShowRestrictEditingWarning, withStrictEditingBypass } from './mode';
 
 export function activate(context: vscode.ExtensionContext) {
   registerCommand(context, 'Extension.dltxt.cursorToLineHead', cursorToLineHead);
@@ -731,4 +731,26 @@ export function clearTranslation() {
       }
     });
   });
+}
+
+export async function swapOriginalTranslation() {
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    return;
+  }
+  const position = activeEditor.selection.active;
+  await withStrictEditingBypass(() => activeEditor.edit(builder => {
+    DocumentParser.processPairedLines(activeEditor.document, (jgrps, cgrps, j_index, c_index) => {
+      if (j_index >= position.line || c_index >= position.line) {
+        return;
+      }
+
+      const originalLine = activeEditor.document.lineAt(j_index);
+      const translatedLine = activeEditor.document.lineAt(c_index);
+      const originalRemainder = originalLine.text.substring(jgrps.prefix.length);
+      const translatedRemainder = translatedLine.text.substring(cgrps.prefix.length);
+      builder.replace(originalLine.range, jgrps.prefix + translatedRemainder);
+      builder.replace(translatedLine.range, cgrps.prefix + originalRemainder);
+    });
+  }));
 }

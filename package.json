@@ -281,6 +281,11 @@
 				"category": "DLTXT"
 			},
 			{
+				"command": "Extension.dltxt.swapOriginalTranslation",
+				"title": "交换光标之前的原文行与译文行",
+				"category": "DLTXT"
+			},
+			{
 				"command": "Extension.dltxt.setGlobalState",
 				"title": "更改全局设置",
 				"category": "DLTXT"
@@ -1174,22 +1179,27 @@
 				},
 				{
 					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.spellCheck",
+					"group": "dltxt.spellCheck"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.spellCheckClear",
+					"group": "dltxt.spellCheck"
+				},
+				{
+					"when": "resourceLangId == dltxt",
+					"command": "Extension.dltxt.clearTranslation",
+					"group": "dltxt.edit"
+				},
+				{
+					"when": "resourceLangId == dltxt",
 					"command": "Extension.dltxt.copy_original",
 					"group": "dltxt.edit"
 				},
 				{
 					"when": "resourceLangId == dltxt",
-					"command": "Extension.dltxt.spellCheck",
-					"group": "dltxt.edit"
-				},
-				{
-					"when": "resourceLangId == dltxt",
-					"command": "Extension.dltxt.spellCheckClear",
-					"group": "dltxt.edit"
-				},
-				{
-					"when": "resourceLangId == dltxt",
-					"command": "Extension.dltxt.clearTranslation",
+					"command": "Extension.dltxt.swapOriginalTranslation",
 					"group": "dltxt.edit"
 				},
 				{

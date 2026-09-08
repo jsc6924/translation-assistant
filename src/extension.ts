@@ -246,6 +246,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			motion.clearTranslation();
 		});
 
+		registerCommand(context, 'Extension.dltxt.swapOriginalTranslation', () => {
+			motion.swapOriginalTranslation();
+		});
+
 		registerCommand(context, 'Extension.dltxt.customWriteKey', (args) => {
 			const k = args.arg1;
 			const s = clipboard.ClipBoardManager.get(context, k);
