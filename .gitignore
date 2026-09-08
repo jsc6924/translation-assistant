@@ -10,3 +10,4 @@ dist/
 data/
 media/webview/*.js
 media/webview/*.js.map
+.commandcode/taste/taste.md

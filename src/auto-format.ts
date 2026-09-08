@@ -7,7 +7,7 @@ import * as path from "path";
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, "Extension.dltxt.core.context.autoDetectFormat", async () => {
         const detector = DocumentParser.getFormatDetector();
-        await detector.autoDetectFormat(context);
+        await detector.autoDetectFormat(context, false);
     })
 
     registerCommand(context, 'Extension.dltxt.core.context.autoDetectFormatContinue', async function () {
@@ -15,21 +15,25 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 export interface AutoDetector {
-    autoDetectFormat(context: vscode.ExtensionContext): void | Promise<void>;
+    autoDetectFormat(context: vscode.ExtensionContext, silent: boolean): boolean | Promise<boolean>;
 }
 
 
 export class NoopAutoDetector implements AutoDetector {
-    autoDetectFormat(context: vscode.ExtensionContext): void {
+    autoDetectFormat(context: vscode.ExtensionContext, silent: boolean): boolean {
+        if (silent) {
+            return false;
+        }
         vscode.window.showInformationMessage(`当前配置下暂不支持自动识别文本格式`);
+        return false;
     }
 }
 export class StandardParserAutoDetector implements AutoDetector {
-    async autoDetectFormat(context: vscode.ExtensionContext) {
+    async autoDetectFormat(context: vscode.ExtensionContext, silent: boolean): Promise<boolean> {
         const activeEditor = vscode.window.activeTextEditor;
         if (!activeEditor) {
             vscode.window.showInformationMessage(`请打开一个文本再执行此命令`);
-            return;
+            return false;
         }
         let startLine = 0;
         if (activeEditor.selection) {
@@ -37,7 +41,7 @@ export class StandardParserAutoDetector implements AutoDetector {
         }
 
         const otherLines = [];
-        while (true) {
+        while (!silent) {
             const r = await vscode.window.showInputBox({
                 "placeHolder": "例：@1",
                 "prompt": `输入几个既不是原文也不是译文的例子，输入空字符串表示结束`,
@@ -60,16 +64,16 @@ export class StandardParserAutoDetector implements AutoDetector {
             oReg = new RegExp(`^(${oRegStr})(.*)`);
         }
 
-        const { rlines, tlines, ok } = await this.alignLines(activeEditor, startLine, oReg);
+        const { rlines, tlines, ok } = await this.alignLines(activeEditor, startLine, oReg, silent);
         if (!ok) {
-            return;
+            return false;
         }
 
         let rRegStr = "";
         let tRegStr = "";
-        let namePos = await vscode.window.showQuickPick(["行前", "行中", "行后"], { placeHolder: "相对对话行，人名在哪个位置？" });
+        let namePos = silent ? "行前" : await vscode.window.showQuickPick(["行前", "行中", "行后"], { placeHolder: "相对对话行，人名在哪个位置？" });
         if (!namePos) {
-            return;
+            return false;
         }
         if (namePos == "行中") {
             rRegStr = generateRegex(rlines, true);
@@ -80,14 +84,16 @@ export class StandardParserAutoDetector implements AutoDetector {
         }
 
         //TODO: 最近已经没有需要这个东西的格式了，可以考虑删了
-        rRegStr = regexSubstract(rRegStr, [{ otherReg: tRegStr, otherLines: tlines }, { otherReg: oRegStr, otherLines: otherLines }]);
-        tRegStr = regexSubstract(tRegStr, [{ otherReg: rRegStr, otherLines: rlines }, { otherReg: oRegStr, otherLines: otherLines }]);
-        if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
-            vscode.window.showInformationMessage(`识别失败`);
-            return;
+        if (!silent) {
+            rRegStr = regexSubstract(rRegStr, [{ otherReg: tRegStr, otherLines: tlines }, { otherReg: oRegStr, otherLines: otherLines }]);
+            tRegStr = regexSubstract(tRegStr, [{ otherReg: rRegStr, otherLines: rlines }, { otherReg: oRegStr, otherLines: otherLines }]);
+            if (matchAnyPrefix(rRegStr, tlines) || matchAnyPrefix(tRegStr, rlines)) {
+                vscode.window.showInformationMessage(`识别失败`);
+                return false;
+            }
         }
 
-        let newlineToken = await vscode.window.showInputBox({
+        let newlineToken = silent ? '\\r\\n' : await vscode.window.showInputBox({
             "placeHolder": "例：\\r\\n",
             "prompt": `输入换行符（默认值是\\r\\n）`,
             "ignoreFocusOut": true
@@ -98,9 +104,9 @@ export class StandardParserAutoDetector implements AutoDetector {
 
         let nameRegStr = namePos == "行中" ? rRegStr : `^${rRegStr}(?<name>[^<>\n\u3001\u3002\u3008-\u301B\uFF1F\uFF01\uFF1A\uFF1B\u2026\u2014\uFF0C（）―]+)$`;
 
-        const u = await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}, 人名位置：${namePos}"，是否应用？`, '是', '否');
+        const u = silent ? '是' : await vscode.window.showInformationMessage(`识别成功！原文标签："${rRegStr}"，译文标签："${tRegStr}"，其他标签："${oRegStr}, 换行符：${newlineToken}, 人名位置：${namePos}"，是否应用？`, '是', '否');
         if (u !== '是') {
-            return;
+            return false;
         }
         const config = vscode.workspace.getConfiguration("dltxt");
         await config.update('core.originalTextPrefixRegex', rRegStr, false);
@@ -111,12 +117,13 @@ export class StandardParserAutoDetector implements AutoDetector {
         await config.update('core.name.regex', nameRegStr, false);
         vscode.commands.executeCommand("Extension.dltxt.internal.updateDecorations");
         vscode.window.showInformationMessage(`已应用设置`);
+        return true;
     }
 
     async autoDetectFormatForInLineName(context: vscode.ExtensionContext) {
     }
 
-    async alignLines(activeEditor: vscode.TextEditor, startLine: number, oReg: RegExp | null): Promise<{ rlines: string[], tlines: string[], ok: boolean }> {
+    async alignLines(activeEditor: vscode.TextEditor, startLine: number, oReg: RegExp | null, silent: boolean): Promise<{ rlines: string[], tlines: string[], ok: boolean }> {
         //find the next empty line as the startLine
         let foundEmptyLine = false;
         for (let lineNumber = startLine; lineNumber < activeEditor.document.lineCount; lineNumber++) {
@@ -164,7 +171,7 @@ export class StandardParserAutoDetector implements AutoDetector {
         }
         if (!foundEmptyLine) {
             const options = ['原文', '译文'];
-            const r = await vscode.window.showQuickPick(options, { placeHolder: `这是原文还是译文：${rlines[0]}` });
+            const r = silent ? '原文' : await vscode.window.showQuickPick(options, { placeHolder: `这是原文还是译文：${rlines[0]}` });
 
             if (r == '译文') {
                 const temp = rlines;
@@ -340,14 +347,14 @@ function forceGeneratePrefix(lines: string[]) {
 }
 
 export class TextBlockAutoDetector implements AutoDetector {
-    async autoDetectFormat(context: vscode.ExtensionContext) {
+    async autoDetectFormat(context: vscode.ExtensionContext, silent: boolean): Promise<boolean> {
         if (!vscode.window.activeTextEditor) {
-            return;
+            return false;
         }
         const thisEditor = vscode.window.activeTextEditor;
         if (!thisEditor.selection || thisEditor.selection.isEmpty) {
             vscode.window.showInformationMessage("请选中一个段落后再使用自动识别");
-            return;
+            return false;
         }
         const text = thisEditor.document.getText(new vscode.Range(
             new vscode.Position(thisEditor.selection.start.line, 0),
@@ -356,7 +363,7 @@ export class TextBlockAutoDetector implements AutoDetector {
         const lines = text.split("\n").map((l) => `${l.trim()}`);
         const template = `请把原文替换成【#JP#】，译文替换成【#CN#】\r\n如果存在人名，请把人名替换成【#NAME#】（每个段落模板里最多出现一次）\r\n其他所有会变化的部分替换成【#ANY#】\r\n如果变化的部分只包括字母或数字也可替换成【#ALPHA#】\r\n替换结束后在右键菜单中选择“自动识别文本格式：继续”\r\n\r\n<<<<<<<<<<不要动这行<<<<<<<<<<\r\n${lines.join('\r\n')}\r\n>>>>>>>>>>也不要动这行>>>>>>>>>>`;
         const filePath: string = vscode.window.activeTextEditor?.document.uri.fsPath as string;
-        if (!filePath) return;
+        if (!filePath) return false;
         const dirPath = path.dirname(filePath);
         const fileName = path.basename(filePath);
         const tempDirPath = dirPath + '\\.dltxt'
@@ -369,6 +376,7 @@ export class TextBlockAutoDetector implements AutoDetector {
 
         const document = await vscode.workspace.openTextDocument(setting)
         await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside, false);
+        return true;
     }
 }
 

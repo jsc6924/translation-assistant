@@ -147,7 +147,18 @@ export async function activate(context: vscode.ExtensionContext) {
 			}, 200);
 		}
 
+		async function initFormat(): Promise<void> {
+			if (parser.DocumentParser.isConfigured()) {
+				return;
+			}
+
+			if (await parser.DocumentParser.getFormatDetector().autoDetectFormat(context, true)) {
+				vscode.window.showInformationMessage("已自动识别文本格式");
+			}
+		}
+
 		if (activeEditor) {
+			await initFormat();
 			triggerUpdateDecorations();
 		}
 

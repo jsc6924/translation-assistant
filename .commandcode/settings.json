@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(npm:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

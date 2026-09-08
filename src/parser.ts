@@ -180,6 +180,8 @@ export interface IDocumentParser {
   getFormatDetector(): AutoDetector;
 
   isUneditable(lineText: string): boolean;
+
+  isConfigured(): boolean;
 }
 
 function isTextDocument(value: unknown): value is vscode.TextDocument {
@@ -205,6 +207,10 @@ class StandardDocumentParser implements IDocumentParser {
       return false;
     }
     return jreg.test(lineText);
+  }
+
+  isConfigured(): boolean {
+    return getRegexConfigPayload() !== undefined;
   }
 
   listenCurrentDocumentProcessed(cb: DocumentProcessedListener): integer {
@@ -606,6 +612,10 @@ export class TextBlockDocumentParser implements IDocumentParser {
 
   isUneditable(lineText: string): boolean {
     return false; // TODO: implement
+  }
+
+  isConfigured(): boolean {
+    return getTextBlockConfigPayload() !== undefined;
   }
 
   processPairedLines(input: string | string[] | vscode.TextDocument, cb: (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number, talkingName?: string) => void): void {

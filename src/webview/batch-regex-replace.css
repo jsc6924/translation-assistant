@@ -99,8 +99,10 @@ textarea {
 
 .layout {
   display: flex;
-  flex-direction: row; /* 横向并排 */
-  gap: 0;             /* 将 gap 置 0，改由 resizer 控制间距与热区 */
+  flex-direction: row;
+  /* 横向并排 */
+  gap: 0;
+  /* 将 gap 置 0，改由 resizer 控制间距与热区 */
   width: 100%;
   height: 100vh;
   padding: 16px;
@@ -133,8 +135,9 @@ textarea {
 }
 
 /* 规则面板部分：取消原有的 min-height 束缚，改为依靠内部规则列表溢出滚动 */
-.sidebar > .panel-section:first-child {
-  border-bottom: none; /* 分割线的职责将交由拖拽 resizer 承担 */
+.sidebar>.panel-section:first-child {
+  border-bottom: none;
+  /* 分割线的职责将交由拖拽 resizer 承担 */
 }
 
 .panel-section:last-child {
@@ -150,7 +153,8 @@ textarea {
   z-index: 10;
   flex-shrink: 0;
   transition: background 150ms ease;
-  margin: -2px 0; /* 扩大鼠标热区，同时不额外抢占实际布局像素 */
+  margin: -2px 0;
+  /* 扩大鼠标热区，同时不额外抢占实际布局像素 */
   border-top: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
 }
@@ -207,11 +211,13 @@ textarea {
   justify-content: center;
   font-size: 18px;
 }
+
 .icon-button.small {
   width: 28px;
   height: 28px;
   font-size: 12px;
 }
+
 .icon-button.folder-toggle {
   border: none;
   width: 28px;
@@ -317,7 +323,7 @@ textarea {
   gap: 8px;
 }
 
-.field-label-inline > input {
+.field-label-inline>input {
   width: auto;
   flex: 1 1 0;
   min-width: 0;
@@ -409,9 +415,11 @@ textarea {
 }
 
 .layout-resizer {
-  width: 16px;         /* 扩充鼠标物理热区 */
+  width: 16px;
+  /* 扩充鼠标物理热区 */
   background: transparent;
-  cursor: col-resize;  /* 变换为横向拉伸指针 */
+  cursor: col-resize;
+  /* 变换为横向拉伸指针 */
   position: relative;
   z-index: 10;
   flex-shrink: 0;
@@ -563,22 +571,28 @@ textarea {
   .layout {
     flex-direction: column;
   }
+
   .layout-resizer {
-    display: none; /* 小屏幕下隐藏横向拉伸条 */
+    display: none;
+    /* 小屏幕下隐藏横向拉伸条 */
   }
+
   .sidebar {
     height: 48% !important;
     width: 100% !important;
     margin-bottom: 12px;
     overflow: auto !important;
   }
-  .sidebar > .panel-section:first-child {
+
+  .sidebar>.panel-section:first-child {
     min-height: 0;
   }
-  .sidebar > .panel-section:last-child {
+
+  .sidebar>.panel-section:last-child {
     flex: 1 1 auto;
     min-height: 0;
   }
+
   .preview-panel {
     height: 52% !important;
     width: 100% !important;

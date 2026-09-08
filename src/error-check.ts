@@ -249,14 +249,17 @@ function likelyDltxt(doc: vscode.TextDocument): boolean {
     }
     // test if any line contains kana
     const kanaRegex = /[ぁ-んァ-ン]/;
-    let hasKana = false;
+    let hasKana = 0;
+    let empty = 0;
     for (let i = 0; i < Math.min(lines.length, 100); i++) {
         if (kanaRegex.test(lines[i])) {
-            hasKana = true;
-            break;
+            hasKana++
+        }
+        if (lines[i].trim().length === 0) {
+            empty++;
         }
     }
-    if (!hasKana) {
+    if (hasKana * 1.0 / lines.length < 0.1 || empty * 1.0 / lines.length < 0.2) {
         return false;
     }
     let x = 0;
