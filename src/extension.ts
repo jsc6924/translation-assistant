@@ -9,6 +9,7 @@ import {
 } from "./formatter";
 import { batchConvertFilesEncoding, detectFileEncoding } from './encoding';
 import * as dlbuild from './dlbuild';
+import * as dlbuildUi from './dlbuild-ui';
 import { trdb_view } from './treeview';
 import { cc_view } from './command-center';
 import { spellCheck, clearSpellCheck } from './spellcheck';
@@ -272,6 +273,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		stage = 'activate feature modules';
 		logStartup(stage);
 		dlbuild.activate(context);
+		dlbuildUi.activate(context);
 		singleline.activate(context);
 		clipboard.activate(context);
 

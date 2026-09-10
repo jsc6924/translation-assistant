@@ -266,6 +266,11 @@
 				"category": "DLTXT"
 			},
 			{
+				"command": "Extension.dltxt.dlbuild.ui",
+				"title": "DLTXT 构建器 (dlbuild UI)",
+				"category": "DLTXT"
+			},
+			{
 				"command": "Extension.dltxt.spellCheck",
 				"title": "检查当前文本译文中的错别字",
 				"category": "DLTXT"
@@ -1099,6 +1104,10 @@
 				{
 					"command": "Extension.dltxt.convertToEncoding",
 					"group": "dltxt.dlencoding@1"
+				},
+				{
+					"command": "Extension.dltxt.dlbuild.ui",
+					"group": "dltxt.dlbuild.ui@0"
 				},
 				{
 					"command": "Extension.dltxt.dlbuild.extract",

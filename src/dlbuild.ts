@@ -31,6 +31,45 @@ const buildYamlFileName = 'dlbuild.yaml';
 const relativeLabelledPath = '.dltxt/dlbuild-labelled/'
 const transformYamlFileName = 'dltransform.yaml';
 
+// ---- 类型化配置接口（供 webview 内存传参，替代 yaml） ----
+
+export interface ExtractConfig {
+    input: { path: string; encoding: string; ext: string; digits: number;
+             items: Array<{ capture: string; tag: string; group: number }> };
+    output: { path: string; encoding: string };
+}
+
+export interface PackConfig {
+    input: { path: string; encoding: string };
+    output: { path: string; encoding: string };
+}
+
+export interface ConcatConfig {
+    input: { path: string; encoding: string };
+    output: { path: string; encoding: string };
+}
+
+export interface MergeConfig {
+    input1: { path: string; encoding: string };
+    input2: { path: string; encoding: string };
+    output: { path: string; encoding: string };
+}
+
+export interface WordcountConfig {
+    input: { path: string; encoding: string };
+}
+
+export interface TransformConfig {
+    input: { path: string; encoding: string };
+    output?: { path: string; encoding: string };
+    script?: { path: string };
+    mode: 'line' | 'block';
+    operations: any[];
+    'on-global-begin'?: string; 'on-global-end'?: string;
+    'on-file-begin'?: string; 'on-file-end'?: string;
+    'on-text-block'?: string;
+}
+
 export function activate(context: vscode.ExtensionContext) {
     registerCommand(context, 'Extension.dltxt.dlbuild.extract', () => {
 		extract(context);
@@ -121,32 +160,29 @@ export async function readFolderRecursively(folderPath: string,
     relativeDirsStack.pop();
 }
 
-async function extract(context: vscode.ExtensionContext) {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('vscode没有打开目录');
-        return;
-    }
-    const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, buildYamlFileName);
-
-    const good = await checkYaml(rootDir, yamlPath, context);
-    if (!good) {
-        return;
-    }
-    const yamlData = readYamlFile(yamlPath);
-    const inputPath = path.join(rootDir, yamlData.extract.input.path);
-    const outPath = path.join(rootDir, yamlData.extract.output.path);
+// 内部实现：接受与 yaml 等价的数据结构（input/output/items 平铺）
+async function doExtract(rootDir: string, cfg: { input: ExtractConfig['input']; output: ExtractConfig['output'] }) {
+    const input = cfg.input;
+    const output = cfg.output;
+    const inputPath = path.join(rootDir, input.path);
+    const outPath = path.join(rootDir, output.path);
     const labelledPath = path.join(rootDir, relativeLabelledPath);
 
     fs.mkdirSync(outPath, { recursive: true });
     fs.mkdirSync(labelledPath, { recursive: true });
 
-    
-    let ext = yamlData.extract.input.ext;
+    let ext = input.ext;
     if (ext && ext[0] !== '.') {
         ext = '.' + ext;
     }
+
+    // 构造一个与 yaml 结构等价的对象，供 processExtract 使用
+    const yamlData = {
+        extract: {
+            input,
+            output,
+        },
+    };
 
     let total = 0;
     let success = 0;
@@ -173,6 +209,34 @@ async function extract(context: vscode.ExtensionContext) {
     if (success !== total) {
         channel.show(true);
     }
+    return { total, success };
+}
+
+// 类型化配置路径（供 dlbuild-ui webview 调用）
+export async function extractWithConfig(context: vscode.ExtensionContext, config: ExtractConfig): Promise<{ total: number; success: number }> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return { total: 0, success: 0 };
+    }
+    return doExtract(folders[0].uri.fsPath, config);
+}
+
+// 原命令入口：读 yaml（兼容保留）
+async function extract(context: vscode.ExtensionContext): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, buildYamlFileName);
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    await doExtract(rootDir, yamlData.extract);
 }
 
 
@@ -262,25 +326,20 @@ async function processExtract(yamlData: any, item: vscode.Uri, outPath: string, 
     return true;
 }
 
-async function pack(context: vscode.ExtensionContext) {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('vscode没有打开目录');
-        return;
-    }
-    const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, buildYamlFileName);
-
-    if (!fs.existsSync(yamlPath)) {
-        vscode.window.showErrorMessage('当前目录下未找到dlbuild.yaml');
-        return;
-    }
-    const yamlData = readYamlFile(yamlPath);
-    const transPath = path.join(rootDir, yamlData.pack.input.path);
-    const replacedPath = path.join(rootDir, yamlData.pack.output.path);
+// 内部实现：接受 pack 配置 + extract.input.ext（pack 依赖 extract 的后缀）
+async function doPack(rootDir: string, cfg: { pack: PackConfig; extractExt: string }) {
+    const input = cfg.pack.input;
+    const output = cfg.pack.output;
+    const transPath = path.join(rootDir, input.path);
+    const replacedPath = path.join(rootDir, output.path);
     const labelledPath = path.join(rootDir, relativeLabelledPath);
 
     fs.mkdirSync(replacedPath, { recursive: true });
+
+    const yamlData = {
+        extract: { input: { ext: cfg.extractExt } },
+        pack: { input, output },
+    };
 
     let total = 0;
     let success = 0;
@@ -299,7 +358,7 @@ async function pack(context: vscode.ExtensionContext) {
             if(await processPack(yamlData, item, realLabelledPath, realReplacedPath)) {
                 success++;
             }
-        } 
+        }
         catch(e) {
             channel.appendLine(`替换${file}时出错: ${e}`);
         }
@@ -309,6 +368,32 @@ async function pack(context: vscode.ExtensionContext) {
     if (success !== total) {
         channel.show(true);
     }
+    return { total, success };
+}
+
+export async function packWithConfig(context: vscode.ExtensionContext, config: PackConfig, extractExt: string): Promise<{ total: number; success: number }> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return { total: 0, success: 0 };
+    }
+    return doPack(folders[0].uri.fsPath, { pack: config, extractExt: extractExt ?? '' });
+}
+
+async function pack(context: vscode.ExtensionContext): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, buildYamlFileName);
+    if (!fs.existsSync(yamlPath)) {
+        vscode.window.showErrorMessage('当前目录下未找到dlbuild.yaml');
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    await doPack(rootDir, { pack: yamlData.pack, extractExt: yamlData.extract?.input?.ext ?? '' });
 }
 
 async function processPack(yamlData: any, item: vscode.Uri, labeledPath: string, replacedPath: string) {
@@ -387,22 +472,10 @@ async function processPack(yamlData: any, item: vscode.Uri, labeledPath: string,
     return true;
 }
 
-async function concat(context: vscode.ExtensionContext) {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('vscode没有打开目录');
-        return;
-    }
-    const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, transformYamlFileName);
-
-    const good = await checkYaml(rootDir, yamlPath, context);
-    if (!good) {
-        return;
-    }
-    const yamlData = readYamlFile(yamlPath);
-    const inputPath = path.join(rootDir, yamlData.concat.input.path);
-    const outputPath = path.join(rootDir, yamlData.concat.output.path);
+async function doConcat(rootDir: string, cfg: ConcatConfig) {
+    const inputPath = path.join(rootDir, cfg.input.path);
+    const outputPath = path.join(rootDir, cfg.output.path);
+    const yamlData = { concat: cfg };
     let total = 0;
     let success = 0;
     let numFolders = 0;
@@ -423,13 +496,13 @@ async function concat(context: vscode.ExtensionContext) {
                 if(await processConcat(yamlData, inputFilePath, outContents)) {
                     success++;
                 }
-            } 
+            }
             catch(e) {
                 channel.appendLine(`连接${file}时出错: ${e}`);
             }
         }
         const concatedContent = outContents.join("\r\n");
-        const encodedBuf = encodeWithBom(concatedContent, yamlData.concat.output.encoding);
+        const encodedBuf = encodeWithBom(concatedContent, cfg.output.encoding);
         fs.writeFileSync(outputFilePath, encodedBuf);
     });
 
@@ -437,7 +510,32 @@ async function concat(context: vscode.ExtensionContext) {
     if (success !== total) {
         channel.show(true);
     }
-    
+    return { total, success, numFolders };
+}
+
+export async function concatWithConfig(context: vscode.ExtensionContext, config: ConcatConfig): Promise<{ total: number; success: number; numFolders: number }> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return { total: 0, success: 0, numFolders: 0 };
+    }
+    return doConcat(folders[0].uri.fsPath, config);
+}
+
+async function concat(context: vscode.ExtensionContext): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    await doConcat(rootDir, yamlData.concat);
 }
 
 async function processConcat(yamlData: any, inputPath: string, outContents: string[]) {
@@ -448,28 +546,16 @@ async function processConcat(yamlData: any, inputPath: string, outContents: stri
     return true;
 }
 
-async function merge(context: vscode.ExtensionContext) {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('vscode没有打开目录');
-        return;
-    }
-    const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, transformYamlFileName);
-
-    const good = await checkYaml(rootDir, yamlPath, context);
-    if (!good) {
-        return;
-    }
-    const yamlData = readYamlFile(yamlPath);
-    const input1Path = path.join(rootDir, yamlData.merge.input1.path);
-    const input2Path = path.join(rootDir, yamlData.merge.input2.path);
-    const outputPath = path.join(rootDir, yamlData.merge.output.path);
+async function doMerge(rootDir: string, cfg: MergeConfig) {
+    const input1Path = path.join(rootDir, cfg.input1.path);
+    const input2Path = path.join(rootDir, cfg.input2.path);
+    const outputPath = path.join(rootDir, cfg.output.path);
+    const yamlData = { merge: cfg };
 
     let total = 0;
     let success = 0;
     await readFolderRecursively(input1Path, [], undefined, async (folderName, files, relativeDir) => {
-        
+
         fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
         const outContents :string[] = [];
         for (const file of files) {
@@ -487,9 +573,9 @@ async function merge(context: vscode.ExtensionContext) {
                     success++;
                 }
                 const concatedContent = outContents.join("\r\n");
-                const encodedBuf = encodeWithBom(concatedContent, yamlData.concat.output.encoding);
+                const encodedBuf = encodeWithBom(concatedContent, cfg.output.encoding);
                 fs.writeFileSync(outputFilePath, encodedBuf);
-            } 
+            }
             catch(e) {
                 channel.appendLine(`合并${file}时出错: ${e}`);
             }
@@ -499,6 +585,32 @@ async function merge(context: vscode.ExtensionContext) {
     if (success !== total) {
         channel.show(true);
     }
+    return { total, success };
+}
+
+export async function mergeWithConfig(context: vscode.ExtensionContext, config: MergeConfig): Promise<{ total: number; success: number }> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return { total: 0, success: 0 };
+    }
+    return doMerge(folders[0].uri.fsPath, config);
+}
+
+async function merge(context: vscode.ExtensionContext): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    await doMerge(rootDir, yamlData.merge);
 }
 async function processMerge(yamlData: any, input1Path: string, input2Path: string, outContents: string[]): Promise<boolean> {
     const contentBuf = fs.readFileSync(input1Path);
@@ -530,22 +642,9 @@ async function processMerge(yamlData: any, input1Path: string, input2Path: strin
     return true;
 }
 
-async function wordcount(context: vscode.ExtensionContext) {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        vscode.window.showErrorMessage('vscode没有打开目录');
-        return;
-    }
-    const rootDir = folders[0].uri.fsPath;
-    const yamlPath = path.join(rootDir, transformYamlFileName);
-
-    const good = await checkYaml(rootDir, yamlPath, context);
-    if (!good) {
-        return;
-    }
-    const yamlData = readYamlFile(yamlPath);
-    
-    const inputPath = path.join(rootDir, yamlData.wordcount.input.path);
+async function doWordcount(rootDir: string, cfg: WordcountConfig) {
+    const inputPath = path.join(rootDir, cfg.input.path);
+    const yamlData = { wordcount: cfg };
     let total = 0;
     let jcount = 0, ccount = 0;
 
@@ -553,7 +652,7 @@ async function wordcount(context: vscode.ExtensionContext) {
         total++;
         const inputFilePath = path.join(inputPath, relativeDir, file);
         const contentBuf = fs.readFileSync(inputFilePath);
-        const srcEncoding = await getInputEncoding(yamlData.wordcount.input.encoding, contentBuf);
+        const srcEncoding = await getInputEncoding(cfg.input.encoding, contentBuf);
         const content = iconv.decode(contentBuf, srcEncoding);
         DocumentParser.processPairedLines(content, (jgrps, cgrps) => {
             jcount += jgrps.text.length;
@@ -562,9 +661,19 @@ async function wordcount(context: vscode.ExtensionContext) {
     }, undefined);
 
     vscode.window.showInformationMessage(`字数统计：共${total}个文件, 原文${jcount}字，译文${ccount}字`);
+    return { total, jcount, ccount };
 }
 
-async function transform(context: vscode.ExtensionContext) {
+export async function wordcountWithConfig(context: vscode.ExtensionContext, config: WordcountConfig): Promise<{ total: number; jcount: number; ccount: number }> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return { total: 0, jcount: 0, ccount: 0 };
+    }
+    return doWordcount(folders[0].uri.fsPath, config);
+}
+
+async function wordcount(context: vscode.ExtensionContext): Promise<void> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
         vscode.window.showErrorMessage('vscode没有打开目录');
@@ -572,36 +681,38 @@ async function transform(context: vscode.ExtensionContext) {
     }
     const rootDir = folders[0].uri.fsPath;
     const yamlPath = path.join(rootDir, transformYamlFileName);
-
     const good = await checkYaml(rootDir, yamlPath, context);
     if (!good) {
         return;
     }
     const yamlData = readYamlFile(yamlPath);
-    const funcNode = yamlData.transform;
-    
-    const inputPath = path.join(rootDir, funcNode.input.path);
-    const hasOutput = !!funcNode.output?.path;
-    const outputPath = hasOutput ? path.join(rootDir, funcNode.output.path) : '';
-    const dstEncoding = funcNode.output?.encoding;
-    const onGlobalBegin = funcNode['on-global-begin'];
-    const onGlobalEnd = funcNode['on-global-end'];
-    const onFileBegin = funcNode['on-file-begin'];
-    const onFileEnd = funcNode['on-file-end'];
-    const onTextBlock = funcNode['on-text-block'];
-    const operations = funcNode.operations ?? [];
-    const opMode = funcNode.mode ?? 'line';
-    
+    await doWordcount(rootDir, yamlData.wordcount);
+}
+
+async function doTransform(rootDir: string, cfg: TransformConfig) {
+    const inputPath = path.join(rootDir, cfg.input.path);
+    const outputCfg = cfg.output;
+    const hasOutput = !!(outputCfg && outputCfg.path);
+    const outputPath = hasOutput && outputCfg ? path.join(rootDir, outputCfg.path) : '';
+    const dstEncoding = outputCfg?.encoding;
+    // 在闭包外收窄一次，避免 TS 在闭包内无法收窄 optional string
+    const onGlobalBegin = cfg['on-global-begin'] || null;
+    const onGlobalEnd = cfg['on-global-end'] || null;
+    const onFileBegin = cfg['on-file-begin'] || null;
+    const onFileEnd = cfg['on-file-end'] || null;
+    const onTextBlock = cfg['on-text-block'] || null;
+    const operations = cfg.operations ?? [];
+    const opMode = cfg.mode ?? 'line';
+
     let total = 0;
-    let success = 0;
 
     try {
         let scriptContext: vm.Context = vm.createContext();
         scriptContext.api = userScriptAPI;
         scriptContext.vars = new Map<string, any>();
         let script = new vm.Script('');
-        if (funcNode.script?.path) {
-            const scriptPath = path.join(rootDir, funcNode.script.path);
+        if (cfg.script?.path) {
+            const scriptPath = path.join(rootDir, cfg.script.path);
             const content = fs.readFileSync(scriptPath, 'utf8');
             script = new vm.Script(content);
         }
@@ -614,13 +725,13 @@ async function transform(context: vscode.ExtensionContext) {
             total++;
             const inputFilePath = path.join(inputPath, relativeDir, file);
             const contentBuf = fs.readFileSync(inputFilePath);
-            const srcEncoding = await getInputEncoding(funcNode.input.encoding, contentBuf);
+            const srcEncoding = await getInputEncoding(cfg.input.encoding, contentBuf);
             const content = iconv.decode(contentBuf, srcEncoding);
             const lines = content.split('\n');
             e.updateFile(file, inputFilePath);
-            
+
             let resultString = '';
-            
+
             if (onFileBegin) {
                 e.execScript(onFileBegin, {lines});
             }
@@ -633,21 +744,23 @@ async function transform(context: vscode.ExtensionContext) {
                 }
             } else if (opMode === 'block') {
                 DocumentParser.processPairedLines(content, (jgrps: MatchedGroups, cgrps: MatchedGroups, j_index: number, c_index: number) => {
-                    resultString += e.execScript(onTextBlock, {jgrps, cgrps, j_index, c_index});
+                    if (onTextBlock) {
+                        resultString += e.execScript(onTextBlock, {jgrps, cgrps, j_index, c_index}) ?? '';
+                    }
                 });
             }
-    
+
             if (onFileEnd) {
                 e.execScript(onFileEnd, {lines});
             }
 
-            if (hasOutput) {
+            if (hasOutput && outputCfg && dstEncoding) {
                 const outputFilePath = path.join(outputPath, relativeDir, file)
                 fs.mkdirSync(path.join(outputPath, relativeDir), {recursive: true});
                 const encodedLabelledBuffer = encodeWithBom(resultString, dstEncoding);
                 fs.writeFileSync(outputFilePath, encodedLabelledBuffer);
             }
-    
+
         }, undefined);
 
         if (onGlobalEnd) {
@@ -660,7 +773,32 @@ async function transform(context: vscode.ExtensionContext) {
     }
 
     vscode.window.showInformationMessage(`批量处理：共${total}个文件`);
-    
+    return { total };
+}
+
+export async function transformWithConfig(context: vscode.ExtensionContext, config: TransformConfig): Promise<{ total: number }> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return { total: 0 };
+    }
+    return doTransform(folders[0].uri.fsPath, config);
+}
+
+async function transform(context: vscode.ExtensionContext): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage('vscode没有打开目录');
+        return;
+    }
+    const rootDir = folders[0].uri.fsPath;
+    const yamlPath = path.join(rootDir, transformYamlFileName);
+    const good = await checkYaml(rootDir, yamlPath, context);
+    if (!good) {
+        return;
+    }
+    const yamlData = readYamlFile(yamlPath);
+    await doTransform(rootDir, yamlData.transform);
 }
 
 class Executor {

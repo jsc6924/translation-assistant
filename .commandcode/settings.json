@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Shell(npm:*)"
+      "Shell(npm:*)",
+      "Shell(node -e \"JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json OK')\")",
+      "Shell(git:*)",
+      "Shell(npx tsc src/dlbuild.ts src/dlbuild-ui.ts src/extension.ts --noEmit --esModuleInterop --moduleResolution node --target ES2020 --module commonjs --strict --skipLibCheck 2 >& 1)",
+      "Shell(npx tsc -p ./tsconfig.webview.json --noEmit)",
+      "Shell(cmd:*)",
+      "Shell(grep:*)"
     ],
     "deny": [],
     "defaultMode": "default"
