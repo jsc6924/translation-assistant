@@ -64,24 +64,24 @@ function renderPanel(panel: vscode.WebviewPanel, context: vscode.ExtensionContex
         try {
             if (msg.type === 'validateConfig') {
                 const result = validateConfig(msg.activeTab, msg.config);
-                await panel.webview.postMessage({ type: 'configValidated', requestId: msg.requestId, ...result });
+                await panel.webview.postMessage({ type: 'configValidated', requestId: msg.requestId, payload: result });
                 return;
             }
             if (msg.type === 'runOperation') {
                 const result = await runOperation(context, msg.activeTab, msg.config);
-                await panel.webview.postMessage({ type: 'operationDone', requestId: msg.requestId, ...result });
+                await panel.webview.postMessage({ type: 'operationDone', requestId: msg.requestId, payload: result });
                 return;
             }
             if (msg.type === 'openDirectoryDialog') {
                 const uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false });
                 const fsPath = uris && uris.length > 0 ? uris[0].fsPath : '';
-                await panel.webview.postMessage({ type: 'dialogResult', requestId: msg.requestId, fsPath });
+                await panel.webview.postMessage({ type: 'dialogResult', requestId: msg.requestId, payload: { fsPath } });
                 return;
             }
             if (msg.type === 'openFileDialog') {
                 const uris = await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: false, canSelectMany: false });
                 const fsPath = uris && uris.length > 0 ? uris[0].fsPath : '';
-                await panel.webview.postMessage({ type: 'dialogResult', requestId: msg.requestId, fsPath });
+                await panel.webview.postMessage({ type: 'dialogResult', requestId: msg.requestId, payload: { fsPath } });
                 return;
             }
         } catch (error) {
@@ -203,6 +203,7 @@ async function runOperation(context: vscode.ExtensionContext, activeTab: string,
 function getHtml(webview: vscode.Webview, context: vscode.ExtensionContext, rootPath: string): string {
     const sharedScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'react-shared-vendor.js'));
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'dlbuild.js'));
+    const componentsCssUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'components', 'components.css'));
     const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'dlbuild-react.css'));
     const initialState = JSON.stringify({ rootPath }).replace(/</g, '\\u003c');
 
@@ -211,6 +212,7 @@ function getHtml(webview: vscode.Webview, context: vscode.ExtensionContext, root
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="${componentsCssUri}">
   <link rel="stylesheet" href="${cssUri}">
 </head>
 <body>

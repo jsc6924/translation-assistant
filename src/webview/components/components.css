@@ -1,0 +1,142 @@
+/* 共享 webview 组件样式。所有 class 加 dlg- 前缀避免与 batch-regex-replace 等现有 webview 冲突。
+   这些组件默认无样式/无 padding，让调用方通过 className 透传控制布局和尺寸。 */
+
+:root {
+    color-scheme: light dark;
+    --dlg-bg: var(--vscode-editor-background);
+    --dlg-text: var(--vscode-editor-foreground);
+    --dlg-muted: var(--vscode-descriptionForeground);
+    --dlg-accent: var(--vscode-textLink-foreground);
+    --dlg-danger: var(--vscode-errorForeground);
+    --dlg-success: color-mix(in srgb, #3fb950 80%, var(--dlg-text) 20%);
+    --dlg-button-bg: var(--vscode-button-background);
+    --dlg-button-hover: var(--vscode-button-hoverBackground);
+    --dlg-button-text: var(--vscode-button-foreground);
+    --dlg-input-bg: var(--vscode-input-background);
+    --dlg-input-text: var(--vscode-input-foreground);
+    --dlg-input-border: var(--vscode-input-border);
+    --dlg-list-hover: var(--vscode-list-hoverBackground);
+    --dlg-panel: color-mix(in srgb, var(--vscode-sideBar-background) 84%, transparent);
+    --dlg-panel-alt: color-mix(in srgb, var(--vscode-editorGroupHeader-tabsBackground) 72%, transparent);
+    --dlg-border: var(--vscode-panel-border);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+button {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--dlg-button-bg);
+    color: var(--dlg-button-text);
+    cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease, opacity 120ms ease;
+    padding: 6px 14px;
+}
+
+button:hover {
+    background: var(--dlg-button-hover);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+    width: 100%;
+    background: var(--dlg-input-bg);
+    color: var(--dlg-input-text);
+    border: 1px solid color-mix(in srgb, var(--dlg-input-border) 70%, transparent);
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+/* ---- Button ---- */
+
+.dlg-btn--ghost {
+    background: transparent;
+    border-color: var(--dlg-border);
+    color: var(--dlg-text);
+}
+
+.dlg-btn--ghost:hover {
+    background: var(--dlg-list-hover);
+}
+
+.dlg-btn--danger {
+    border-color: color-mix(in srgb, var(--dlg-danger) 50%, transparent);
+    color: var(--dlg-danger);
+}
+
+.dlg-btn--icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.dlg-btn--icon-sm {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+/* ---- Checkbox ---- */
+
+.dlg-checkbox {
+    width: auto;
+    min-width: auto;
+    margin: 0;
+}
+
+.dlg-checkbox-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--dlg-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* ---- PathInput ---- */
+
+.dlg-path-input {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+}
+
+.dlg-path-input .dlg-textfield {
+    flex: 1;
+    min-width: 0;
+}
+
+.dlg-path-input .dlg-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
