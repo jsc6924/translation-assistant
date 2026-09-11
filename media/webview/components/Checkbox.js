@@ -16,7 +16,7 @@
   var createRoot = shared.ReactDOMClient.createRoot;
 
   // src/webview/components/Checkbox.tsx
-  function Checkbox({ checked, onChange, label, disabled, className }) {
+  function Checkbox({ checked, onChange, label, disabled, className, ariaLabel }) {
     const element = /* @__PURE__ */ React.createElement(
       "input",
       {
@@ -24,6 +24,7 @@
         type: "checkbox",
         checked,
         disabled,
+        "aria-label": ariaLabel,
         onChange: (e) => onChange(e.target.checked)
       }
     );

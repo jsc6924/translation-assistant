@@ -442,11 +442,13 @@ function getConfigureFormatWebviewHtml(panel: vscode.WebviewPanel, state: Format
   const htmlPath = path.join(ContextHolder.get().extensionPath, 'src', 'webview', 'format-config.html');
   const template = fs.readFileSync(htmlPath, 'utf8');
   const cssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'format-config.css'));
+  const componentsCssUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'components', 'components.css'));
   const sharedScriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'webview', 'react-shared-vendor.js'));
   const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'webview', 'format-config.js'));
   const serializedState = JSON.stringify(state).replace(/</g, '\\u003c');
 
   return template
+    .replace('{{componentsStyleUri}}', componentsCssUri.toString())
     .replace('{{styleUri}}', cssUri.toString())
     .replace('{{sharedScriptUri}}', sharedScriptUri.toString())
     .replace('{{scriptUri}}', scriptUri.toString())
@@ -462,6 +464,10 @@ export async function configureFormat() {
     {
       enableScripts: true,
       retainContextWhenHidden: false,
+      localResourceRoots: [
+        vscode.Uri.joinPath(ContextHolder.get().extensionUri, 'src', 'webview'),
+        vscode.Uri.joinPath(ContextHolder.get().extensionUri, 'media', 'webview'),
+      ],
     }
   );
 

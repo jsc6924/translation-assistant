@@ -6,15 +6,17 @@ export interface CheckboxProps {
     label?: string;
     disabled?: boolean;
     className?: string;
+    ariaLabel?: string;
 }
 
-export function Checkbox({ checked, onChange, label, disabled, className }: CheckboxProps) {
+export function Checkbox({ checked, onChange, label, disabled, className, ariaLabel }: CheckboxProps) {
     const element = (
         <input
             className="dlg-checkbox"
             type="checkbox"
             checked={checked}
             disabled={disabled}
+            aria-label={ariaLabel}
             onChange={(e) => onChange(e.target.checked)}
         />
     );

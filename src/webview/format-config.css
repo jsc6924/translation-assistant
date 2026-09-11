@@ -86,19 +86,25 @@ body {
   gap: 10px;
 }
 
-button {
+/* 全局 button / input / select reset 已迁移到 components.css。
+   这里的样式仅作用于本页面 legacy <button class="primary|secondary">，
+   防止误覆盖 shared 组件的 .dlg-btn 样式。 */
+.actions button.primary,
+button.legacy-primary {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
   padding: 8px 16px;
   border-radius: 6px;
   border: 1px solid var(--vscode-button-border, transparent);
   cursor: pointer;
 }
 
-button.primary {
-  color: var(--vscode-button-foreground);
-  background: var(--vscode-button-background);
-}
-
-button.secondary {
+.actions button.secondary,
+button.legacy-secondary {
   color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
   background: var(--vscode-button-secondaryBackground, transparent);
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  cursor: pointer;
 }
