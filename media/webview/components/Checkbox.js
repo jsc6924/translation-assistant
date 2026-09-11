@@ -8,6 +8,7 @@
   var React = shared.React;
   var {
     Fragment,
+    useCallback,
     useEffect,
     useRef,
     useState

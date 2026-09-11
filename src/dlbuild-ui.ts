@@ -1,16 +1,13 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { registerCommand } from './utils';
 import * as dlbuild from './dlbuild';
+import type {
+    RequestMap, RequestType, RequestInput, RequestOutput,
+    ResponseEnvelope,
+} from './shared/dlbuild-rpc';
 
 const VIEW_TYPE = 'dltxt-dlbuild-ui';
 const PANEL_TITLE = 'DLTXT 构建器';
-
-type WebviewMessage =
-    | { type: 'validateConfig'; requestId: string; activeTab: string; config: unknown }
-    | { type: 'runOperation'; requestId: string; activeTab: string; config: unknown }
-    | { type: 'openDirectoryDialog'; requestId: string }
-    | { type: 'openFileDialog'; requestId: string };
 
 let currentPanel: vscode.WebviewPanel | undefined;
 
@@ -58,41 +55,65 @@ function createPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
     return panel;
 }
 
-function renderPanel(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, rootPath: string) {
-    panel.webview.html = getHtml(panel.webview, context, rootPath);
-    panel.webview.onDidReceiveMessage(async (msg: WebviewMessage) => {
+// ---- Handlers ----
+// 每个 handler 输入/输出类型由 RequestMap 强制约束。新增消息只需要在 RequestMap 加一条
+// 并在此注册一个 handler；TS 会自动校验签名。
+
+type Handler<T extends RequestType> = (
+    context: vscode.ExtensionContext,
+    input: RequestInput<T>,
+) => RequestOutput<T> | Promise<RequestOutput<T>>;
+
+const handlers: { [T in RequestType]: Handler<T> } = {
+    validateConfig: (_ctx, input) => validateConfig(input.activeTab, input.config),
+
+    runOperation: async (ctx, input) =>
+        runOperation(ctx, input.activeTab, input.config),
+
+    openDirectoryDialog: async () => {
+        const uris = await vscode.window.showOpenDialog({
+            canSelectFiles: false, canSelectFolders: true, canSelectMany: false,
+        });
+        const fsPath = uris && uris.length > 0 ? uris[0].fsPath : '';
+        return { fsPath };
+    },
+
+    openFileDialog: async () => {
+        const uris = await vscode.window.showOpenDialog({
+            canSelectFiles: true, canSelectFolders: false, canSelectMany: false,
+        });
+        const fsPath = uris && uris.length > 0 ? uris[0].fsPath : '';
+        return { fsPath };
+    },
+};
+
+function renderPanel(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, _rootPath: string) {
+    panel.webview.html = getHtml(panel.webview, context, _rootPath);
+    panel.webview.onDidReceiveMessage(async (msg: { type?: string; requestId?: string; [k: string]: unknown }) => {
+        const type = msg.type as RequestType | undefined;
+        const requestId = msg.requestId;
+        if (!type || !requestId) { return; }
+        const handler = handlers[type];
+        if (!handler) { return; }
         try {
-            if (msg.type === 'validateConfig') {
-                const result = validateConfig(msg.activeTab, msg.config);
-                await panel.webview.postMessage({ type: 'configValidated', requestId: msg.requestId, payload: result });
-                return;
-            }
-            if (msg.type === 'runOperation') {
-                const result = await runOperation(context, msg.activeTab, msg.config);
-                await panel.webview.postMessage({ type: 'operationDone', requestId: msg.requestId, payload: result });
-                return;
-            }
-            if (msg.type === 'openDirectoryDialog') {
-                const uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false });
-                const fsPath = uris && uris.length > 0 ? uris[0].fsPath : '';
-                await panel.webview.postMessage({ type: 'dialogResult', requestId: msg.requestId, payload: { fsPath } });
-                return;
-            }
-            if (msg.type === 'openFileDialog') {
-                const uris = await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: false, canSelectMany: false });
-                const fsPath = uris && uris.length > 0 ? uris[0].fsPath : '';
-                await panel.webview.postMessage({ type: 'dialogResult', requestId: msg.requestId, payload: { fsPath } });
-                return;
-            }
+            // 剥离 type/requestId，剩余字段交给 handler（RequestMap[T]['input']）
+            const { type: _t, requestId: _r, ...rest } = msg;
+            // 类型断言：handler 内部根据已收窄的 T 自行使用对应 RequestInput
+            const input = rest as any;
+            const payload = await (handler as Handler<typeof type>)(context, input);
+            const response: ResponseEnvelope<typeof payload> = { type, requestId, payload };
+            await panel.webview.postMessage(response);
         } catch (error) {
             await panel.webview.postMessage({
                 type: 'requestError',
-                requestId: msg.requestId,
+                requestId,
                 error: error instanceof Error ? error.message : String(error),
             });
         }
     });
 }
+
+// ---- validateConfig ----
 
 function validateConfig(activeTab: string, config: unknown): { ok: boolean; error?: string } {
     if (!config || typeof config !== 'object') {
@@ -160,7 +181,13 @@ function validateTransform(c: any): { ok: boolean; error?: string } {
     return { ok: true };
 }
 
-async function runOperation(context: vscode.ExtensionContext, activeTab: string, config: unknown): Promise<{ ok: boolean; message: string; total?: number; success?: number }> {
+// ---- runOperation ----
+
+async function runOperation(
+    context: vscode.ExtensionContext,
+    activeTab: string,
+    config: unknown,
+): Promise<{ ok: boolean; message: string; total?: number; success?: number }> {
     const rootPath = getRootPath();
     if (!rootPath) { return { ok: false, message: '未打开工作区' }; }
     const v = validateConfig(activeTab, config);
@@ -199,6 +226,8 @@ async function runOperation(context: vscode.ExtensionContext, activeTab: string,
         return { ok: false, message: `执行失败: ${e instanceof Error ? e.message : e}` };
     }
 }
+
+// ---- HTML ----
 
 function getHtml(webview: vscode.Webview, context: vscode.ExtensionContext, rootPath: string): string {
     const sharedScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'media', 'webview', 'react-shared-vendor.js'));

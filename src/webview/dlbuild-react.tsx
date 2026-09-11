@@ -551,7 +551,7 @@ function App() {
 
     async function handleValidate() {
         try {
-            const res = await rpc.request<{ ok: boolean; error?: string }>('validateConfig', {
+            const res = await rpc.request('validateConfig', {
                 activeTab,
                 config: getActiveConfig(),
             });
@@ -569,7 +569,7 @@ function App() {
         setRunning(true);
         setStatus({ kind: 'running', text: '执行中...' });
         try {
-            const res = await rpc.request<{ ok: boolean; message: string; total?: number; success?: number }>('runOperation', {
+            const res = await rpc.request('runOperation', {
                 activeTab,
                 config: getActiveConfig(),
             });

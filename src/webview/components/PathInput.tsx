@@ -1,4 +1,4 @@
-import { React, useEffect, useRef } from '../react-shared-runtime';
+import { React, useCallback } from '../react-shared-runtime';
 import { TextField } from './TextField';
 import { Button } from './Button';
 import { useVscodeRpc } from '../useVscodeRpc';
@@ -15,7 +15,8 @@ export interface PathInputProps {
  * 文本框 + 浏览按钮 + 与 extension 后端 dialog 联动。
  * 浏览点击 → 后端 showOpenDialog → 收到 fsPath → 自动转相对路径填入。
  *
- * 用 ref 记录本次浏览的 requestId，只响应自己触发的响应，避免多实例时互相覆盖。
+ * 用 request（promise）取代 push + requestId 配对，避多实例时派发串扰：
+ * 每个 PathInput 实例持有一个 pendingPromise，由 hook 内的 pendingMap 隔离。
  */
 export function PathInput({
     value,
@@ -25,26 +26,19 @@ export function PathInput({
     rootPath,
 }: PathInputProps) {
     const rpc = useVscodeRpc();
-    const pendingRequestIdRef = useRef<string | null>(null);
 
-    useEffect(() => {
-        const off = rpc.onPush<{ fsPath: string }>('dialogResult', (payload, requestId) => {
-            if (requestId !== pendingRequestIdRef.current) { return; }
-            pendingRequestIdRef.current = null;
-            if (!payload?.fsPath) { return; }
-            if (rootPath && payload.fsPath.startsWith(rootPath)) {
-                onChange('.' + payload.fsPath.slice(rootPath.length));
-            } else {
-                onChange(payload.fsPath);
-            }
-        });
-        return off;
+    const handleBrowse = useCallback(async () => {
+        const result = isDirectory
+            ? await rpc.request('openDirectoryDialog', {})
+            : await rpc.request('openFileDialog', {});
+        if (!result.fsPath) { return; }
+        if (rootPath && result.fsPath.startsWith(rootPath)) {
+            onChange('.' + result.fsPath.slice(rootPath.length));
+        } else {
+            onChange(result.fsPath);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rootPath]);
-
-    function handleBrowse() {
-        pendingRequestIdRef.current = rpc.post(isDirectory ? 'openDirectoryDialog' : 'openFileDialog');
-    }
+    }, [isDirectory, rootPath, onChange]);
 
     return (
         <div className="dlg-path-input">
@@ -53,4 +47,3 @@ export function PathInput({
         </div>
     );
 }
-

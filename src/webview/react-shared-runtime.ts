@@ -13,6 +13,7 @@ if (!shared || !shared.React || !shared.ReactDOMClient) {
 export const React = shared.React as typeof ReactNS;
 export const {
     Fragment,
+    useCallback,
     useEffect,
     useRef,
     useState,

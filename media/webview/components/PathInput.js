@@ -8,6 +8,7 @@
   var React = shared.React;
   var {
     Fragment,
+    useCallback,
     useEffect,
     useRef,
     useState
@@ -117,10 +118,13 @@
       window.addEventListener("message", handler);
       return () => window.removeEventListener("message", handler);
     }, []);
-    function request(type, payload = {}) {
+    function request(type, payload) {
       const requestId = uid(type);
       return new Promise((resolve, reject) => {
-        pendingRef.current.set(requestId, { resolve: (p) => resolve(p), reject });
+        pendingRef.current.set(requestId, {
+          resolve: (p) => resolve(p),
+          reject
+        });
         vscode.postMessage({ type, requestId, ...payload });
       });
     }
@@ -155,27 +159,17 @@
     rootPath
   }) {
     const rpc = useVscodeRpc();
-    const pendingRequestIdRef = useRef(null);
-    useEffect(() => {
-      const off = rpc.onPush("dialogResult", (payload, requestId) => {
-        if (requestId !== pendingRequestIdRef.current) {
-          return;
-        }
-        pendingRequestIdRef.current = null;
-        if (!payload?.fsPath) {
-          return;
-        }
-        if (rootPath && payload.fsPath.startsWith(rootPath)) {
-          onChange("." + payload.fsPath.slice(rootPath.length));
-        } else {
-          onChange(payload.fsPath);
-        }
-      });
-      return off;
-    }, [rootPath]);
-    function handleBrowse() {
-      pendingRequestIdRef.current = rpc.post(isDirectory ? "openDirectoryDialog" : "openFileDialog");
-    }
+    const handleBrowse = useCallback(async () => {
+      const result = isDirectory ? await rpc.request("openDirectoryDialog", {}) : await rpc.request("openFileDialog", {});
+      if (!result.fsPath) {
+        return;
+      }
+      if (rootPath && result.fsPath.startsWith(rootPath)) {
+        onChange("." + result.fsPath.slice(rootPath.length));
+      } else {
+        onChange(result.fsPath);
+      }
+    }, [isDirectory, rootPath, onChange]);
     return /* @__PURE__ */ React.createElement("div", { className: "dlg-path-input" }, /* @__PURE__ */ React.createElement(TextField, { value, onChange, placeholder }), /* @__PURE__ */ React.createElement(Button, { variant: "ghost", onClick: handleBrowse }, "\u6D4F\u89C8"));
   }
 })();
